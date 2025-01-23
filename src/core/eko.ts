@@ -28,9 +28,10 @@ export class Eko {
   private ekoConfig: EkoConfig;
 
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
+    console.log("ekoConfig: " + ekoConfig);
     this.ekoConfig = ekoConfig ? ekoConfig : {
       alwaysOpenNewWindow: false,
-    }
+    };
     if (typeof llmConfig == 'string') {
       this.llmProvider = new ClaudeProvider(llmConfig);
     } else if ('llm' in llmConfig) {
