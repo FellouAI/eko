@@ -2,7 +2,7 @@ import { WorkflowGenerator } from '../services/workflow/generator';
 import { ClaudeProvider } from '../services/llm/claude-provider';
 import { OpenaiProvider } from '../services/llm/openai-provider';
 import {
-  EkoConfig,
+  LLMConfig,
   EkoInvokeParam,
   LLMProvider,
   Tool,
@@ -11,6 +11,8 @@ import {
   OpenaiConfig,
   WorkflowCallback,
   NodeOutput,
+  ExecutionContext,
+  EkoConfig,
 } from '../types';
 import { ToolRegistry } from './tool-registry';
 
@@ -23,30 +25,32 @@ export class Eko {
   private llmProvider: LLMProvider;
   private toolRegistry = new ToolRegistry();
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
+  private ekoConfig: EkoConfig;
 
-  constructor(config: EkoConfig) {
-    if (typeof config == 'string') {
-      this.llmProvider = new ClaudeProvider(config);
-    } else if ('llm' in config) {
-      if (config.llm == 'claude') {
-        let claudeConfig = config as ClaudeConfig;
+  constructor(llmConfig: LLMConfig, ekoConfig: EkoConfig) {
+    this.ekoConfig = ekoConfig;
+    if (typeof llmConfig == 'string') {
+      this.llmProvider = new ClaudeProvider(llmConfig);
+    } else if ('llm' in llmConfig) {
+      if (llmConfig.llm == 'claude') {
+        let claudeConfig = llmConfig as ClaudeConfig;
         this.llmProvider = new ClaudeProvider(
           claudeConfig.apiKey,
           claudeConfig.modelName,
           claudeConfig.options
         );
-      } else if (config.llm == 'openai') {
-        let openaiConfig = config as OpenaiConfig;
+      } else if (llmConfig.llm == 'openai') {
+        let openaiConfig = llmConfig as OpenaiConfig;
         this.llmProvider = new OpenaiProvider(
           openaiConfig.apiKey,
           openaiConfig.modelName,
           openaiConfig.options
         );
       } else {
-        throw new Error('Unknown parameter: llm > ' + config['llm']);
+        throw new Error('Unknown parameter: llm > ' + llmConfig['llm']);
       }
     } else {
-      this.llmProvider = config as LLMProvider;
+      this.llmProvider = llmConfig as LLMProvider;
     }
     Eko.tools.forEach((tool) => this.toolRegistry.registerTool(tool));
   }
@@ -108,8 +112,9 @@ export class Eko {
     if (typeof tool === 'string') {
       tool = this.getTool(tool);
     }
-    let context = {
+    let context: ExecutionContext = {
       llmProvider: this.llmProvider,
+      ekoConfig: this.ekoConfig,
       variables: new Map<string, unknown>(),
       tools: new Map<string, Tool<any, any>>(),
       callback,

@@ -29,8 +29,13 @@ export interface Property {
   properties?: Properties;
 }
 
+export interface EkoConfig {
+  alwaysOpenNewWindow: boolean;
+}
+
 export interface ExecutionContext {
   llmProvider: LLMProvider;
+  ekoConfig: EkoConfig;
   variables: Map<string, unknown>;
   workflow?: Workflow;
   tools?: Map<string, Tool<any, any>>;
