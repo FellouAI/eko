@@ -27,8 +27,10 @@ export class Eko {
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
   private ekoConfig: EkoConfig;
 
-  constructor(llmConfig: LLMConfig, ekoConfig: EkoConfig) {
-    this.ekoConfig = ekoConfig;
+  constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
+    this.ekoConfig = ekoConfig ? ekoConfig : {
+      alwaysOpenNewWindow: false,
+    }
     if (typeof llmConfig == 'string') {
       this.llmProvider = new ClaudeProvider(llmConfig);
     } else if ('llm' in llmConfig) {

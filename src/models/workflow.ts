@@ -38,10 +38,11 @@ export class WorkflowImpl implements Workflow {
       const node = this.getNode(nodeId);
 
       // Execute the node's action
-      const context = {
+      const context: ExecutionContext = {
         __skip: false,
         __abort: false,
         workflow: this,
+        ekoConfig: {alwaysOpenNewWindow: false},
         variables: this.variables,
         llmProvider: this.llmProvider as LLMProvider,
         tools: new Map(node.action.tools.map(tool => [tool.name, tool])),
