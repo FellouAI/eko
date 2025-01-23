@@ -47,7 +47,8 @@ export class WebSearch implements Tool<WebSearchParam, WebSearchResult[]> {
     }
     let taskId = new Date().getTime() + '';
     let searchs = [{ url: url as string, keyword: query as string }];
-    let searchInfo = await deepSearch(taskId, searchs, maxResults || 5);
+    let window = await chrome.windows.getCurrent();
+    let searchInfo = await deepSearch(taskId, searchs, maxResults || 5, window);
     let links = searchInfo.result[0]?.links || [];
     return links.filter((s: any) => s.content) as WebSearchResult[];
   }
