@@ -23,9 +23,9 @@ Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that
 | **One sentence to multi-step workflow** | ✅    | ❌          | ✅            | ❌        | ❌      |
 | **Intervenability**                  | ✅    | ✅          | ❌            | ❌        | ❌      | 
 | **Development Efficiency**           | **High**  | Low      | Middle        | Middle    | Low    | 
-| **Task Complexity**           | High  | High      | Low        | Middle    | Middle    | Middle       |
+| **Task Complexity**           | **High**  | High      | Low        | Middle    | Middle    | Middle       |
 | **Open-source**                      | ✅    | ✅          | ✅            | ✅        | ❌      |
-| **Access to private web resources** | ✅ **(Coming soon)** | ❌          | ❌            | ❌        | ❌      |
+| **Access to private web resources** | ✅ | ❌          | ❌            | ❌        | ❌      |
 
 ## Quickstart
 
@@ -54,7 +54,7 @@ await eko.execute(sysWorkflow);
 
 ## Demos
 
-**Propmt:** `Collect the latest NASDAQ data on Yahoo Finance, including price changes, market capitalization, trading volume of major stocks, analyze the data and generate visualization reports`.
+**Prompt:** `Collect the latest NASDAQ data on Yahoo Finance, including price changes, market capitalization, trading volume of major stocks, analyze the data and generate visualization reports`.
 
 https://github.com/user-attachments/assets/4087b370-8eb8-4346-a549-c4ce4d1efec3
 
@@ -62,7 +62,7 @@ Click [here](https://github.com/FellouAI/eko-demos/tree/main/browser-extension-s
 
 ---
 
-**Propmt:** `Based on the README of FellouAI/eko on github, search for competitors, highlight the key contributions of Eko, write a blog post advertising Eko, and post it on Write.as.`
+**Prompt:** `Based on the README of FellouAI/eko on github, search for competitors, highlight the key contributions of Eko, write a blog post advertising Eko, and post it on Write.as.`
 
 https://github.com/user-attachments/assets/6feaea86-2fb9-4e5c-b510-479c2473d810
 
@@ -70,7 +70,7 @@ Click [here](https://github.com/FellouAI/eko-demos/tree/main/browser-extension-b
 
 ---
 
-**Propmt:** `Clean up all files in the current directory larger than 1MB`
+**Prompt:** `Clean up all files in the current directory larger than 1MB`
 
 https://github.com/user-attachments/assets/ef7feb58-3ddd-4296-a1de-bb8b6c66e48b
 
@@ -78,7 +78,7 @@ Click [here](https://eko.fellou.ai/docs/computeruse/computer-node/#example-file-
 
 ---
 
-**Propmt:** Automatic software testing
+**Prompt:** Automatic software testing
 ```
     Current login page automation test:
     1. Correct account and password are: admin / 666666 
@@ -125,6 +125,15 @@ Eko can be used in multiple environments:
 - Join our [slack community discussions](https://join.slack.com/t/eko-ai/shared_invite/zt-2xhvkudv9-nHvD1g8Smp227sM51x_Meg)
 - Contribute tools and improvements
 - Share your use cases and feedback
+
+<h1 align="center">
+  <a href="https://github.com/FellouAI/eko" target="_blank">
+    <img width="699" alt="Screenshot 2025-01-22 at 6 41 57 PM" src="https://github.com/user-attachments/assets/88320cc9-1755-4f21-913b-2bfc909e781d" />
+  </a>
+</h1>
+
+
+
 
 ## License
 

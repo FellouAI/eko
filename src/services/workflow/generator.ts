@@ -108,7 +108,11 @@ export class WorkflowGenerator {
       data.description || '',
       [],
       new Map(Object.entries(data.variables || {})),
-      this.llmProvider
+      this.llmProvider,
+      {
+        logLevel: 'info',
+        includeTimestamp: true,
+      }
     );
 
     // Add nodes to workflow

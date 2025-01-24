@@ -49,6 +49,14 @@ export interface OpenUrlResult {
   title?: string;
 }
 
+export interface BrowserTab {
+  id: number,
+  url?: string,
+  title?: string,
+  content: string,
+  description: string,
+}
+
 export interface ScreenshotResult {
   image: ScreenshotImage;
 }
@@ -60,7 +68,7 @@ export interface ScreenshotImage {
 }
 
 export interface TabManagementParam {
-  commond: string;
+  command: string;
 }
 
 export type TabManagementResult = TabInfo | CloseTabInfo | TabInfo[];

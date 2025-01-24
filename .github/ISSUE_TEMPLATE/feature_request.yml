@@ -1,0 +1,35 @@
+name: "✨ Feature Request"
+description: "Propose a new feature or improvement"
+title: "[FEATURE] Describe your feature request"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please use this template to suggest new features or improvements.
+  - type: input
+    id: summary
+    attributes:
+      label: "Feature Summary"
+      description: "Briefly describe the feature or improvement you’d like to see"
+      placeholder: "Write a short summary of the feature here"
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: "Use Case"
+      description: "Describe the target audience and scenarios for this feature"
+      placeholder: "E.g., This feature will help users accomplish..."
+  - type: textarea
+    id: expected_outcome
+    attributes:
+      label: "Expected Outcome"
+      description: "Describe the expected impact or result of this feature"
+      placeholder: "Write the expected outcome here"
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Provide any additional details or references"
+      placeholder: "E.g., inspiration, references, or sketches"

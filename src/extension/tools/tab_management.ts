@@ -28,9 +28,9 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
     this.input_schema = {
       type: 'object',
       properties: {
-        commond: {
+        command: {
           type: 'string',
-          description: `The commond to perform. The available commonds are:
+          description: `The command to perform. The available commands are:
 * \`tab_all\`: View all tabs and return the tabId and title.
 * \`current_tab\`: Get current tab information (tabId, url, title).
 * \`go_back\`: Go back to the previous page in the current tab.
@@ -40,33 +40,33 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
 * \`new_tab [url]\`: Open a new tab window and open the URL, eg: \`new_tab https://www.google.com\``,
         },
       },
-      required: ['commond'],
+      required: ['command'],
     };
   }
 
   /**
    * Tab management
    *
-   * @param {*} params { commond: `new_tab [url]` | 'tab_all' | 'current_tab' | 'go_back' | 'close_tab' | 'switch_tab [tabId]' | `change_url [url]` }
+   * @param {*} params { command: `new_tab [url]` | 'tab_all' | 'current_tab' | 'go_back' | 'close_tab' | 'switch_tab [tabId]' | `change_url [url]` }
    * @returns > { result, success: true }
    */
   async execute(
     context: ExecutionContext,
     params: TabManagementParam
   ): Promise<TabManagementResult> {
-    if (params === null || !params.commond) {
-      throw new Error('Invalid parameters. Expected an object with a "commond" property.');
+    if (params === null || !params.command) {
+      throw new Error('Invalid parameters. Expected an object with a "command" property.');
     }
     let windowId = await getWindowId(context);
-    let commond = params.commond.trim();
-    if (commond.startsWith('`')) {
-      commond = commond.substring(1);
+    let command = params.command.trim();
+    if (command.startsWith('`')) {
+      command = command.substring(1);
     }
-    if (commond.endsWith('`')) {
-      commond = commond.substring(0, commond.length - 1);
+    if (command.endsWith('`')) {
+      command = command.substring(0, command.length - 1);
     }
     let result: TabManagementResult;
-    if (commond == 'tab_all') {
+    if (command == 'tab_all') {
       result = [];
       let tabs = await chrome.tabs.query({ windowId: windowId });
       for (let i = 0; i < tabs.length; i++) {
@@ -82,18 +82,18 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
         }
         result.push(tabInfo);
       }
-    } else if (commond == 'current_tab') {
+    } else if (command == 'current_tab') {
       let tabId = await getTabId(context);
       let tab = await chrome.tabs.get(tabId);
       let tabInfo: TabInfo = { tabId, windowId: tab.windowId, title: tab.title, url: tab.url };
       result = tabInfo;
-    } else if (commond == 'go_back') {
+    } else if (command == 'go_back') {
       let tabId = await getTabId(context);
       await chrome.tabs.goBack(tabId);
       let tab = await chrome.tabs.get(tabId);
       let tabInfo: TabInfo = { tabId, windowId: tab.windowId, title: tab.title, url: tab.url };
       result = tabInfo;
-    } else if (commond == 'close_tab') {
+    } else if (command == 'close_tab') {
       let closedTabId = await getTabId(context);
       await chrome.tabs.remove(closedTabId);
       await sleep(100);
@@ -110,15 +110,15 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
       context.variables.set('windowId', tab.windowId);
       let closeTabInfo: CloseTabInfo = { closedTabId, newTabId, newTabTitle: tab.title };
       result = closeTabInfo;
-    } else if (commond.startsWith('switch_tab')) {
-      let tabId = parseInt(commond.replace('switch_tab', '').replace('[', '').replace(']', ''));
+    } else if (command.startsWith('switch_tab')) {
+      let tabId = parseInt(command.replace('switch_tab', '').replace('[', '').replace(']', ''));
       let tab = await chrome.tabs.update(tabId, { active: true });
       context.variables.set('tabId', tab.id);
       context.variables.set('windowId', tab.windowId);
       let tabInfo: TabInfo = { tabId, windowId: tab.windowId, title: tab.title, url: tab.url };
       result = tabInfo;
-    } else if (commond.startsWith('change_url')) {
-      let url = commond.substring('change_url'.length).replace('[', '').replace(']', '').trim();
+    } else if (command.startsWith('change_url')) {
+      let url = command.substring('change_url'.length).replace('[', '').replace(']', '').trim();
       let tabId = await getTabId(context);
       // await chrome.tabs.update(tabId, { url: url });
       await executeScript(tabId, () => {
@@ -127,8 +127,8 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
       let tab = await waitForTabComplete(tabId);
       let tabInfo: TabInfo = { tabId, windowId: tab.windowId, title: tab.title, url: tab.url };
       result = tabInfo;
-    } else if (commond.startsWith('new_tab')) {
-      let url = commond.replace('new_tab', '').replace('[', '').replace(']', '').replace(/"/g, '');
+    } else if (command.startsWith('new_tab')) {
+      let url = command.replace('new_tab', '').replace('[', '').replace(']', '').replace(/"/g, '');
       // First mandatory opening of a new window
       let newWindow = !context.variables.get('windowId') && !context.variables.get('tabId');
       let tab: chrome.tabs.Tab;
@@ -158,7 +158,7 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
       };
       result = tabInfo;
     } else {
-      throw Error('Unknown commond: ' + commond);
+      throw Error('Unknown command: ' + command);
     }
     return result;
   }

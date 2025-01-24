@@ -1,0 +1,39 @@
+name: "📝 Proposal"
+description: "Propose a significant change or enhancement to the project"
+title: "[PROPOSAL] Describe your proposal"
+labels: ["proposal", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for significant proposals, such as new architecture or strategic features.
+  - type: input
+    id: summary
+    attributes:
+      label: "Proposal Summary"
+      description: "Provide a concise summary of your proposal"
+      placeholder: "Write a brief summary here"
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: "Problem Statement"
+      description: "What problem does this proposal aim to solve?"
+      placeholder: "Describe the problem here"
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: "Proposed Solution"
+      description: "Describe your proposed solution and why it's the best approach"
+      placeholder: "Write your solution here"
+  - type: textarea
+    id: alternatives_considered
+    attributes:
+      label: "Alternatives Considered"
+      description: "List other approaches you considered and why they were not chosen"
+      placeholder: "Write alternative solutions here"
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Provide any other relevant information or resources"
+      placeholder: "E.g., links, diagrams, or prior discussions"

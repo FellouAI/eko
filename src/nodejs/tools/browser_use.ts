@@ -232,7 +232,11 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
             quality: 50,
           });
           let base64 = screenshotBuffer.toString('base64');
-          let image = 'data:image/jpeg;base64,' + base64;
+          let image = {
+            type: 'base64',
+            media_type: 'image/jpeg',
+            data: base64,
+          }
           await page.evaluate(() => {
             return (window as any).remove_highlight();
           });

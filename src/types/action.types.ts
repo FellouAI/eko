@@ -40,6 +40,7 @@ export interface ExecutionContext {
   workflow?: Workflow;
   tools?: Map<string, Tool<any, any>>;
   callback?: WorkflowCallback;
+  signal?: AbortSignal;
   [key: string]: any;
 }
 
@@ -48,5 +49,6 @@ export interface Action {
   name: string;
   description: string;
   execute: (input: NodeInput, output: NodeOutput, context: ExecutionContext) => Promise<unknown>;
-  tools: Tool<any, any>[];
+  tools: Array<Tool<any, any>>; // Allow both Tool objects and tool names
+  llmProvider?: LLMProvider;
 }

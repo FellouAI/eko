@@ -1,7 +1,10 @@
+import { ExecutionLogger, LogOptions } from "@/utils/execution-logger";
 import { Workflow, WorkflowNode, NodeInput, NodeOutput, ExecutionContext, LLMProvider, WorkflowCallback } from "../types";
 
 export class WorkflowImpl implements Workflow {
   abort?: boolean;
+  private logger?: ExecutionLogger;
+  abortControllers: Map<string, AbortController> = new Map<string, AbortController>();
 
   constructor(
     public id: string,
@@ -10,7 +13,23 @@ export class WorkflowImpl implements Workflow {
     public nodes: WorkflowNode[] = [],
     public variables: Map<string, unknown> = new Map(),
     public llmProvider?: LLMProvider,
-  ) {}
+    loggerOptions?: LogOptions
+  ) {
+    if (loggerOptions) {
+      this.logger = new ExecutionLogger(loggerOptions);
+    }
+  }
+
+  setLogger(logger: ExecutionLogger) {
+    this.logger = logger;
+  }
+
+  async cancel(): Promise<void> {
+    this.abort = true;
+    for (const controller of this.abortControllers.values()) {
+      controller.abort("Workflow cancelled");
+    }
+  }
 
   async execute(callback?: WorkflowCallback): Promise<NodeOutput[]> {
     if (!this.validateDAG()) {
@@ -36,6 +55,8 @@ export class WorkflowImpl implements Workflow {
       }
 
       const node = this.getNode(nodeId);
+      const abortController = new AbortController();
+      this.abortControllers.set(nodeId, abortController);
 
       // Execute the node's action
       const context: ExecutionContext = {
@@ -47,12 +68,19 @@ export class WorkflowImpl implements Workflow {
         llmProvider: this.llmProvider as LLMProvider,
         tools: new Map(node.action.tools.map(tool => [tool.name, tool])),
         callback,
+        logger: this.logger,
         next: () => context.__skip = true,
-        abortAll: () => this.abort = context.__abort = true,
+        abortAll: () => {
+          this.abort = context.__abort = true;
+          // Abort all running tasks
+          for (const controller of this.abortControllers.values()) {
+            controller.abort("Workflow cancelled");
+          }
+        },
+        signal: abortController.signal
       };
 
       executing.add(nodeId);
-
       // Execute dependencies first
       for (const depId of node.dependencies) {
         await executeNode(depId);

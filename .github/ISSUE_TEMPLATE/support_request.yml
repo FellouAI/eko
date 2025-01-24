@@ -1,0 +1,27 @@
+name: "❓ Support Request"
+description: "Ask a question or request support for using the project"
+title: "[SUPPORT] Describe your question"
+labels: ["support"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to describe your question or ask for help.
+  - type: input
+    id: topic
+    attributes:
+      label: "Topic"
+      description: "Briefly describe your question or issue"
+      placeholder: "E.g., How to configure X? What does Y mean?"
+  - type: textarea
+    id: details
+    attributes:
+      label: "Details"
+      description: "Provide more details about your question or issue"
+      placeholder: "Write a detailed description here"
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Include any supporting information or examples"
+      placeholder: "E.g., code snippets, logs, or environment details"

@@ -12,7 +12,7 @@ export class WebSearch implements Tool<WebSearchParam, WebSearchResult[]> {
 
   constructor() {
     this.name = 'web_search';
-    this.description = 'Use web search to return search results';
+    this.description = 'Search the web based on keywords and return relevant extracted content from webpages.';
     this.input_schema = {
       type: 'object',
       properties: {

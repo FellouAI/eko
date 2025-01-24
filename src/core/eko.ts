@@ -78,8 +78,32 @@ export class Eko {
   }
 
   public async execute(workflow: Workflow, callback?: WorkflowCallback): Promise<NodeOutput[]> {
+    // Inject LLM provider at workflow level
+    workflow.llmProvider = this.llmProvider;
+
+    // Process each node's action
+    for (const node of workflow.nodes) {
+      if (node.action.type === 'prompt') {
+        // Inject LLM provider
+        node.action.llmProvider = this.llmProvider;
+
+        // Resolve tools
+        node.action.tools = node.action.tools.map(tool => {
+          if (typeof tool === 'string') {
+            return this.toolRegistry.getTool(tool);
+          }
+          return tool;
+        });
+      }
+    }
+
     return await workflow.execute(callback);
   }
+
+  public async cancel(workflow: Workflow): Promise<void> {
+    return await workflow.cancel();
+  }
+
 
   public async modify(workflow: Workflow, prompt: string): Promise<Workflow> {
     const generator = this.workflowGeneratorMap.get(workflow) as WorkflowGenerator;
