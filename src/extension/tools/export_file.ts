@@ -79,12 +79,13 @@ export class ExportFile implements Tool<ExportFileParam, unknown> {
     const url = 'https://www.google.com';
     const exportClosure = async (tabId: number) => {
       await chrome.scripting.executeScript({
-      target: { tabId: tabId},
+      target: { tabId: tabId },
       func: exportFile,
       args: [filename, type, params.content],
     });}
     const openNewTabAndProcess = async (url: string, tabId: number) => {
       let tab = await open_new_tab(url, true);
+      context.callback?.hooks?.onTabCreated?.(tab.id as number);
       tabId = tab.id as number;
       await exportClosure(tabId);
       await sleep(1000);

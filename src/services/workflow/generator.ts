@@ -93,6 +93,18 @@ export class WorkflowGenerator {
       }
     }
 
+    // Forcibly add special tools
+    const specialTools = [
+      "cancel_workflow",
+    ]
+    for (const node of workflowData.nodes) {
+      for (const tool of specialTools) {
+        if (!node.action.tools.includes(tool)) {
+          node.action.tools.push(tool);
+        }
+      }
+    }
+
     // Generate a new UUID if not provided
     if (!workflowData.id) {
       workflowData.id = uuidv4();

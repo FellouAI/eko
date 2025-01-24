@@ -403,6 +403,10 @@ export class ActionImpl implements Action {
         context
       );
 
+      if (response?.textContent) {
+        context.callback?.hooks?.onLlmMessage?.(response.textContent);
+      }
+
       lastResponse = response;
 
       // Add round messages to conversation history

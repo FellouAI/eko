@@ -134,9 +134,11 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
       let tab: chrome.tabs.Tab;
       if (newWindow) {
         tab = await open_new_tab(url, true);
+        context.callback?.hooks?.onTabCreated?.(tab.id as number);
       } else {
         let windowId = await getWindowId(context);
         tab = await open_new_tab(url, false, windowId);
+        context.callback?.hooks?.onTabCreated?.(tab.id as number);
       }
       let windowId = tab.windowId as number;
       let tabId = tab.id as number;

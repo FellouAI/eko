@@ -49,7 +49,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/extension/**/*'],
+        include: ['src/types/*', 'src/extension/**/*', 'src/universal_tools/**/*'],
         exclude: ['src/extension/script']
       }),
       copy({

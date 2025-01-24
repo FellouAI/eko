@@ -10,6 +10,8 @@ import { TabManagement } from './tab_management';
 import { WebSearch } from './web_search';
 import { RequestLogin } from './request_login';
 
+export * from '../../universal_tools';
+
 export {
   BrowserUse,
   ElementClick,

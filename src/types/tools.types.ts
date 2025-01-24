@@ -111,3 +111,7 @@ export interface ElementRect {
   width?: number;
   height?: number;
 }
+
+export interface CancelWorkflowInput {
+  reason: string;
+}

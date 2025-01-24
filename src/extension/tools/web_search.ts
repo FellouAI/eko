@@ -50,10 +50,10 @@ export class WebSearch implements Tool<WebSearchParam, WebSearchResult[]> {
     let searchInfo: any;
     console.log("context.ekoConfig: "+context.ekoConfig);
     if (context.ekoConfig.alwaysOpenNewWindow) {
-      searchInfo = await deepSearch(taskId, searchs, maxResults || 5);
+      searchInfo = await deepSearch(context, taskId, searchs, maxResults || 5);
     } else {
       let window = await chrome.windows.getCurrent();
-      searchInfo = await deepSearch(taskId, searchs, maxResults || 5, window);
+      searchInfo = await deepSearch(context, taskId, searchs, maxResults || 5, window);
     }
     let links = searchInfo.result[0]?.links || [];
     return links.filter((s: any) => s.content) as WebSearchResult[];
@@ -134,6 +134,7 @@ chrome.tabs.onUpdated.addListener(async function (tabId, changeInfo, tab) {
  * @param {number} detailsMaxNum Maximum crawling quantity per search detail page
  */
 async function deepSearch(
+  context: ExecutionContext,
   taskId: string,
   searchs: Array<{ url: string; keyword: string }>,
   detailsMaxNum: number,
@@ -151,9 +152,9 @@ async function deepSearch(
   }
   // crawler the search page details page link
   // [{ links: [{ title, url }] }]
-  let detailLinkGroups = await doDetailLinkGroups(taskId, searchs, detailsMaxNum, window);
+  let detailLinkGroups = await doDetailLinkGroups(context, taskId, searchs, detailsMaxNum, window);
   // crawler all details page content and comments
-  let searchInfo = await doPageContent(taskId, detailLinkGroups, window);
+  let searchInfo = await doPageContent(context, taskId, detailLinkGroups, window);
   console.log('searchInfo: ', searchInfo);
   // close window
   closeWindow && chrome.windows.remove(window.id as number);
@@ -170,6 +171,7 @@ async function deepSearch(
  * @returns [{ links: [{ title, url }] }]
  */
 async function doDetailLinkGroups(
+  context: ExecutionContext,
   taskId: string,
   searchs: Array<{ url: string; keyword: string }>,
   detailsMaxNum: number,
@@ -186,6 +188,7 @@ async function doDetailLinkGroups(
         url: url,
         windowId: window.id,
       });
+      context.callback?.hooks?.onTabCreated?.(tab.id as number);
       let eventId = taskId + '_' + i;
       // monitor Tab status
       tabsUpdateEvent.addListener(async function (obj: any) {
@@ -236,6 +239,7 @@ async function doDetailLinkGroups(
  * @returns search info
  */
 async function doPageContent(
+  context: ExecutionContext,
   taskId: string,
   detailLinkGroups: Array<any>,
   window: chrome.windows.Window
@@ -263,6 +267,7 @@ async function doPageContent(
         url: link.url,
         windowId: window.id,
       });
+      context.callback?.hooks?.onTabCreated?.(tab.id as number);
       searchInfo.running++;
       let eventId = taskId + '_' + i + '_' + j;
       // monitor Tab status
