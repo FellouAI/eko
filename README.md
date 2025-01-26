@@ -132,8 +132,7 @@ Eko can be used in multiple environments:
   </a>
 </h1>
 
-
-
+[![Star History Chart](https://api.star-history.com/svg?repos=FellouAI/eko&type=Date)](https://star-history.com/#FellouAI/eko&Date)
 
 ## License
 

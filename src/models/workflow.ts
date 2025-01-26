@@ -63,6 +63,7 @@ export class WorkflowImpl implements Workflow {
         __skip: false,
         __abort: false,
         workflow: this,
+        ekoConfig: {alwaysOpenNewWindow: false},
         variables: this.variables,
         llmProvider: this.llmProvider as LLMProvider,
         tools: new Map(node.action.tools.map(tool => [tool.name, tool])),
