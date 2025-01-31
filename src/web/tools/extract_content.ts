@@ -8,6 +8,7 @@ export class ExtractContent implements Tool<any, string> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'extract_content';

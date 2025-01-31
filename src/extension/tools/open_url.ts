@@ -9,6 +9,7 @@ export class OpenUrl implements Tool<OpenUrlParam, OpenUrlResult> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'open_url';

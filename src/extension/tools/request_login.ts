@@ -7,6 +7,7 @@ export class RequestLogin implements Tool<any, any> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = true;
 
   constructor() {
     this.name = 'request_login';

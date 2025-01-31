@@ -12,6 +12,7 @@ export class FindElementPosition implements Tool<TaskPrompt, ElementRect | null>
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = true;
 
   constructor() {
     this.name = 'find_element_position';

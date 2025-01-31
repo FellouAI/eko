@@ -14,6 +14,7 @@ export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextR
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'human_input_text';
@@ -51,6 +52,7 @@ export class HumanInputSingleChoice implements Tool<HumanInputSingleChoiceInput,
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'human_input_single_choice';
@@ -94,6 +96,7 @@ export class HumanInputMultipleChoice implements Tool<HumanInputMultipleChoiceIn
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'human_input_multiple_choice';
@@ -137,6 +140,7 @@ export class HumanOperate implements Tool<HumanOperateInput, HumanOperateResult>
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'human_operate';

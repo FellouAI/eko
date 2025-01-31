@@ -13,6 +13,7 @@ export interface CommandExecuteParams {
 export class CommandExecute implements Tool<CommandExecuteParams, any> {
   name = 'command_execute';
   description = 'Execute a shell command with user confirmation';
+  need_vision: boolean = false;
   input_schema: InputSchema = {
     type: 'object',
     properties: {

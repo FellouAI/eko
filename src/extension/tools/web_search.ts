@@ -9,6 +9,7 @@ export class WebSearch implements Tool<WebSearchParam, WebSearchResult[]> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'web_search';

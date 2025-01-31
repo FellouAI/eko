@@ -10,6 +10,7 @@ export class ExportFile implements Tool<ExportFileParam, unknown> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'export_file';

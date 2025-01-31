@@ -10,6 +10,7 @@ export interface FileReadParams {
 export class FileRead implements Tool<FileReadParams, any> {
   name = 'file_read';
   description = 'Read content from a file';
+  need_vision: boolean = false;
   input_schema: InputSchema = {
     type: 'object',
     properties: {
