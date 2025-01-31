@@ -48,7 +48,13 @@ export class Eko {
     } else {
       this.llmProvider = config as LLMProvider;
     }
-    Eko.tools.forEach((tool) => this.toolRegistry.registerTool(tool));
+
+    // filter tools
+    let tools = Array.from(Eko.tools.entries()).map(([key, tool]) => tool);
+    if (this.llmProvider.hasVisionCapacity()) {
+      tools = tools.filter(tool => !tool.need_vision);
+    }
+    tools.forEach(tool => this.toolRegistry.registerTool(tool));
   }
 
   public async generate(prompt: string, param?: EkoInvokeParam): Promise<Workflow> {
