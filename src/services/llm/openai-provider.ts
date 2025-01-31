@@ -70,6 +70,10 @@ export class OpenaiProvider implements LLMProvider {
     }
   }
 
+  public hasVisionCapacity(): boolean {
+    return true;
+  }
+  
   private buildParams(
     messages: Message[],
     params: LLMParameters,

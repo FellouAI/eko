@@ -70,6 +70,10 @@ export class DeepseekProvider implements LLMProvider {
     }
   }
 
+  public hasVisionCapacity(): boolean {
+    return false;
+  }
+  
   private buildParams(
     messages: Message[],
     params: LLMParameters,
