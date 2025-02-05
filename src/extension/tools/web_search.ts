@@ -1,6 +1,7 @@
 import { WebSearchParam, WebSearchResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { MsgEvent, CountDownLatch, sleep, injectScript } from '../utils';
+import { DeepseekProvider } from '@/services/llm/deepseek-provider';
 
 /**
  * Web Search
@@ -9,6 +10,7 @@ export class WebSearch implements Tool<WebSearchParam, WebSearchResult[]> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'web_search';
@@ -43,7 +45,11 @@ export class WebSearch implements Tool<WebSearchParam, WebSearchResult[]> {
     let query = params.query;
     let maxResults = params.maxResults;
     if (!url) {
-      url = 'https://www.google.com';
+      // if (context.llmProvider instanceof DeepseekProvider) {
+      //   url = 'https://www.bing.com';
+      // } else {
+      //   url = 'https://www.google.com';
+      // }
     }
     let taskId = new Date().getTime() + '';
     let searchs = [{ url: url as string, keyword: query as string }];

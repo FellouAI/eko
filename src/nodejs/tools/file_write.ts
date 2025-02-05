@@ -14,6 +14,7 @@ export interface FileWriteParams {
 export class FileWrite implements Tool<FileWriteParams, any> {
   name = 'file_write';
   description = 'Write content to a file with user confirmation';
+  need_vision: boolean = false;
   input_schema: InputSchema = {
     type: 'object',
     properties: {

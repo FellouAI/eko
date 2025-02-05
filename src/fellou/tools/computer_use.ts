@@ -9,6 +9,7 @@ export class ComputerUse implements Tool<ComputerUseParam, ComputerUseResult> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = true;
 
   constructor() {
     this.name = 'computer_use';

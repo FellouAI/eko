@@ -6,6 +6,7 @@ export class GetAllTabs implements Tool<any, BrowserTab[]> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'get_all_tabs';

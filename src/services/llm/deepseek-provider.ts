@@ -24,9 +24,9 @@ interface PartialToolUse {
   accumulatedJson: string;
 }
 
-export class OpenaiProvider implements LLMProvider {
+export class DeepseekProvider implements LLMProvider {
   private client: OpenAI;
-  private defaultModel = 'gpt-4o';
+  private defaultModel = 'deepseek-chat';
 
   constructor(client: OpenAI, defaultModel?: string);
   constructor(options: ClientOptions, defaultModel?: string);
@@ -71,7 +71,7 @@ export class OpenaiProvider implements LLMProvider {
   }
 
   public hasVisionCapacity(): boolean {
-    return true;
+    return false;
   }
   
   private buildParams(
@@ -196,7 +196,7 @@ export class OpenaiProvider implements LLMProvider {
             } else {
               _messages.push({
                 role: 'tool',
-                content: _content,
+                content: JSON.stringify(_content),
                 tool_call_id: content.tool_call_id || content.tool_use_id,
               });
             }

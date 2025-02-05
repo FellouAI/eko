@@ -9,6 +9,7 @@ export class Screenshot implements Tool<any, ScreenshotResult> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = true;
 
   constructor() {
     this.name = 'screenshot';

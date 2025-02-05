@@ -10,6 +10,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = true;
 
   private browser: Browser | null = null;
   private browser_context: BrowserContext | null = null;

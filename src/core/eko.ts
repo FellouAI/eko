@@ -11,8 +11,10 @@ import {
   OpenaiConfig,
   WorkflowCallback,
   NodeOutput,
+  DeepseekConfig,
 } from '../types';
 import { ToolRegistry } from './tool-registry';
+import { DeepseekProvider } from '@/services/llm/deepseek-provider';
 
 /**
  * Eko core
@@ -42,13 +44,26 @@ export class Eko {
           openaiConfig.modelName,
           openaiConfig.options
         );
+      } else if (config.llm == 'deepseek') {
+        let deepseekConfig = config as DeepseekConfig;
+        this.llmProvider = new DeepseekProvider(
+          deepseekConfig.apiKey,
+          deepseekConfig.modelName,
+          deepseekConfig.options
+        );
       } else {
         throw new Error('Unknown parameter: llm > ' + config['llm']);
       }
     } else {
       this.llmProvider = config as LLMProvider;
     }
-    Eko.tools.forEach((tool) => this.toolRegistry.registerTool(tool));
+
+    // filter tools
+    let tools = Array.from(Eko.tools.entries()).map(([key, tool]) => tool);
+    if (this.llmProvider.hasVisionCapacity()) {
+      tools = tools.filter(tool => !tool.need_vision);
+    }
+    tools.forEach(tool => this.toolRegistry.registerTool(tool));
   }
 
   public async generate(prompt: string, param?: EkoInvokeParam): Promise<Workflow> {

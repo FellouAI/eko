@@ -50,6 +50,7 @@ export interface LLMStreamHandler {
 }
 
 export interface LLMProvider {
+  hasVisionCapacity(): boolean;
   generateText(messages: Message[], params: LLMParameters): Promise<LLMResponse>;
   generateStream(messages: Message[], params: LLMParameters, handler: LLMStreamHandler): Promise<void>;
 }

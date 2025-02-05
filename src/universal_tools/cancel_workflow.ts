@@ -5,6 +5,7 @@ export class CancelWorkflow implements Tool<CancelWorkflowInput, void> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'cancel_workflow';

@@ -21,6 +21,7 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = false;
 
   constructor() {
     this.name = 'tab_management';

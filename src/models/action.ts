@@ -33,6 +33,7 @@ class WriteContextTool implements Tool<any, any> {
     },
     required: ['key', 'value'],
   } as InputSchema;
+  need_vision: boolean = false;
 
   async execute(context: ExecutionContext, params: unknown): Promise<unknown> {
     const { key, value } = params as { key: string; value: string };
@@ -76,6 +77,7 @@ function createReturnTool(
       } as unknown,
       required: ['use_tool_result', 'value'],
     } as InputSchema,
+    need_vision: false,
 
     async execute(context: ExecutionContext, params: unknown): Promise<unknown> {
       context.variables.set(`__action_${actionName}_output`, params);

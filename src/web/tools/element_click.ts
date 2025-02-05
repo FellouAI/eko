@@ -11,6 +11,7 @@ export class ElementClick implements Tool<TaskPrompt, any> {
   name: string;
   description: string;
   input_schema: InputSchema;
+  need_vision: boolean = true;
 
   constructor() {
     this.name = 'element_click';

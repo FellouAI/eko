@@ -60,6 +60,10 @@ export class ClaudeProvider implements LLMProvider {
     }
   }
 
+  public hasVisionCapacity(): boolean {
+    return true;
+  }
+  
   private processResponse(response: Anthropic.Message): LLMResponse {
     const toolCalls = response.content
       .filter((block): block is Anthropic.ToolUseBlock => block.type === 'tool_use')
