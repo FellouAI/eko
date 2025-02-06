@@ -1,14 +1,11 @@
+import { LLMProviderFactory } from '@/services/llm/provider-factory';
 import { WorkflowGenerator } from '../services/workflow/generator';
-import { ClaudeProvider } from '../services/llm/claude-provider';
-import { OpenaiProvider } from '../services/llm/openai-provider';
 import {
   EkoConfig,
   EkoInvokeParam,
   LLMProvider,
   Tool,
   Workflow,
-  ClaudeConfig,
-  OpenaiConfig,
   WorkflowCallback,
   NodeOutput,
 } from '../types';
@@ -25,29 +22,7 @@ export class Eko {
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
 
   constructor(config: EkoConfig) {
-    if (typeof config == 'string') {
-      this.llmProvider = new ClaudeProvider(config);
-    } else if ('llm' in config) {
-      if (config.llm == 'claude') {
-        let claudeConfig = config as ClaudeConfig;
-        this.llmProvider = new ClaudeProvider(
-          claudeConfig.apiKey,
-          claudeConfig.modelName,
-          claudeConfig.options
-        );
-      } else if (config.llm == 'openai') {
-        let openaiConfig = config as OpenaiConfig;
-        this.llmProvider = new OpenaiProvider(
-          openaiConfig.apiKey,
-          openaiConfig.modelName,
-          openaiConfig.options
-        );
-      } else {
-        throw new Error('Unknown parameter: llm > ' + config['llm']);
-      }
-    } else {
-      this.llmProvider = config as LLMProvider;
-    }
+    this.llmProvider = LLMProviderFactory.buildLLMProvider(config);
     Eko.tools.forEach((tool) => this.toolRegistry.registerTool(tool));
   }
 
