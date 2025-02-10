@@ -88,7 +88,7 @@ export class ExportFile implements Tool<ExportFileParam, unknown> {
       context.callback?.hooks?.onTabCreated?.(tab.id as number);
       tabId = tab.id as number;
       await exportClosure(tabId);
-      await sleep(1000);
+      await sleep(5000);
       await chrome.tabs.remove(tabId);
     };
     console.log("context.ekoConfig: "+context.ekoConfig);

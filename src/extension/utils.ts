@@ -36,6 +36,7 @@ export async function getTabId(context: ExecutionContext): Promise<number> {
       context.variables.delete('tabId');
     }
   }
+
   if (!tabId) {
     let windowId = context.variables.get('windowId') as any;
     if (windowId) {
@@ -48,13 +49,24 @@ export async function getTabId(context: ExecutionContext): Promise<number> {
     } else {
       tabId = await getCurrentTabId();
     }
+
+    if (!tabId) {
+      throw new Error('Could not find a valid tab');
+    }
+    context.variables.set('tabId', tabId);
   }
-  return tabId as number;
+
+  return tabId;
 }
 
 export function getCurrentTabId(windowId?: number | undefined): Promise<number | undefined> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     chrome.tabs.query({ windowId, active: true, lastFocusedWindow: true }, function (tabs) {
+      if (chrome.runtime.lastError) {
+        console.error('Chrome runtime error:', chrome.runtime.lastError);
+        reject(chrome.runtime.lastError);
+        return;
+      }
       if (tabs.length > 0) {
         resolve(tabs[0].id);
       } else {
@@ -63,9 +75,12 @@ export function getCurrentTabId(windowId?: number | undefined): Promise<number |
             resolve(_tabs[0].id);
             return;
           } else {
-            chrome.tabs.query({ windowId, status: 'complete', currentWindow: true }, function (__tabs) {
-              resolve(__tabs.length ? __tabs[__tabs.length - 1].id : undefined);
-            });
+            chrome.tabs.query(
+              { windowId, status: 'complete', currentWindow: true },
+              function (__tabs) {
+                resolve(__tabs.length ? __tabs[__tabs.length - 1].id : undefined);
+              }
+            );
           }
         });
       }

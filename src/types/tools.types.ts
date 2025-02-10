@@ -115,3 +115,45 @@ export interface ElementRect {
 export interface CancelWorkflowInput {
   reason: string;
 }
+
+export interface HumanInputTextInput {
+  question: string;
+}
+
+export interface HumanInputTextResult {
+  status: string;
+  answer: string;
+}
+
+export interface HumanInputSingleChoiceInput {
+  question: string;
+  choices: string[];
+}
+
+export interface HumanInputSingleChoiceResult {
+  status: string;
+  answer: string;
+}
+
+export interface HumanInputMultipleChoiceInput {
+  question: string;
+  choices: string[];
+}
+
+export interface HumanInputMultipleChoiceResult {
+  status: string;
+  answer: string[];
+}
+
+export interface HumanOperateInput {
+  reason: string,
+}
+
+export interface HumanOperateResult {
+  status: string,
+  userOperation: string,
+}
+
+export interface SummaryWorkflowInput {
+  summary: string,
+}

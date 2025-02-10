@@ -115,7 +115,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/nodejs/**/*']
+        include: ['src/types/*', 'src/nodejs/**/*', 'src/universal_tools/**/*']
       })
     ]
   },
@@ -135,7 +135,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/nodejs/**/*']
+        include: ['src/types/*', 'src/nodejs/**/*', 'src/universal_tools/**/*']
       }),
       replace({
         preventAssignment: true,

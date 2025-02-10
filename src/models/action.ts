@@ -205,8 +205,10 @@ export class ActionImpl implements Action {
                 result = modified_result;
               }
             }
+
+            const result_has_image: boolean = result && "image" in result;
             const resultContent =
-              result.image
+              result_has_image
                 ? {
                     type: 'tool_result',
                     tool_use_id: toolCall.id,
@@ -223,7 +225,7 @@ export class ActionImpl implements Action {
                     content: [{ type: 'text', text: JSON.stringify(result) }],
                   };
             const resultContentText =
-              result.image
+              result_has_image
                 ? result.text
                   ? result.text + ' [Image]'
                   : '[Image]'
@@ -239,6 +241,8 @@ export class ActionImpl implements Action {
               this.toolResults.set(toolCall.id, resultContentText);
             }
           } catch (err) {
+            console.log("An error occurred when calling tool:");
+            console.log(err);
             const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
             const errorResult: Message = {
               role: 'user',
@@ -509,6 +513,8 @@ export class ActionImpl implements Action {
     2. Think step by step about what needs to be done
     3. Return the output of the subtask using the 'return_output' tool when you are done; prefer using the 'tool_use_id' parameter to refer to the output of a tool call over providing a long text as the value
     4. Use the context to store important information for later reference, but use it sparingly: most of the time, the output of the subtask should be sufficient for the next steps
+    5. If there are any unclear points during the task execution, please use the human-related tool to inquire with the user
+    6. If user intervention is required during the task execution, please use the human-related tool to transfer the operation rights to the user
     `;
   }
 

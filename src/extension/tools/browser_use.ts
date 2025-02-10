@@ -80,7 +80,16 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
       if (params === null || !params.action) {
         throw new Error('Invalid parameters. Expected an object with a "action" property.');
       }
-      let tabId = await getTabId(context);
+      let tabId: number;
+      try {
+        tabId = await getTabId(context);
+        if (!tabId || !Number.isInteger(tabId)) {
+          throw new Error('Could not get valid tab ID');
+        }
+      } catch (e) {
+        console.error('Tab ID error:', e);
+        return { success: false, error: 'Could not access browser tab' };
+      }
       let windowId = await getWindowId(context);
       let selector_map = context.selector_map;
       let selector_xpath;
@@ -157,7 +166,12 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
           if (params.text == null) {
             throw new Error('text parameter is required');
           }
-          result = await browser.select_dropdown_option(tabId, params.text, selector_xpath, params.index);
+          result = await browser.select_dropdown_option(
+            tabId,
+            params.text,
+            selector_xpath,
+            params.index
+          );
           break;
         case 'screenshot_extract_element':
           await sleep(100);
@@ -184,11 +198,12 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
         return { success: false };
       }
     } catch (e: any) {
+      console.error('Browser use error:', e);
       return { success: false, error: e?.message };
     }
   }
 
   destroy(context: ExecutionContext) {
-    delete context.selector_map
+    delete context.selector_map;
   }
 }

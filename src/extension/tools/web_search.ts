@@ -257,9 +257,11 @@ async function doPageContent(
     searchInfo.total += links.length;
   }
   let countDownLatch = new CountDownLatch(searchInfo.total);
+
   for (let i = 0; i < detailLinkGroups.length; i++) {
     let filename = detailLinkGroups[i].filename;
     let links = detailLinkGroups[i].links;
+
     for (let j = 0; j < links.length; j++) {
       let link = links[j];
       // open new tab
@@ -270,47 +272,68 @@ async function doPageContent(
       context.callback?.hooks?.onTabCreated?.(tab.id as number);
       searchInfo.running++;
       let eventId = taskId + '_' + i + '_' + j;
-      // monitor Tab status
-      tabsUpdateEvent.addListener(async function (obj: any) {
-        if (obj.tabId != tab.id) {
-          return;
-        }
-        if (obj.changeInfo.status === 'complete') {
-          try {
+
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Page load timeout')), 10000); // Timeout after 10 seconds
+      });
+
+      // Create a tab monitoring promise
+      const monitorTabPromise = new Promise<void>(async (resolve, reject) => {
+        tabsUpdateEvent.addListener(async function onTabUpdated(obj: any) {
+          if (obj.tabId !== tab.id) return;
+
+          if (obj.changeInfo.status === 'complete') {
             tabsUpdateEvent.removeListener(eventId);
-            // inject js
-            await injectScript(tab.id as number, filename);
-            await sleep(1000);
-            // cralwer content and comments
-            // { title, content }
-            let result: any = await chrome.tabs.sendMessage(tab.id as number, {
-              type: 'page:getContent',
-            });
-            if (!result) {
-              throw Error('No Result');
+            try {
+              // Inject script and get page content
+              await injectScript(tab.id as number, filename);
+              await sleep(1000);
+
+              let result: any = await chrome.tabs.sendMessage(tab.id as number, {
+                type: 'page:getContent',
+              });
+
+              if (!result) throw new Error('No Result');
+
+              link.content = result.content;
+              link.page_title = result.title;
+              searchInfo.succeed++;
+              resolve(); // Resolve the promise if successful
+            } catch (error) {
+              searchInfo.failed++;
+              searchInfo.failedLinks.push(link);
+              reject(error); // Reject the promise on error
+            } finally {
+              searchInfo.running--;
+              countDownLatch.countDown();
+              chrome.tabs.remove(tab.id as number);
+              tabsUpdateEvent.removeListener(eventId);
             }
-            link.content = result.content;
-            link.page_title = result.title;
-            searchInfo.succeed++;
-          } catch (e) {
-            searchInfo.failed++;
-            searchInfo.failedLinks.push(link);
-            console.error(link.title + ' crawler error', link.url, e);
-          } finally {
+          } else if (obj.changeInfo.status === 'unloaded') {
             searchInfo.running--;
             countDownLatch.countDown();
             chrome.tabs.remove(tab.id as number);
             tabsUpdateEvent.removeListener(eventId);
+            reject(new Error('Tab unloaded')); // Reject if the tab is unloaded
           }
-        } else if (obj.changeInfo.status === 'unloaded') {
-          searchInfo.running--;
-          countDownLatch.countDown();
-          chrome.tabs.remove(tab.id as number);
-          tabsUpdateEvent.removeListener(eventId);
-        }
-      }, eventId);
+        }, eventId);
+      });
+
+      // Use Promise.race to enforce the timeout
+      try {
+        await Promise.race([monitorTabPromise, timeoutPromise]);
+      } catch (e) {
+        console.error(`${link.title} failed:`, e);
+        searchInfo.running--;
+        searchInfo.failed++;
+        searchInfo.failedLinks.push(link);
+        countDownLatch.countDown();
+        chrome.tabs.remove(tab.id as number); // Clean up tab on failure
+      }
     }
   }
+
   await countDownLatch.await(60_000);
   return searchInfo;
 }
