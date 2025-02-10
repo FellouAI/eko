@@ -74,24 +74,32 @@ export class ExportFile implements Tool<ExportFileParam, unknown> {
     } else {
       filename = params.filename;
     }
-    try {
-      let tabId = await getTabId(context);
+    let tabId = await getTabId(context);
+
+    const url = 'https://www.google.com';
+    const exportClosure = async (tabId: number) => {
       await chrome.scripting.executeScript({
-        target: { tabId: tabId as number },
-        func: exportFile,
-        args: [filename, type, params.content],
-      });
-    } catch (e) {
-      let tab = await open_new_tab('https://www.google.com', true);
+      target: { tabId: tabId },
+      func: exportFile,
+      args: [filename, type, params.content],
+    });}
+    const openNewTabAndProcess = async (url: string, tabId: number) => {
+      let tab = await open_new_tab(url, true);
       context.callback?.hooks?.onTabCreated?.(tab.id as number);
-      let tabId = tab.id as number;
-      await chrome.scripting.executeScript({
-        target: { tabId: tabId as number },
-        func: exportFile,
-        args: [filename, type, params.content],
-      });
+      tabId = tab.id as number;
+      await exportClosure(tabId);
       await sleep(5000);
       await chrome.tabs.remove(tabId);
+    };
+    console.log("context.ekoConfig: "+context.ekoConfig);
+    if (context.ekoConfig.alwaysOpenNewWindow) {
+      await openNewTabAndProcess(url, tabId);
+    } else {
+      try {
+        await exportClosure(tabId as number);
+      } catch (e) {
+        await openNewTabAndProcess(url, tabId);
+      }
     }
     return { success: true };
   }
