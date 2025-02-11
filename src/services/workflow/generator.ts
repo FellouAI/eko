@@ -18,6 +18,10 @@ export class WorkflowGenerator {
     return this.doGenerateWorkflow(prompt, false);
   }
 
+  async generateWorkflowFromJson(json: any): Promise<Workflow> {
+    return this.createWorkflowFromData(json);
+  }
+
   async modifyWorkflow(prompt: string): Promise<Workflow> {
     return this.doGenerateWorkflow(prompt, true);
   }
