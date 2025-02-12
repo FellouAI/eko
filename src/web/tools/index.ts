@@ -5,6 +5,8 @@ import { ExtractContent } from './extract_content';
 import { FindElementPosition } from './find_element_position';
 import { Screenshot } from './screenshot';
 
+export * from '../../universal_tools';
+
 export {
   BrowserUse,
   ElementClick,

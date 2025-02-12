@@ -95,7 +95,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/web/**/*']
+        include: ['src/types/*', 'src/web/**/*', 'src/universal_tools/**/*']
       })
     ]
   },
