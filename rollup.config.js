@@ -49,7 +49,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/extension/**/*', 'src/universal_tools/**/*'],
+        include: ['src/common/**/*', 'src/types/*', 'src/extension/**/*', 'src/universal_tools/**/*'],
         exclude: ['src/extension/script']
       }),
       copy({
@@ -71,7 +71,7 @@ export default [
       typescript({ 
         tsconfig: './tsconfig.json',
         declaration: false,
-        include: ['src/extension/content/*'],
+        include: ['src/common/**/*', 'src/extension/content/*'],
         declarationDir: 'dist'
       })
     ]
@@ -95,7 +95,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/web/**/*']
+        include: ['src/common/**/*', 'src/types/*', 'src/web/**/*']
       })
     ]
   },
@@ -115,7 +115,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/nodejs/**/*', 'src/universal_tools/**/*']
+        include: ['src/common/**/*', 'src/types/*', 'src/nodejs/**/*', 'src/universal_tools/**/*']
       })
     ]
   },
@@ -135,7 +135,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/nodejs/**/*', 'src/universal_tools/**/*']
+        include: ['src/common/**/*', 'src/types/*', 'src/nodejs/**/*', 'src/universal_tools/**/*']
       }),
       replace({
         preventAssignment: true,
@@ -164,7 +164,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/fellou/**/*']
+        include: ['src/common/**/*', 'src/types/*', 'src/fellou/**/*']
       })
     ]
   }

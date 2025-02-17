@@ -1,17 +1,18 @@
 import { ExecutionContext } from '../types/action.types';
+import { getChromeProxy } from '@/common/chrome/proxy';
 
 export async function getWindowId(context: ExecutionContext): Promise<number> {
   let windowId = context.variables.get('windowId') as any;
   if (windowId) {
     try {
-      await chrome.windows.get(windowId);
+      await getChromeProxy().windows.get(windowId);
     } catch (e) {
       windowId = null;
       context.variables.delete('windowId');
       let tabId = context.variables.get('tabId') as any;
       if (tabId) {
         try {
-          let tab = await chrome.tabs.get(tabId);
+          let tab = await getChromeProxy().tabs.get(tabId);
           windowId = tab.windowId;
         } catch (e) {
           context.variables.delete('tabId');
@@ -20,7 +21,7 @@ export async function getWindowId(context: ExecutionContext): Promise<number> {
     }
   }
   if (!windowId) {
-    const window = await chrome.windows.getCurrent();
+    const window = await getChromeProxy().windows.getCurrent();
     windowId = window.id;
   }
   return windowId as number;
@@ -30,7 +31,7 @@ export async function getTabId(context: ExecutionContext): Promise<number> {
   let tabId = context.variables.get('tabId') as any;
   if (tabId) {
     try {
-      await chrome.tabs.get(tabId);
+      await getChromeProxy().tabs.get(tabId);
     } catch (e) {
       tabId = null;
       context.variables.delete('tabId');
@@ -61,7 +62,7 @@ export async function getTabId(context: ExecutionContext): Promise<number> {
 
 export function getCurrentTabId(windowId?: number | undefined): Promise<number | undefined> {
   return new Promise((resolve, reject) => {
-    chrome.tabs.query({ windowId, active: true, lastFocusedWindow: true }, function (tabs) {
+    getChromeProxy().tabs.query({ windowId, active: true, lastFocusedWindow: true }, function (tabs: any) {
       if (chrome.runtime.lastError) {
         console.error('Chrome runtime error:', chrome.runtime.lastError);
         reject(chrome.runtime.lastError);
@@ -70,7 +71,7 @@ export function getCurrentTabId(windowId?: number | undefined): Promise<number |
       if (tabs.length > 0) {
         resolve(tabs[0].id);
       } else {
-        chrome.tabs.query({ windowId, active: true, currentWindow: true }, function (_tabs) {
+        getChromeProxy().tabs.query({ windowId, active: true, currentWindow: true }, function (_tabs: any) {
           if (_tabs.length > 0) {
             resolve(_tabs[0].id);
             return;
@@ -110,7 +111,7 @@ export async function open_new_tab(
     tabId = tabs[0].id as number;
   } else {
     if (!windowId) {
-      const window = await chrome.windows.getCurrent();
+      const window = await getChromeProxy().windows.getCurrent();
       windowId = window.id;
     }
     let tab = await chrome.tabs.create({
@@ -138,29 +139,29 @@ export async function waitForTabComplete(
   timeout: number = 15_000
 ): Promise<chrome.tabs.Tab> {
   return new Promise(async (resolve, reject) => {
-    let tab = await chrome.tabs.get(tabId);
+    let tab = await getChromeProxy().tabs.get(tabId);
     if (tab.status === 'complete') {
       resolve(tab);
       return;
     }
     const time = setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(listener);
+      getChromeProxy().tabs.onUpdated.removeListener(listener);
       reject();
     }, timeout);
     const listener = async (updatedTabId: number, changeInfo: any, tab: chrome.tabs.Tab) => {
       if (updatedTabId === tabId && changeInfo.status === 'complete') {
-        chrome.tabs.onUpdated.removeListener(listener);
+        getChromeProxy().tabs.onUpdated.removeListener(listener);
         clearTimeout(time);
         resolve(tab);
       }
     };
-    chrome.tabs.onUpdated.addListener(listener);
+    getChromeProxy().tabs.onUpdated.addListener(listener);
   });
 }
 
 export async function doesTabExists(tabId: number) {
   const tabExists = await new Promise((resolve) => {
-    chrome.tabs.get(tabId, (tab) => {
+    getChromeProxy().tabs.get(tabId, (tab: any) => {
       if (chrome.runtime.lastError) {
         resolve(false);
       } else {

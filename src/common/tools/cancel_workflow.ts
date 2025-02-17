@@ -1,5 +1,5 @@
-import { CancelWorkflowInput } from '../types/tools.types';
-import { Tool, InputSchema, ExecutionContext } from '../types/action.types';
+import { CancelWorkflowInput } from '../../types/tools.types';
+import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 
 export class CancelWorkflow implements Tool<CancelWorkflowInput, void> {
   name: string;

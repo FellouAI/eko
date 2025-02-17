@@ -2,6 +2,7 @@ import { Message } from '../../types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { getTabId, getWindowId, doesTabExists } from '../utils';
 import { screenshot } from './browser';
+import { getChromeProxy } from '@/common/chrome/proxy';
 
 export class RequestLogin implements Tool<any, any> {
   name: string;
@@ -53,7 +54,7 @@ export class RequestLogin implements Tool<any, any> {
         if (!tabExists) {
           clearInterval(checkTabClosedInterval);
           resolve(false);
-          chrome.runtime.onMessage.removeListener(listener);
+          getChromeProxy().runtime.onMessage.removeListener(listener);
         }
       }, 1000);
       const listener = (message: any) => {
@@ -62,7 +63,7 @@ export class RequestLogin implements Tool<any, any> {
           clearInterval(checkTabClosedInterval);
         }
       };
-      chrome.runtime.onMessage.addListener(listener);
+      getChromeProxy().runtime.onMessage.addListener(listener);
     });
   }
 

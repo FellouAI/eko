@@ -1,5 +1,5 @@
-import { SummaryWorkflowInput } from '../types/tools.types';
-import { Tool, InputSchema, ExecutionContext } from '../types/action.types';
+import { SummaryWorkflowInput } from '../../types/tools.types';
+import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 
 export class SummaryWorkflow implements Tool<SummaryWorkflowInput, any> {
   name: string;

@@ -1,3 +1,5 @@
+import { getChromeProxy } from '@/common/chrome/proxy';
+
 declare const eko: any;
 
 if (!(window as any).eko) {
@@ -18,7 +20,7 @@ document.addEventListener('mousemove', (event) => {
   eko.lastMouseY = event.clientY;
 });
 
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+getChromeProxy().runtime.onMessage.addListener(function (request: any, sender: any, sendResponse: any) {
   (async () => {
     try {
       switch (request.type) {
@@ -458,7 +460,7 @@ function request_user_help(task_id: string, failure_type: string, failure_messag
     cursor: pointer;
   `;
   resolvedBut.onclick = () => {
-    chrome.runtime.sendMessage({ type: 'issue_resolved', task_id, failure_type }, () => {
+    getChromeProxy().runtime.sendMessage({ type: 'issue_resolved', task_id, failure_type }, () => {
       notification.remove();
     });
   };

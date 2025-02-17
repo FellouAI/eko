@@ -1,6 +1,7 @@
 import { ExtractContentResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { getTabId, executeScript, injectScript, sleep } from '../utils';
+import { getChromeProxy } from '@/common/chrome/proxy';
 
 /**
  * Extract Page Content
@@ -27,7 +28,7 @@ export class ExtractContent implements Tool<any, ExtractContentResult> {
    */
   async execute(context: ExecutionContext, params: any): Promise<ExtractContentResult> {
     let tabId = await getTabId(context);
-    let tab = await chrome.tabs.get(tabId);
+    let tab = await getChromeProxy().tabs.get(tabId);
     await injectScript(tabId);
     await sleep(500);
     let content = await executeScript(tabId, () => {

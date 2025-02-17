@@ -7,8 +7,8 @@ import {
   HumanInputMultipleChoiceResult,
   HumanOperateInput,
   HumanOperateResult,
-} from '../types/tools.types';
-import { Tool, InputSchema, ExecutionContext } from '../types/action.types';
+} from '../../types/tools.types';
+import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 
 export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextResult> {
   name: string;
