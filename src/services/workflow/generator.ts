@@ -86,9 +86,6 @@ export class WorkflowGenerator {
 
     const workflowData = response.toolCalls[0].input.workflow as any;
 
-    // Forcibly add special tools
-   // Removed "Forcibly add special tools" logic
-   // No additional changes made as per the requirements
 
     // Validate all tools exist
     for (const node of workflowData.nodes) {
