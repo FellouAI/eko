@@ -33,6 +33,7 @@ function clickable_elements_to_string(element_tree, includeAttributes) {
       'type',
       'name',
       'role',
+      'class',
       // 'href',
       'tabindex',
       'aria-label',

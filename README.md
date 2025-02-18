@@ -33,7 +33,7 @@ Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that
 npm install @eko-ai/eko
 ```
 
-> For detailed usage, please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/).
+> Important Notice: The following example code cannot be executed directly. Please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/) guide for instructions on how to run it.
 
 ```typescript
 import { Eko } from '@eko-ai/eko';

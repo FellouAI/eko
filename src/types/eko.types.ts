@@ -19,7 +19,11 @@ export interface OpenaiConfig {
 
 export type ClaudeApiKey = string;
 
-export type EkoConfig = ClaudeApiKey | ClaudeConfig | OpenaiConfig | LLMProvider;
+export type LLMConfig = ClaudeApiKey | ClaudeConfig | OpenaiConfig | LLMProvider;
+
+export interface EkoConfig {
+  workingWindowId?: number,
+}
 
 export interface EkoInvokeParam {
   tools?: Array<string> | Array<Tool<any, any>>;

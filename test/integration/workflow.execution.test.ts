@@ -122,7 +122,8 @@ describeIntegration('Minimal Workflow Integration', () => {
     // Create workflow
     const workflow = new WorkflowImpl(
       'calc-and-display',
-      'Calculate and Display Workflow'
+      'Calculate and Display Workflow',
+      { workingWindowId: undefined },
     );
 
     workflow.llmProvider = llmProvider;

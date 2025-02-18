@@ -5,6 +5,7 @@ import { ActionImpl } from '../../models/action';
 import { ToolRegistry } from '../../core/tool-registry';
 import { createWorkflowPrompts, createWorkflowGenerationTool } from './templates';
 import { v4 as uuidv4 } from 'uuid';
+import { EkoConfig } from '@/types';
 
 export class WorkflowGenerator {
   message_history: Message[] = [];
@@ -14,15 +15,15 @@ export class WorkflowGenerator {
     private toolRegistry: ToolRegistry
   ) {}
 
-  async generateWorkflow(prompt: string): Promise<Workflow> {
-    return this.doGenerateWorkflow(prompt, false);
+  async generateWorkflow(prompt: string, ekoConfig: EkoConfig): Promise<Workflow> {
+    return this.doGenerateWorkflow(prompt, false, ekoConfig);
   }
 
-  async modifyWorkflow(prompt: string): Promise<Workflow> {
-    return this.doGenerateWorkflow(prompt, true);
+  async modifyWorkflow(prompt: string, ekoConfig: EkoConfig): Promise<Workflow> {
+    return this.doGenerateWorkflow(prompt, true, ekoConfig);
   }
 
-  private async doGenerateWorkflow(prompt: string, modify: boolean): Promise<Workflow> {
+  private async doGenerateWorkflow(prompt: string, modify: boolean, ekoConfig: EkoConfig): Promise<Workflow> {
     // Create prompts with current set of tools
     const prompts = createWorkflowPrompts(this.toolRegistry.getToolDefinitions());
 
@@ -104,13 +105,14 @@ export class WorkflowGenerator {
     console.log(workflowData);
     console.log("Debug the workflow...Done")    
     
-    return this.createWorkflowFromData(workflowData);
+    return this.createWorkflowFromData(workflowData, ekoConfig);
   }
 
-  private createWorkflowFromData(data: any): Workflow {
+  private createWorkflowFromData(data: any, ekoConfig: EkoConfig): Workflow {
     const workflow = new WorkflowImpl(
       data.id,
       data.name,
+      ekoConfig,
       data.description || '',
       [],
       new Map(Object.entries(data.variables || {})),

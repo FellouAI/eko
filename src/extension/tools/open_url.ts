@@ -35,13 +35,15 @@ export class OpenUrl implements Tool<OpenUrlParam, OpenUrlResult> {
    * @param {*} params { url: 'https://www.google.com', newWindow: true }
    * @returns > { tabId, windowId, title, success: true }
    */
-  async execute(context: ExecutionContext, params: OpenUrlParam): Promise<OpenUrlResult> {
+  async execute(context: ExecutionContext, params: OpenUrlParam): Promise<OpenUrlResult> {    
     if (typeof params !== 'object' || params === null || !params.url) {
       throw new Error('Invalid parameters. Expected an object with a "url" property.');
     }
     let url = params.url;
     let newWindow = params.newWindow;
-    if (!newWindow && !context.variables.get('windowId') && !context.variables.get('tabId')) {
+    if (context.ekoConfig.workingWindowId) {
+      newWindow = false;
+    } else if (!newWindow && !context.variables.get('windowId') && !context.variables.get('tabId')) {
       // First mandatory opening of a new window
       newWindow = true;
     }
@@ -50,7 +52,7 @@ export class OpenUrl implements Tool<OpenUrlParam, OpenUrlResult> {
       tab = await open_new_tab(url, true);
       context.callback?.hooks?.onTabCreated?.(tab.id as number);
     } else {
-      let windowId = await getWindowId(context);
+      let windowId = context.ekoConfig.workingWindowId ? context.ekoConfig.workingWindowId : await getWindowId(context);
       tab = await open_new_tab(url, false, windowId);
       context.callback?.hooks?.onTabCreated?.(tab.id as number);
     }

@@ -29,19 +29,11 @@ export async function getWindowId(context: ExecutionContext): Promise<number> {
 export async function getTabId(context: ExecutionContext): Promise<number> {
   let tabId = context.variables.get('tabId') as any;
   if (tabId) {
-    // Ensure tabId is a number
-    tabId = Number(tabId);
-    // Check if it's a valid integer
-    if (!Number.isInteger(tabId)) {
-      context.variables.delete('tabId');
+    try {
+      await chrome.tabs.get(tabId);
+    } catch (e) {
       tabId = null;
-    } else {
-      try {
-        await chrome.tabs.get(tabId);
-      } catch (e) {
-        tabId = null;
-        context.variables.delete('tabId');
-      }
+      context.variables.delete('tabId');
     }
   }
 
@@ -67,27 +59,31 @@ export async function getTabId(context: ExecutionContext): Promise<number> {
   return tabId;
 }
 
-export async function getCurrentTabId(windowId?: number): Promise<number> {
+export function getCurrentTabId(windowId?: number | undefined): Promise<number | undefined> {
   return new Promise((resolve, reject) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+    chrome.tabs.query({ windowId, active: true, lastFocusedWindow: true }, function (tabs) {
       if (chrome.runtime.lastError) {
         console.error('Chrome runtime error:', chrome.runtime.lastError);
         reject(chrome.runtime.lastError);
         return;
       }
-
-      if (!tabs || tabs.length === 0) {
-        reject(new Error('No active tab found'));
-        return;
+      if (tabs.length > 0) {
+        resolve(tabs[0].id);
+      } else {
+        chrome.tabs.query({ windowId, active: true, currentWindow: true }, function (_tabs) {
+          if (_tabs.length > 0) {
+            resolve(_tabs[0].id);
+            return;
+          } else {
+            chrome.tabs.query(
+              { windowId, status: 'complete', currentWindow: true },
+              function (__tabs) {
+                resolve(__tabs.length ? __tabs[__tabs.length - 1].id : undefined);
+              }
+            );
+          }
+        });
       }
-
-      const tabId = tabs[0].id;
-      if (typeof tabId !== 'number') {
-        reject(new Error('Invalid tab ID'));
-        return;
-      }
-
-      resolve(tabId);
     });
   });
 }

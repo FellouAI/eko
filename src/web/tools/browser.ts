@@ -226,12 +226,17 @@ function do_input(text: string, xpath?: string, highlightIndex?: number): boolea
   }
   input.focus && input.focus();
   if (!text) {
-    if (input.value == '') {
-      return true;
+    if (input.value == undefined) {
+      input.textContent = '';
+    } else {
+      input.value = '';
     }
-    input.value = '';
   } else {
-    input.value += text;
+    if (input.value == undefined) {
+      input.textContent += text;
+    } else {
+      input.value += text;
+    }
   }
   let result = input.dispatchEvent(new Event('input', { bubbles: true }));
   if (enter) {

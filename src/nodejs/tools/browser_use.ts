@@ -457,23 +457,38 @@ function do_input(params: any): boolean {
     text = text.substring(0, text.length - 1);
   }
   let input: any;
-  if (
+  if (element.tagName == 'IFRAME') {
+    let iframeDoc = element.contentDocument || element.contentWindow.document;
+    input =
+      iframeDoc.querySelector('textarea') ||
+      iframeDoc.querySelector('*[contenteditable="true"]') ||
+      iframeDoc.querySelector('input');
+  } else if (
     element.tagName == 'INPUT' ||
     element.tagName == 'TEXTAREA' ||
     element.childElementCount == 0
   ) {
     input = element;
   } else {
-    input = element.querySelector('input') || element.querySelector('textarea') || element;
+    input =
+      element.querySelector('input') ||
+      element.querySelector('textarea') ||
+      element.querySelector('*[contenteditable="true"]') ||
+      element;
   }
   input.focus && input.focus();
   if (!text) {
-    if (input.value == '') {
-      return true;
+    if (input.value == undefined) {
+      input.textContent = '';
+    } else {
+      input.value = '';
     }
-    input.value = '';
   } else {
-    input.value += text;
+    if (input.value == undefined) {
+      input.textContent += text;
+    } else {
+      input.value += text;
+    }
   }
   let result = input.dispatchEvent(new Event('input', { bubbles: true }));
   if (enter) {

@@ -47,7 +47,7 @@ export class WebSearch implements Tool<WebSearchParam, WebSearchResult[]> {
     }
     let taskId = new Date().getTime() + '';
     let searchs = [{ url: url as string, keyword: query as string }];
-    let searchInfo = await deepSearch(context, taskId, searchs, maxResults || 5);
+    let searchInfo = await deepSearch(context, taskId, searchs, maxResults || 5, context.ekoConfig.workingWindowId);
     let links = searchInfo.result[0]?.links || [];
     return links.filter((s: any) => s.content) as WebSearchResult[];
   }
@@ -131,26 +131,28 @@ async function deepSearch(
   taskId: string,
   searchs: Array<{ url: string; keyword: string }>,
   detailsMaxNum: number,
-  window?: chrome.windows.Window
+  windowId?: number,
 ) {
   let closeWindow = false;
-  if (!window) {
+  if (!windowId) {
     // open new window
-    window = await chrome.windows.create({
+    let window = await chrome.windows.create({
       type: 'normal',
       state: 'maximized',
       url: null,
     } as any as chrome.windows.CreateData);
+    windowId = window.id;
     closeWindow = true;
   }
+  windowId = windowId as number;
   // crawler the search page details page link
   // [{ links: [{ title, url }] }]
-  let detailLinkGroups = await doDetailLinkGroups(context, taskId, searchs, detailsMaxNum, window);
+  let detailLinkGroups = await doDetailLinkGroups(context, taskId, searchs, detailsMaxNum, windowId);
   // crawler all details page content and comments
-  let searchInfo = await doPageContent(context, taskId, detailLinkGroups, window);
+  let searchInfo = await doPageContent(context, taskId, detailLinkGroups, windowId);
   console.log('searchInfo: ', searchInfo);
   // close window
-  closeWindow && chrome.windows.remove(window.id as number);
+  closeWindow && chrome.windows.remove(windowId);
   return searchInfo;
 }
 
@@ -168,7 +170,7 @@ async function doDetailLinkGroups(
   taskId: string,
   searchs: Array<{ url: string; keyword: string }>,
   detailsMaxNum: number,
-  window: chrome.windows.Window
+  windowId: number,
 ) {
   let detailLinkGroups = [] as Array<any>;
   let countDownLatch = new CountDownLatch(searchs.length);
@@ -179,7 +181,7 @@ async function doDetailLinkGroups(
       // open new Tab
       let tab = await chrome.tabs.create({
         url: url,
-        windowId: window.id,
+        windowId,
       });
       context.callback?.hooks?.onTabCreated?.(tab.id as number);
       let eventId = taskId + '_' + i;
@@ -235,7 +237,7 @@ async function doPageContent(
   context: ExecutionContext,
   taskId: string,
   detailLinkGroups: Array<any>,
-  window: chrome.windows.Window
+  windowId: number,
 ) {
   const searchInfo: any = {
     total: 0,
@@ -260,7 +262,7 @@ async function doPageContent(
       // open new tab
       let tab = await chrome.tabs.create({
         url: link.url,
-        windowId: window.id,
+        windowId,
       });
       context.callback?.hooks?.onTabCreated?.(tab.id as number);
       searchInfo.running++;
