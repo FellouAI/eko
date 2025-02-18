@@ -2,6 +2,7 @@ import { ClientOptions as OpenAiClientOptions } from 'openai';
 import { ClientOptions as ClaudeClientOption } from '@anthropic-ai/sdk';
 import { LLMProvider } from './llm.types';
 import { Tool } from './action.types';
+import { WorkflowCallback } from './workflow.types';
 
 export interface ClaudeConfig {
   llm: 'claude';
@@ -23,6 +24,7 @@ export type LLMConfig = ClaudeApiKey | ClaudeConfig | OpenaiConfig | LLMProvider
 
 export interface EkoConfig {
   workingWindowId?: number,
+  callback?: WorkflowCallback,
 }
 
 export interface EkoInvokeParam {
