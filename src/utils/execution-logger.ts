@@ -126,9 +126,15 @@ export class ExecutionLogger {
    * Logs an error that occurred during execution
    */
   logError(error: Error, context?: ExecutionContext) {
-    this.log('error', `Error occurred: ${error.message}`, context);
-    if (error.stack) {
-      this.log('debug', `Stack trace: ${error.stack}`);
+    console.error(error);
+    try {
+      this.log('error', `Error occurred: ${error.message}`, context);
+      if (error.stack) {
+        this.log('debug', `Stack trace: ${error.stack}`);
+      }
+    } catch (error) {
+      console.error("An error occurs when trying to log another error:");
+      console.error(error);
     }
   }
 
