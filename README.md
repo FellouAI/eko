@@ -33,7 +33,7 @@ Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that
 npm install @eko-ai/eko
 ```
 
-> For detailed usage, please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/).
+> Important Notice: The following example code cannot be executed directly. Please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/) guide for instructions on how to run it.
 
 ```typescript
 import { Eko } from '@eko-ai/eko';
@@ -128,7 +128,7 @@ Eko can be used in multiple environments:
 
 <h1 align="center">
   <a href="https://github.com/FellouAI/eko" target="_blank">
-    <img width="699" alt="Screenshot 2025-01-22 at 6 41 57 PM" src="https://github.com/user-attachments/assets/88320cc9-1755-4f21-913b-2bfc909e781d" />
+    <img width="663" alt="Screenshot 2025-02-05 at 10 49 58" src="https://github.com/user-attachments/assets/02df5b97-41c0-423f-84d8-2fee2364c36b" />
   </a>
 </h1>
 
