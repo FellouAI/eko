@@ -1,6 +1,5 @@
+import { LLMProviderFactory } from '../services/llm/provider-factory';
 import { WorkflowGenerator } from '../services/workflow/generator';
-import { ClaudeProvider } from '../services/llm/claude-provider';
-import { OpenaiProvider } from '../services/llm/openai-provider';
 import {
   LLMConfig,
   EkoConfig,
@@ -8,8 +7,6 @@ import {
   LLMProvider,
   Tool,
   Workflow,
-  ClaudeConfig,
-  OpenaiConfig,
   WorkflowCallback,
   NodeOutput,
   ExecutionContext,
@@ -28,39 +25,35 @@ export class Eko {
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
 
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
-    if (typeof llmConfig == 'string') {
-      this.llmProvider = new ClaudeProvider(llmConfig);
-    } else if ('llm' in llmConfig) {
-      if (llmConfig.llm == 'claude') {
-        let claudeConfig = llmConfig as ClaudeConfig;
-        this.llmProvider = new ClaudeProvider(
-          claudeConfig.apiKey,
-          claudeConfig.modelName,
-          claudeConfig.options
-        );
-      } else if (llmConfig.llm == 'openai') {
-        let openaiConfig = llmConfig as OpenaiConfig;
-        this.llmProvider = new OpenaiProvider(
-          openaiConfig.apiKey,
-          openaiConfig.modelName,
-          openaiConfig.options
-        );
-      } else {
-        let msg: string = 'Unknown parameter: llm > ' + llmConfig['llm'];
-        console.error(msg)
-        throw new Error(msg);
-      }
-    } else {
-      this.llmProvider = llmConfig as LLMProvider;
-    }
-
+    this.llmProvider = LLMProviderFactory.buildLLMProvider(llmConfig);
+    
     if (ekoConfig) {
       this.ekoConfig = ekoConfig;
     } else {
       console.warn("`ekoConfig` is missing when construct `Eko` instance, default to `{}`");
       this.ekoConfig = {};
     }
+    
     this.registerTools();
+  }
+
+  public async generate(prompt: string, param?: EkoInvokeParam): Promise<Workflow> {
+    let toolRegistry = this.toolRegistry;
+    if (param && param.tools && param.tools.length > 0) {
+      toolRegistry = new ToolRegistry();
+      for (let i = 0; i < param.tools.length; i++) {
+        let tool = param.tools[i];
+        if (typeof tool == 'string') {
+          toolRegistry.registerTool(this.getTool(tool));
+        } else {
+          toolRegistry.registerTool(tool);
+        }
+      }
+    }
+    const generator = new WorkflowGenerator(this.llmProvider, toolRegistry);
+    const workflow = await generator.generateWorkflow(prompt, this.ekoConfig);
+    this.workflowGeneratorMap.set(workflow, generator);
+    return workflow;
   }
 
   private registerTools() {
@@ -91,25 +84,6 @@ export class Eko {
     }
     
     tools.forEach(tool => this.toolRegistry.registerTool(tool));
-  }
-
-  public async generate(prompt: string, param?: EkoInvokeParam): Promise<Workflow> {
-    let toolRegistry = this.toolRegistry;
-    if (param && param.tools && param.tools.length > 0) {
-      toolRegistry = new ToolRegistry();
-      for (let i = 0; i < param.tools.length; i++) {
-        let tool = param.tools[i];
-        if (typeof tool == 'string') {
-          toolRegistry.registerTool(this.getTool(tool));
-        } else {
-          toolRegistry.registerTool(tool);
-        }
-      }
-    }
-    const generator = new WorkflowGenerator(this.llmProvider, toolRegistry);
-    const workflow = await generator.generateWorkflow(prompt, this.ekoConfig);
-    this.workflowGeneratorMap.set(workflow, generator);
-    return workflow;
   }
 
   public async execute(workflow: Workflow): Promise<NodeOutput[]> {
