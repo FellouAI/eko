@@ -161,7 +161,7 @@ export class HumanOperate implements Tool<HumanOperateInput, HumanOperateResult>
 
   constructor() {
     this.name = 'human_operate';
-    this.description = 'When you encounter operations that require login, CAPTCHA verification, or other tasks that you cannot complete, please call this tool, transfer control to the user, and explain why.';
+    this.description = 'When you encounter operations that require login, CAPTCHA verification, or other tasks that you cannot complete, please call this tool, transfer control to the user, and explain why.\n\nAsk the user for final confirmation before the final step of any task with external side effects. This includes submitting purchases, deletions, editing data, appointments, sending a message, managing accounts, moving files, etc. Do not confirm before adding items to a cart, or other intermediate steps.';
     this.input_schema = {
       type: 'object',
       properties: {
