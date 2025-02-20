@@ -1,11 +1,15 @@
 import { WorkflowImpl } from '../../src/models/workflow';
-import { WorkflowNode, Action, Tool, ExecutionContext } from '../../src/types';
+import { WorkflowNode, Action, Tool, ExecutionContext, EkoConfig } from '../../src/types';
 
 describe('WorkflowImpl', () => {
   let workflow: WorkflowImpl;
 
   beforeEach(() => {
-    workflow = new WorkflowImpl('test-id', 'Test Workflow');
+    workflow = new WorkflowImpl(
+      'test-id',
+      'Test Workflow',
+      { workingWindowId: undefined } as EkoConfig,
+    );
   });
 
   const createMockNode = (id: string, dependencies: string[] = []): WorkflowNode => ({

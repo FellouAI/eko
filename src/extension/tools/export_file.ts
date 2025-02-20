@@ -45,6 +45,7 @@ export class ExportFile implements Tool<ExportFileParam, unknown> {
     if (typeof params !== 'object' || params === null || !('content' in params)) {
       throw new Error('Invalid parameters. Expected an object with a "content" property.');
     }
+    await context.callback?.hooks?.onExportFile?.(params);
     let type = 'text/plain';
     switch (params.fileType) {
       case 'csv':
@@ -82,7 +83,13 @@ export class ExportFile implements Tool<ExportFileParam, unknown> {
         args: [filename, type, params.content],
       });
     } catch (e) {
-      let tab = await open_new_tab('https://www.google.com', true);
+      let tab;
+      const url = 'https://www.google.com';
+      if (context.ekoConfig.workingWindowId) {
+        tab = await open_new_tab(url, false, context.ekoConfig.workingWindowId);
+      } else {
+        tab = await open_new_tab(url, true);
+      }
       context.callback?.hooks?.onTabCreated?.(tab.id as number);
       let tabId = tab.id as number;
       await chrome.scripting.executeScript({

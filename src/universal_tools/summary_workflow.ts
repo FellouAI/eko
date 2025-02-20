@@ -8,7 +8,7 @@ export class SummaryWorkflow implements Tool<SummaryWorkflowInput, any> {
 
   constructor() {
     this.name = 'summary_workflow';
-    this.description = 'Summarize what this workflow has done from start to finish using an ordered list .';
+    this.description = 'Summarize briefly what this workflow has accomplished.';
     this.input_schema = {
       type: 'object',
       properties: {

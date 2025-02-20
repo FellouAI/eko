@@ -1,5 +1,5 @@
 import {
-  EkoConfig,
+  LLMConfig,
   LLMProvider,
   ClaudeConfig,
   OpenaiConfig,
@@ -8,7 +8,7 @@ import { ClaudeProvider } from './claude-provider';
 import { OpenaiProvider } from './openai-provider';
 
 export class LLMProviderFactory {
-  public static buildLLMProvider(config: EkoConfig) {
+  public static buildLLMProvider(config: LLMConfig) {
     let llmProvider: LLMProvider;
     if (typeof config == 'string') {
       llmProvider = new ClaudeProvider(config);

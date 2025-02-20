@@ -2,6 +2,7 @@ import { Workflow } from "./workflow.types";
 import { LLMProvider } from "./llm.types";
 import { NodeOutput, WorkflowCallback } from "./workflow.types";
 import { NodeInput } from "./workflow.types";
+import { EkoConfig } from "./eko.types";
 
 export interface Tool<T, R> {
   name: string;
@@ -31,6 +32,7 @@ export interface Property {
 
 export interface ExecutionContext {
   llmProvider: LLMProvider;
+  ekoConfig: EkoConfig;
   variables: Map<string, unknown>;
   workflow?: Workflow;
   tools?: Map<string, Tool<any, any>>;

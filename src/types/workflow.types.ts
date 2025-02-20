@@ -1,6 +1,7 @@
 import { Action, ExecutionContext, Tool } from "./action.types";
 import { LLMProvider } from "./llm.types";
 import { ExecutionLogger } from "@/utils/execution-logger";
+import { ExportFileParam } from "./tools.types";
 
 export interface NodeOutput {
   name: string;
@@ -54,5 +55,6 @@ export interface WorkflowCallback {
     onHumanInputMultipleChoice?: (question: string, choices: string[]) => Promise<string[]>;
     onHumanOperate?: (reason: string) => Promise<string>;
     onSummaryWorkflow?: (summary: string) => Promise<void>;
+    onExportFile?: (param: ExportFileParam) => Promise<void>;
   }
 };

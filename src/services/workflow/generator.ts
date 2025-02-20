@@ -5,6 +5,7 @@ import { ActionImpl } from '../../models/action';
 import { ToolRegistry } from '../../core/tool-registry';
 import { createWorkflowPrompts, createWorkflowGenerationTool } from './templates';
 import { v4 as uuidv4 } from 'uuid';
+import { EkoConfig } from '@/types';
 
 export class WorkflowGenerator {
   message_history: Message[] = [];
@@ -14,15 +15,19 @@ export class WorkflowGenerator {
     private toolRegistry: ToolRegistry
   ) {}
 
-  async generateWorkflow(prompt: string): Promise<Workflow> {
-    return this.doGenerateWorkflow(prompt, false);
+  async generateWorkflow(prompt: string, ekoConfig: EkoConfig): Promise<Workflow> {
+    return this.doGenerateWorkflow(prompt, false, ekoConfig);
   }
 
-  async modifyWorkflow(prompt: string): Promise<Workflow> {
-    return this.doGenerateWorkflow(prompt, true);
+  async generateWorkflowFromJson(json: any, ekoConfig: EkoConfig): Promise<Workflow> {
+    return this.createWorkflowFromData(json, ekoConfig);
   }
 
-  private async doGenerateWorkflow(prompt: string, modify: boolean): Promise<Workflow> {
+  async modifyWorkflow(prompt: string, ekoConfig: EkoConfig): Promise<Workflow> {
+    return this.doGenerateWorkflow(prompt, true, ekoConfig);
+  }
+
+  private async doGenerateWorkflow(prompt: string, modify: boolean, ekoConfig: EkoConfig): Promise<Workflow> {
     // Create prompts with current set of tools
     const prompts = createWorkflowPrompts(this.toolRegistry.getToolDefinitions());
 
@@ -86,19 +91,7 @@ export class WorkflowGenerator {
 
     const workflowData = response.toolCalls[0].input.workflow as any;
 
-    // Forcibly add special tools
-    const specialTools = [
-      "cancel_workflow",
-      "human_input_text",
-      "human_operate",
-    ]
-    for (const node of workflowData.nodes) {
-      for (const tool of specialTools) {
-        if (!node.action.tools.includes(tool)) {
-          node.action.tools.push(tool);
-        }
-      }
-    }
+    
 
     // Validate all tools exist
     for (const node of workflowData.nodes) {
@@ -117,13 +110,14 @@ export class WorkflowGenerator {
     console.log(workflowData);
     console.log("Debug the workflow...Done")    
     
-    return this.createWorkflowFromData(workflowData);
+    return this.createWorkflowFromData(workflowData, ekoConfig);
   }
 
-  private createWorkflowFromData(data: any): Workflow {
+  private createWorkflowFromData(data: any, ekoConfig: EkoConfig): Workflow {
     const workflow = new WorkflowImpl(
       data.id,
       data.name,
+      ekoConfig,
       data.description || '',
       [],
       new Map(Object.entries(data.variables || {})),

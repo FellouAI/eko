@@ -206,7 +206,7 @@ export class ActionImpl implements Action {
               }
             }
 
-            const result_has_image: boolean = result && "image" in result;
+            const result_has_image: boolean = result && result.image;
             const resultContent =
               result_has_image
                 ? {

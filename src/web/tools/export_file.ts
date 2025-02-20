@@ -44,6 +44,7 @@ export class ExportFile implements Tool<ExportFileParam, unknown> {
     if (typeof params !== 'object' || params === null || !('content' in params)) {
       throw new Error('Invalid parameters. Expected an object with a "content" property.');
     }
+    await context.callback?.hooks?.onExportFile?.(params);
     let type = 'text/plain';
     switch (params.fileType) {
       case 'csv':
