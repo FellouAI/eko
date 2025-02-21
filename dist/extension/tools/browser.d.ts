@@ -1,0 +1,22 @@
+import { ScreenshotResult } from '../../types/tools.types';
+export declare function type(tabId: number, text: string, coordinate?: [number, number]): Promise<any>;
+export declare function type_by(tabId: number, text: string, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function clear_input(tabId: number, coordinate?: [number, number]): Promise<any>;
+export declare function clear_input_by(tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function mouse_move(tabId: number, coordinate: [number, number]): Promise<any>;
+export declare function left_click(tabId: number, coordinate?: [number, number]): Promise<any>;
+export declare function left_click_by(tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function right_click(tabId: number, coordinate?: [number, number]): Promise<any>;
+export declare function right_click_by(tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function double_click(tabId: number, coordinate?: [number, number]): Promise<any>;
+export declare function double_click_by(tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function screenshot(windowId: number, compress?: boolean): Promise<ScreenshotResult>;
+export declare function compress_image(dataUrl: string, scale?: number, quality?: number): Promise<string>;
+export declare function scroll_to(tabId: number, coordinate: [number, number]): Promise<any>;
+export declare function scroll_to_by(tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function get_dropdown_options(tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function select_dropdown_option(tabId: number, text: string, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function cursor_position(tabId: number): Promise<{
+    coordinate: [number, number];
+}>;
+export declare function size(tabId?: number): Promise<[number, number]>;
