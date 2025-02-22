@@ -37,25 +37,6 @@ export class Eko {
     this.registerTools();
   }
 
-  public async generate(prompt: string, param?: EkoInvokeParam): Promise<Workflow> {
-    let toolRegistry = this.toolRegistry;
-    if (param && param.tools && param.tools.length > 0) {
-      toolRegistry = new ToolRegistry();
-      for (let i = 0; i < param.tools.length; i++) {
-        let tool = param.tools[i];
-        if (typeof tool == 'string') {
-          toolRegistry.registerTool(this.getTool(tool));
-        } else {
-          toolRegistry.registerTool(tool);
-        }
-      }
-    }
-    const generator = new WorkflowGenerator(this.llmProvider, toolRegistry);
-    const workflow = await generator.generateWorkflow(prompt, this.ekoConfig);
-    this.workflowGeneratorMap.set(workflow, generator);
-    return workflow;
-  }
-
   private registerTools() {
     let tools = Array.from(Eko.tools.entries()).map(([_key, tool]) => tool);
 
@@ -84,6 +65,25 @@ export class Eko {
     }
     
     tools.forEach(tool => this.toolRegistry.registerTool(tool));
+  }
+
+  public async generate(prompt: string, param?: EkoInvokeParam): Promise<Workflow> {
+    let toolRegistry = this.toolRegistry;
+    if (param && param.tools && param.tools.length > 0) {
+      toolRegistry = new ToolRegistry();
+      for (let i = 0; i < param.tools.length; i++) {
+        let tool = param.tools[i];
+        if (typeof tool == 'string') {
+          toolRegistry.registerTool(this.getTool(tool));
+        } else {
+          toolRegistry.registerTool(tool);
+        }
+      }
+    }
+    const generator = new WorkflowGenerator(this.llmProvider, toolRegistry);
+    const workflow = await generator.generateWorkflow(prompt, this.ekoConfig);
+    this.workflowGeneratorMap.set(workflow, generator);
+    return workflow;
   }
 
   public async execute(workflow: Workflow): Promise<NodeOutput[]> {
