@@ -113,6 +113,7 @@ export class Eko {
   }
 
   public async execute(workflow: Workflow): Promise<NodeOutput[]> {
+    console.log("kyf bp");
     // Inject LLM provider at workflow level
     workflow.llmProvider = this.llmProvider;
 

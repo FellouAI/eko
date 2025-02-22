@@ -8,7 +8,8 @@ export class SummaryWorkflow implements Tool<SummaryWorkflowInput, any> {
 
   constructor() {
     this.name = 'summary_workflow';
-    this.description = 'Summarize briefly what this workflow has accomplished.';
+    //description的修改
+    this.description = 'Summarize briefly what this workflow has accomplished and store the summary in the result variable.';
     this.input_schema = {
       type: 'object',
       properties: {
@@ -27,6 +28,10 @@ export class SummaryWorkflow implements Tool<SummaryWorkflowInput, any> {
     }
     const summary = params.summary;
     console.log("summary: " + summary);
+
+    //将summary存储到result变量中
+    context.variables.set('result',summary);
+
     await context.callback?.hooks.onSummaryWorkflow?.(summary);
     return {status: "OK"};
   }

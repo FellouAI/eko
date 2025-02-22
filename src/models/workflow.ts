@@ -122,7 +122,14 @@ export class WorkflowImpl implements Workflow {
 
     callback && await callback.hooks.afterWorkflow?.(this, this.variables);
 
-    return terminalNodes.map(node => node.output);
+    //return terminalNodes.map(node => node.output);
+    //修改返回值为result，因为不能保证result一定存在或者被正确设置，所以添加了检查result是否存在的步骤
+    const result = this.variables.get("result");
+    if (result === undefined) {
+      console.warn('The "result" variable is not set in the workflow variables.');
+      return null; // 或者返回其他默认值
+      }
+      return result;
   }
 
   addNode(node: WorkflowNode): void {
