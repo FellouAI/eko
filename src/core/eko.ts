@@ -13,6 +13,7 @@ import {
   WorkflowCallback,
   NodeOutput,
   ExecutionContext,
+  WorkflowResult,
 } from '../types';
 import { ToolRegistry } from './tool-registry';
 
@@ -112,7 +113,7 @@ export class Eko {
     return workflow;
   }
 
-  public async execute(workflow: Workflow): Promise<NodeOutput[]> {
+  public async execute(workflow: Workflow): Promise<WorkflowResult | null> {
     console.log("kyf bp");
     // Inject LLM provider at workflow level
     workflow.llmProvider = this.llmProvider;

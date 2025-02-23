@@ -23,6 +23,27 @@ export interface WorkflowNode {
   output: NodeOutput;
 }
 
+// 定义 WorkflowResult 接口
+export interface WorkflowResult {
+  // 总结工作流做了什么
+  summary?: string;
+  // 简单总结工作流，然后输出大段文本，用 "--" 隔断
+  summaryWithText?: {
+      summary: string;
+      text: string;
+  };
+  // 预留 image 类型，后续可根据实际需求实现
+  // image?: {
+  //     url: string;
+  //     // 可以添加更多关于图片的属性，如宽度、高度等
+  // };
+  // 预留 pdf 类型，后续可根据实际需求实现
+  // pdf?: {
+  //     url: string;
+  //     // 可以添加更多关于 PDF 的属性，如页数等
+  // };
+}
+
 export interface Workflow {
   id: string;
   name: string;
@@ -32,7 +53,8 @@ export interface Workflow {
   llmProvider?: LLMProvider;
 
   setLogger(logger: ExecutionLogger): void;
-  execute(callback?: WorkflowCallback): Promise<NodeOutput[]>;
+  // 修改 execute 方法的返回类型
+  execute(callback?: WorkflowCallback): Promise<WorkflowResult | null>;
   cancel(): Promise<void>;
   addNode(node: WorkflowNode): void;
   removeNode(nodeId: string): void;

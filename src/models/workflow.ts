@@ -1,5 +1,5 @@
 import { ExecutionLogger, LogOptions } from "@/utils/execution-logger";
-import { Workflow, WorkflowNode, NodeInput, NodeOutput, ExecutionContext, LLMProvider, WorkflowCallback } from "../types";
+import { Workflow, WorkflowNode, NodeInput, NodeOutput, ExecutionContext, LLMProvider, WorkflowCallback, WorkflowResult } from "../types";
 import { EkoConfig } from "../types/eko.types";
 
 export class WorkflowImpl implements Workflow {
@@ -33,7 +33,7 @@ export class WorkflowImpl implements Workflow {
     }
   }
 
-  async execute(callback?: WorkflowCallback): Promise<NodeOutput[]> {
+  async execute(callback?: WorkflowCallback): Promise<WorkflowResult | null> {
     if (!this.validateDAG()) {
       throw new Error("Invalid workflow: Contains circular dependencies");
     }
@@ -123,14 +123,41 @@ export class WorkflowImpl implements Workflow {
     callback && await callback.hooks.afterWorkflow?.(this, this.variables);
 
     //return terminalNodes.map(node => node.output);
+    
     //修改返回值为result，因为不能保证result一定存在或者被正确设置，所以添加了检查result是否存在的步骤
+    /*
     const result = this.variables.get("result");
     if (result === undefined) {
       console.warn('The "result" variable is not set in the workflow variables.');
       return null; // 或者返回其他默认值
       }
       return result;
-  }
+    */
+
+      const result = this.variables.get("result");
+      if (result === undefined) {
+        console.warn('The "result" variable is not set in the workflow variables.');
+        return null;
+      }
+      if (typeof result === 'string') {
+        if (result.includes('--')) {
+          const [summary, text] = result.split('--');
+          return {
+            summaryWithText: {
+              summary: summary.trim(),
+              text: text.trim()
+            }
+          };
+        } else {
+          return {
+            summary:result
+          };
+        }
+      }
+      
+      console.warn('Unexpected result type:', typeof result);
+      return null;
+    }
 
   addNode(node: WorkflowNode): void {
     if (this.nodes.some(n => n.id === node.id)) {
