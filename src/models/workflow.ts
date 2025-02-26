@@ -1,6 +1,6 @@
 import { ExecutionLogger, LogOptions } from "@/utils/execution-logger";
-import { Workflow, WorkflowNode, NodeInput, NodeOutput, ExecutionContext, LLMProvider, WorkflowCallback } from "../types";
-import { EkoConfig } from "../types/eko.types";
+import { Workflow, WorkflowNode, NodeInput, ExecutionContext, LLMProvider, WorkflowCallback } from "../types";
+import { EkoConfig, WorkflowResult } from "../types/eko.types";
 
 export class WorkflowImpl implements Workflow {
   abort?: boolean;
@@ -33,7 +33,7 @@ export class WorkflowImpl implements Workflow {
     }
   }
 
-  async execute(callback?: WorkflowCallback): Promise<NodeOutput[]> {
+  async execute(callback?: WorkflowCallback): Promise<WorkflowResult> {
     if (!this.validateDAG()) {
       throw new Error("Invalid workflow: Contains circular dependencies");
     }
@@ -122,7 +122,22 @@ export class WorkflowImpl implements Workflow {
 
     callback && await callback.hooks.afterWorkflow?.(this, this.variables);
 
-    return terminalNodes.map(node => node.output);
+    let node_outputs = terminalNodes.map(node => node.output);
+    
+    // Special context variables
+    console.log("debug special context variables...");
+    const workflowIsSuccessful = this.variables.get("workflow_is_successful");
+    console.log(workflowIsSuccessful);
+    const workflowSummary = this.variables.get("workflow_summary");
+    console.log(workflowSummary);
+    const workflowTranscript = this.variables.get("workflow_transcript");
+    console.log(workflowTranscript);
+
+    return {
+      isSuccessful: workflowIsSuccessful as boolean,
+      summary: workflowSummary as string,
+      payload: workflowTranscript as string,
+    };
   }
 
   addNode(node: WorkflowNode): void {

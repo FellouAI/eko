@@ -8,8 +8,8 @@ import {
   Tool,
   Workflow,
   WorkflowCallback,
-  NodeOutput,
   ExecutionContext,
+  WorkflowResult
 } from '../types';
 import { ToolRegistry } from './tool-registry';
 
@@ -86,7 +86,7 @@ export class Eko {
     return workflow;
   }
 
-  public async execute(workflow: Workflow): Promise<NodeOutput[]> {
+  public async execute(workflow: Workflow): Promise<WorkflowResult> {
     // Inject LLM provider at workflow level
     workflow.llmProvider = this.llmProvider;
 
@@ -106,7 +106,9 @@ export class Eko {
       }
     }
 
-    return await workflow.execute(this.ekoConfig.callback);
+    const result = await workflow.execute(this.ekoConfig.callback);
+    console.log(result);
+    return result;
   }
 
   public async cancel(workflow: Workflow): Promise<void> {

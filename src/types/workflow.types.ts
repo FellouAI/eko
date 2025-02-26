@@ -2,6 +2,7 @@ import { Action, ExecutionContext, Tool } from "./action.types";
 import { LLMProvider } from "./llm.types";
 import { ExecutionLogger } from "@/utils/execution-logger";
 import { ExportFileParam } from "./tools.types";
+import { WorkflowResult } from "./eko.types";
 
 export interface NodeOutput {
   name: string;
@@ -32,7 +33,7 @@ export interface Workflow {
   llmProvider?: LLMProvider;
 
   setLogger(logger: ExecutionLogger): void;
-  execute(callback?: WorkflowCallback): Promise<NodeOutput[]>;
+  execute(callback?: WorkflowCallback): Promise<WorkflowResult>;
   cancel(): Promise<void>;
   addNode(node: WorkflowNode): void;
   removeNode(nodeId: string): void;
