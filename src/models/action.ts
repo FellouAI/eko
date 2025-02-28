@@ -492,8 +492,6 @@ export class ActionImpl implements Action {
     const outputParams = context.variables.get(outputKey) as any;
     context.variables.delete(outputKey);
 
-console.log(`Output parameters:`, outputParams);
-
     // Get output value, first checking for use_tool_result
     const outputValue = outputParams.use_tool_result
       ? Array.from(this.toolResults.values()).pop()
