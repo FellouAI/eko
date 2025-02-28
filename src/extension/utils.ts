@@ -19,6 +19,7 @@ export async function getWindowId(context: ExecutionContext): Promise<number> {
       }
     }
   }
+
   if (!windowId) {
     const window = await context.ekoConfig.chromeProxy.windows.getCurrent();
     windowId = window.id;
@@ -28,6 +29,11 @@ export async function getWindowId(context: ExecutionContext): Promise<number> {
   if (!windowId) {
     windowId = (window as any).FELLOU_WINDOW_ID;
   }
+
+  if (!windowId) {
+    console.warn("`getWindowId()` returns " + windowId);
+  }
+
   return windowId as number;
 }
 
