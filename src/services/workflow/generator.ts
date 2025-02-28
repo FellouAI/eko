@@ -103,7 +103,7 @@ export class WorkflowGenerator {
       "action": {
         "type": "prompt",
         "name": "Summarize the workflow.",
-        "description": "Summarize briefly what this workflow has accomplished. Your summary should be based on user\'s original query.",
+        "description": "Summarize briefly what this workflow has accomplished. Your summary should be based on user\'s original query. You MUST use the 'summary_workflow' tool.",
         "tools": [
           "summary_workflow"
         ]
