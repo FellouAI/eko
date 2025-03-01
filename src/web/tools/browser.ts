@@ -1,5 +1,6 @@
 import html2canvas from 'html2canvas';
 import { ScreenshotResult } from '../../types/tools.types';
+import { log } from '../../log';
 
 export function type(text: string, xpath?: string, highlightIndex?: number): boolean {
   return do_input(text, xpath, highlightIndex);
@@ -251,7 +252,7 @@ function do_input(text: string, xpath?: string, highlightIndex?: number): boolea
       input.dispatchEvent(event);
     });
   }
-  console.log('type', input, result);
+  log.info('type', input, result);
   return true;
 }
 
@@ -279,7 +280,7 @@ function simulateMouseEvent(
       button, // 0 left; 2 right
     });
     let result = element.dispatchEvent(event);
-    console.log('simulateMouse', element, { xpath, eventTypes, button }, result);
+    log.info('simulateMouse', element, { xpath, eventTypes, button }, result);
   }
   return true;
 }

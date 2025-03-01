@@ -6,6 +6,7 @@ import { ToolRegistry } from '../../core/tool-registry';
 import { createWorkflowPrompts, createWorkflowGenerationTool } from './templates';
 import { v4 as uuidv4 } from 'uuid';
 import { EkoConfig } from '@/types';
+import { log } from '../../log';
 
 export class WorkflowGenerator {
   message_history: Message[] = [];
@@ -106,9 +107,9 @@ export class WorkflowGenerator {
     }
 
     // debug
-    console.log("Debug the workflow...")
-    console.log(workflowData);
-    console.log("Debug the workflow...Done")    
+    log.debug("Debug the workflow...")
+    log.debug(workflowData);
+    log.debug("Debug the workflow...Done")    
     
     return this.createWorkflowFromData(workflowData, ekoConfig);
   }

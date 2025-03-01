@@ -9,6 +9,7 @@ import {
   HumanOperateResult,
 } from '../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../types/action.types';
+import { log } from '../log';
 
 export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextResult> {
   name: string;
@@ -35,20 +36,20 @@ export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextR
       throw new Error('Invalid parameters. Expected an object with a "question" property.');
     }
     const question = params.question;
-    console.log("question: " + question);
+    log.info("question: " + question);
     let onHumanInputText = context.callback?.hooks.onHumanInputText;
     if (onHumanInputText) {
       let answer;
       try {
         answer = await onHumanInputText(question);
       } catch (e) {
-        console.error(e);
+        log.error(e);
         return {status: "Error: Cannot get user's answer.", answer: ""};
       }
-      console.log("answer: " + answer);
+      log.info("answer: " + answer);
       return {status: "OK", answer: answer};
     } else {
-      console.error("`onHumanInputText` not implemented");
+      log.error("`onHumanInputText` not implemented");
       return {status: "Error: Cannot get user's answer.", answer: ""};
     }
   }
@@ -84,21 +85,21 @@ export class HumanInputSingleChoice implements Tool<HumanInputSingleChoiceInput,
     }
     const question = params.question;
     const choices = params.choices;
-    console.log("question: " + question);
-    console.log("choices: " + choices);
+    log.info("question: " + question);
+    log.info("choices: " + choices);
     let onHumanInputSingleChoice = context.callback?.hooks.onHumanInputSingleChoice;
     if (onHumanInputSingleChoice) {
       let answer;
       try {
         answer = await onHumanInputSingleChoice(question, choices);
       } catch (e) {
-        console.error(e);
+        log.error(e);
         return {status: "Error: Cannot get user's answer.", answer: ""};
       }
-      console.log("answer: " + answer);
+      log.info("answer: " + answer);
       return {status: "OK", answer: answer};
     } else {
-      console.error("`onHumanInputSingleChoice` not implemented");
+      log.error("`onHumanInputSingleChoice` not implemented");
       return {status: "Error: Cannot get user's answer.", answer: ""};
     }
   }
@@ -134,21 +135,21 @@ export class HumanInputMultipleChoice implements Tool<HumanInputMultipleChoiceIn
     }
     const question = params.question;
     const choices = params.choices;
-    console.log("question: " + question);
-    console.log("choices: " + choices);
+    log.info("question: " + question);
+    log.info("choices: " + choices);
     let onHumanInputMultipleChoice = context.callback?.hooks.onHumanInputMultipleChoice;
     if (onHumanInputMultipleChoice) {
       let answer;
       try {
         answer = await onHumanInputMultipleChoice(question, choices)
       } catch (e) {
-        console.error(e);
+        log.error(e);
         return {status: "`onHumanInputMultipleChoice` not implemented", answer: []};
       }
-      console.log("answer: " + answer);
+      log.info("answer: " + answer);
       return {status: "OK", answer: answer};
     } else {
-      console.error("Cannot get user's answer.");
+      log.error("Cannot get user's answer.");
       return {status: "Error: Cannot get user's answer.", answer: []};
     }
   }
@@ -179,20 +180,20 @@ export class HumanOperate implements Tool<HumanOperateInput, HumanOperateResult>
       throw new Error('Invalid parameters. Expected an object with a "reason" property.');
     }
     const reason = params.reason;
-    console.log("reason: " + reason);
+    log.info("reason: " + reason);
     let onHumanOperate = context.callback?.hooks.onHumanOperate;
     if (onHumanOperate) {
       let userOperation;
       try {
         userOperation = await onHumanOperate(reason);
       } catch (e) {
-        console.error(e);
+        log.error(e);
         return {status: "`onHumanOperate` not implemented", userOperation: ""};
       }
-      console.log("userOperation: " + userOperation);
+      log.info("userOperation: " + userOperation);
       return {status: "OK", userOperation: userOperation};
     } else {
-      console.error("Cannot get user's operation.");
+      log.error("Cannot get user's operation.");
       return {status: "Error: Cannot get user's operation.", userOperation: ""};
     }
   }

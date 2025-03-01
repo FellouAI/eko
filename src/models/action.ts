@@ -10,7 +10,7 @@ import {
   ToolDefinition,
   LLMResponse,
 } from '../types/llm.types';
-import { ExecutionLogger } from '@/utils/execution-logger';
+import { log } from '../log';
 
 /**
  * Special tool that allows LLM to write values to context
@@ -88,7 +88,6 @@ export class ActionImpl implements Action {
   private readonly maxRounds: number = 10; // Default max rounds
   private writeContextTool: WriteContextTool;
   private toolResults: Map<string, any> = new Map();
-  private logger: ExecutionLogger = new ExecutionLogger();
 
   constructor(
     public type: 'prompt', // Only support prompt type
@@ -116,7 +115,6 @@ export class ActionImpl implements Action {
     hasToolUse: boolean;
     roundMessages: Message[];
   }> {
-    this.logger = context.logger;
     const roundMessages: Message[] = [];
     let hasToolUse = false;
     let response: LLMResponse | null = null;
@@ -143,8 +141,8 @@ export class ActionImpl implements Action {
         }
       },
       onToolUse: async (toolCall) => {
-        this.logger.log('info', `Assistant: ${assistantTextMessage}`);
-        this.logger.logToolExecution(toolCall.name, toolCall.input, context);
+        log.info('info', `Assistant: ${assistantTextMessage}`);
+        log.info(toolCall.name, toolCall.input, context);
         hasToolUse = true;
 
         const tool = toolMap.get(toolCall.name);
@@ -235,14 +233,13 @@ export class ActionImpl implements Action {
               content: [resultContent],
             };
             toolResultMessage = resultMessage;
-            this.logger.logToolResult(tool.name, result, context);
+            log.info(tool.name, result, context);
             // Store tool results except for the return_output tool
             if (tool.name !== 'return_output') {
               this.toolResults.set(toolCall.id, resultContentText);
             }
           } catch (err) {
-            console.log("An error occurred when calling tool:");
-            console.log(err);
+            log.error("An error occurred when calling tool:", err);
             const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
             const errorResult: Message = {
               role: 'user',
@@ -256,7 +253,7 @@ export class ActionImpl implements Action {
               ],
             };
             toolResultMessage = errorResult;
-            this.logger.logError(err as Error, context);
+            log.error(err as Error, context);
           }
         })();
       },
@@ -264,8 +261,8 @@ export class ActionImpl implements Action {
         response = llmResponse;
       },
       onError: (error) => {
-        console.error('Stream Error:', error);
-        console.log('Last message array sent to LLM:', JSON.stringify(messages, null, 2));
+        log.error('Stream Error:', error);
+        log.info('Last message array sent to LLM:', JSON.stringify(messages, null, 2));
       },
     };
 
@@ -335,7 +332,7 @@ export class ActionImpl implements Action {
 
     const finalImageCount = this.countImages(messages);
     if (initialImageCount !== finalImageCount) {
-      this.logger.log("info", `Removed ${initialImageCount - finalImageCount} images from history`);
+      log.info(`Removed ${initialImageCount - finalImageCount} images from history`);
     }
   }
 
@@ -359,8 +356,7 @@ export class ActionImpl implements Action {
     context: ExecutionContext,
     outputSchema?: unknown
   ): Promise<unknown> {
-    this.logger = context.logger;
-    console.log(`Executing action started: ${this.name}`);
+    log.info(`Executing action started: ${this.name}`);
     // Create return tool with output schema
     const returnTool = createReturnTool(this.name, output.description, outputSchema);
 
@@ -376,7 +372,7 @@ export class ActionImpl implements Action {
       { role: 'user', content: this.formatUserPrompt(context, input) },
     ];
 
-    this.logger.logActionStart(this.name, input, context);
+    log.info(this.name, input, context);
 
     // Configure tool parameters
     const params: LLMParameters = {
@@ -398,7 +394,7 @@ export class ActionImpl implements Action {
       }
 
       roundCount++;
-      this.logger.log('info', `Starting round ${roundCount} of ${this.maxRounds}`, context);
+      log.info(`Starting round ${roundCount} of ${this.maxRounds}`, context);
 
       const { response, hasToolUse, roundMessages } = await this.executeSingleRound(
         messages,
@@ -415,17 +411,13 @@ export class ActionImpl implements Action {
 
       // Add round messages to conversation history
       messages.push(...roundMessages);
-      this.logger.log(
-        'debug',
-        `Round ${roundCount} messages: ${JSON.stringify(roundMessages)}`,
-        context
-      );
+      log.debug(`Round ${roundCount} messages: ${JSON.stringify(roundMessages)}`, context);
 
       // Check termination conditions
       if (!hasToolUse && response) {
         // LLM sent a message without using tools - request explicit return
-        this.logger.log('info', `Assistant: ${response.textContent}`);
-        this.logger.log('warn', 'LLM sent a message without using tools; requesting explicit return');
+        log.info(`Assistant: ${response.textContent}`)
+        log.warn('LLM sent a message without using tools; requesting explicit return');
         const returnOnlyParams = {
           ...params,
           tools: [
@@ -459,7 +451,7 @@ export class ActionImpl implements Action {
 
       // If this is the last round, force an explicit return
       if (roundCount === this.maxRounds) {
-        this.logger.log('warn', 'Max rounds reached, requesting explicit return');
+        log.warn('Max rounds reached, requesting explicit return');
         const returnOnlyParams = {
           ...params,
           tools: [
@@ -498,7 +490,7 @@ export class ActionImpl implements Action {
       : outputParams?.value;
 
     if (outputValue === undefined) {
-      console.warn('Action completed without returning a value');
+      log.warn('Action completed without returning a value');
       return {};
     }
 

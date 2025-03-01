@@ -1,3 +1,5 @@
+import { log } from '../../log';
+
 declare const eko: any;
 
 if (!(window as any).eko) {
@@ -28,7 +30,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             try {
               result = await eko.subListeners[request.event](request.params);
             } catch (e) {
-              console.log(e);
+              log.error(e);
             }
           }
           sendResponse(result);
@@ -93,7 +95,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         }
       }
     } catch (e) {
-      console.log('onMessage error', e);
+      log.error('onMessage error', e);
       sendResponse(false);
     }
   })();
@@ -177,7 +179,7 @@ function type(request: any): boolean {
       input.dispatchEvent(event);
     });
   }
-  console.log('type', input, request, result);
+  log.info('type', input, request, result);
   return true;
 }
 
@@ -195,7 +197,7 @@ function mouse_move(request: any): boolean {
     clientY: y,
   });
   let result = document.body.dispatchEvent(event);
-  console.log('mouse_move', document.body, request, result);
+  log.info('mouse_move', document.body, request, result);
   return true;
 }
 
@@ -233,7 +235,7 @@ function simulateMouseEvent(request: any, eventTypes: Array<string>, button: 0 |
       button, // 0 left; 2 right
     });
     let result = element.dispatchEvent(event);
-    console.log('simulateMouse', element, { ...request, eventTypes, button }, result);
+    log.info('simulateMouse', element, { ...request, eventTypes, button }, result);
   }
   return true;
 }
@@ -271,7 +273,7 @@ function scroll_to(request: any): boolean {
       behavior: 'smooth',
     });
   }
-  console.log('scroll_to', request);
+  log.info('scroll_to', request);
   return true;
 }
 

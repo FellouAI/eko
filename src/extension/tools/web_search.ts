@@ -1,7 +1,7 @@
 import { WebSearchParam, WebSearchResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { MsgEvent, CountDownLatch, sleep, injectScript } from '../utils';
-import { log } from '../../utils/execution-logger';
+import { log } from '../../log';
 
 /**
  * Web Search
@@ -151,7 +151,6 @@ async function deepSearch(
   let detailLinkGroups = await doDetailLinkGroups(context, taskId, searchs, detailsMaxNum, windowId);
   // crawler all details page content and comments
   let searchInfo = await doPageContent(context, taskId, detailLinkGroups, windowId);
-  console.log('searchInfo: ', searchInfo);
   log.info('searchInfo: ', searchInfo);
   // close window
   closeWindow && chrome.windows.remove(windowId);
@@ -207,7 +206,7 @@ async function doDetailLinkGroups(
             // TODO error
             detailLinks = { links: [] };
           }
-          console.log('detailLinks: ', detailLinks);
+          log.info('detailLinks: ', detailLinks);
           let links = detailLinks.links.slice(0, detailsMaxNum);
           detailLinkGroups.push({ url, links, filename });
           countDownLatch.countDown();
@@ -219,7 +218,7 @@ async function doDetailLinkGroups(
         }
       }, eventId);
     } catch (e) {
-      console.error(e);
+      log.error(e);
       countDownLatch.countDown();
     }
   }
@@ -321,7 +320,7 @@ async function doPageContent(
       try {
         await Promise.race([monitorTabPromise, timeoutPromise]);
       } catch (e) {
-        console.error(`${link.title} failed:`, e);
+        log.error(`${link.title} failed:`, e);
         searchInfo.running--;
         searchInfo.failed++;
         searchInfo.failedLinks.push(link);

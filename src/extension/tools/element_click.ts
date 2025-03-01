@@ -4,6 +4,7 @@ import { executeScript, getTabId, getWindowId } from '../utils';
 import { extractOperableElements, clickOperableElement } from './html_script';
 import { left_click, screenshot } from './browser';
 import { TaskPrompt } from '../../types/tools.types';
+import { log } from '../../log';
 
 /**
  * Element click
@@ -37,7 +38,7 @@ export class ElementClick implements Tool<TaskPrompt, any> {
     try {
       result = await executeWithHtmlElement(context, task_prompt);
     } catch (e) {
-      console.log(e);
+      log.error(e);
       result = false;
     }
     if (!result) {

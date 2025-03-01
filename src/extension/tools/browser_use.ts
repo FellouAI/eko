@@ -2,6 +2,7 @@ import { BrowserUseParam, BrowserUseResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { getWindowId, getTabId, sleep, injectScript, executeScript } from '../utils';
 import * as browser from './browser';
+import { log } from '../../log';
 
 /**
  * Browser Use for general
@@ -87,7 +88,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
           throw new Error('Could not get valid tab ID');
         }
       } catch (e) {
-        console.error('Tab ID error:', e);
+        log.error('Tab ID error:', e);
         return { success: false, error: 'Could not access browser tab' };
       }
       let windowId = await getWindowId(context);
@@ -198,7 +199,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
         return { success: false };
       }
     } catch (e: any) {
-      console.error('Browser use error:', e);
+      log.error('Browser use error:', e);
       return { success: false, error: e?.message };
     }
   }

@@ -1,3 +1,4 @@
+import { log } from '../log';
 import { ExecutionContext } from '../types/action.types';
 
 export async function getWindowId(context: ExecutionContext): Promise<number> {
@@ -63,7 +64,7 @@ export function getCurrentTabId(windowId?: number | undefined): Promise<number |
   return new Promise((resolve, reject) => {
     chrome.tabs.query({ windowId, active: true, lastFocusedWindow: true }, function (tabs) {
       if (chrome.runtime.lastError) {
-        console.error('Chrome runtime error:', chrome.runtime.lastError);
+        log.error('Chrome runtime error:', chrome.runtime.lastError);
         reject(chrome.runtime.lastError);
         return;
       }
@@ -228,7 +229,7 @@ export class MsgEvent {
           await result;
         }
       } catch (e) {
-        console.error(e);
+        log.error(e);
       }
     }
   }

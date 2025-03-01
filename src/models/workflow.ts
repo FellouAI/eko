@@ -1,4 +1,4 @@
-import { ExecutionLogger, LogOptions } from "@/utils/execution-logger";
+import { ExecutionLogger, LogOptions } from "@/log";
 import { Workflow, WorkflowNode, NodeInput, NodeOutput, ExecutionContext, LLMProvider, WorkflowCallback } from "../types";
 import { EkoConfig } from "../types/eko.types";
 

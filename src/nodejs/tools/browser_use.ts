@@ -2,6 +2,7 @@ import { BrowserUseParam, BrowserUseResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { chromium, Browser, Page, ElementHandle, BrowserContext } from 'playwright';
 import { run_build_dom_tree } from '../script/build_dom_tree';
+import { log } from '../../log';
 
 /**
  * Browser Use => `npx playwright install`
@@ -253,7 +254,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
         return { success: false };
       }
     } catch (e: any) {
-      console.log(e);
+      log.error(e);
       return { success: false, error: e?.message };
     }
   }
@@ -424,7 +425,7 @@ function do_click(param: any) {
         button, // 0 left; 2 right
       });
       let result = element.dispatchEvent(event);
-      console.log('simulateMouse', element, { eventTypes, button }, result);
+      log.info('simulateMouse', element, { eventTypes, button }, result);
     }
     return true;
   }
@@ -503,6 +504,6 @@ function do_input(params: any): boolean {
       input.dispatchEvent(event);
     });
   }
-  console.log('type', input, result);
+  log.info('type', input, result);
   return true;
 }
