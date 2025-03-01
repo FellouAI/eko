@@ -1,6 +1,7 @@
 import { WebSearchParam, WebSearchResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { MsgEvent, CountDownLatch, sleep, injectScript } from '../utils';
+import { log } from '../../utils/execution-logger';
 
 /**
  * Web Search
@@ -151,6 +152,7 @@ async function deepSearch(
   // crawler all details page content and comments
   let searchInfo = await doPageContent(context, taskId, detailLinkGroups, windowId);
   console.log('searchInfo: ', searchInfo);
+  log.info('searchInfo: ', searchInfo);
   // close window
   closeWindow && chrome.windows.remove(windowId);
   return searchInfo;
