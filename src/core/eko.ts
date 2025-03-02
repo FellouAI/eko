@@ -12,7 +12,7 @@ import {
   ExecutionContext,
 } from '../types';
 import { ToolRegistry } from './tool-registry';
-import { log } from '../log';
+import { logger } from '../log';
 
 /**
  * Eko core
@@ -31,7 +31,7 @@ export class Eko {
     if (ekoConfig) {
       this.ekoConfig = ekoConfig;
     } else {
-      log.warn("`ekoConfig` is missing when construct `Eko` instance, default to `{}`");
+      logger.warn("`ekoConfig` is missing when construct `Eko` instance, default to `{}`");
       this.ekoConfig = {};
     }
     
@@ -62,7 +62,7 @@ export class Eko {
         }
       });
     } else {
-      log.warn("`ekoConfig.callback` is missing when construct `Eko` instance.")
+      logger.warn("`ekoConfig.callback` is missing when construct `Eko` instance.")
     }
     
     tools.forEach(tool => this.toolRegistry.registerTool(tool));

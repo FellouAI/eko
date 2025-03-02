@@ -1,4 +1,4 @@
-import { log } from '../../log';
+import { logger } from '../../log';
 
 declare const eko: any;
 
@@ -30,7 +30,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             try {
               result = await eko.subListeners[request.event](request.params);
             } catch (e) {
-              log.error(e);
+              logger.error(e);
             }
           }
           sendResponse(result);
@@ -95,7 +95,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         }
       }
     } catch (e) {
-      log.error('onMessage error', e);
+      logger.error('onMessage error', e);
       sendResponse(false);
     }
   })();
@@ -179,7 +179,7 @@ function type(request: any): boolean {
       input.dispatchEvent(event);
     });
   }
-  log.info('type', input, request, result);
+  logger.debug('type', input, request, result);
   return true;
 }
 
@@ -197,7 +197,7 @@ function mouse_move(request: any): boolean {
     clientY: y,
   });
   let result = document.body.dispatchEvent(event);
-  log.info('mouse_move', document.body, request, result);
+  logger.debug('mouse_move', document.body, request, result);
   return true;
 }
 
@@ -235,7 +235,7 @@ function simulateMouseEvent(request: any, eventTypes: Array<string>, button: 0 |
       button, // 0 left; 2 right
     });
     let result = element.dispatchEvent(event);
-    log.info('simulateMouse', element, { ...request, eventTypes, button }, result);
+    logger.debug('simulateMouse', element, { ...request, eventTypes, button }, result);
   }
   return true;
 }
@@ -273,7 +273,7 @@ function scroll_to(request: any): boolean {
       behavior: 'smooth',
     });
   }
-  log.info('scroll_to', request);
+  logger.debug('scroll_to', request);
   return true;
 }
 

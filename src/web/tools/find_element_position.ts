@@ -3,7 +3,7 @@ import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { TaskPrompt, ElementRect } from '../../types/tools.types';
 import { extractOperableElements, getOperableElementRect } from './html_script';
 import { screenshot } from './browser';
-import { log } from '../../log';
+import { logger } from '../../log';
 
 /**
  * Find Element Position
@@ -37,7 +37,7 @@ export class FindElementPosition implements Tool<TaskPrompt, ElementRect | null>
     try {
       result = await executeWithHtmlElement(context, task_prompt);
     } catch (e) {
-      log.error(e);
+      logger.error(e);
       result = null;
     }
     if (!result) {

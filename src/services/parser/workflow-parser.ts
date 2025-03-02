@@ -165,10 +165,6 @@ export class WorkflowParser {
       [],
       variables,
       undefined,
-      {
-        logLevel: 'info',
-        includeTimestamp: true,
-      }
     );
 
     // Convert nodes

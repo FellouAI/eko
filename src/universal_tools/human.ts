@@ -9,7 +9,7 @@ import {
   HumanOperateResult,
 } from '../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../types/action.types';
-import { log } from '../log';
+import { logger } from '../log';
 
 export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextResult> {
   name: string;
@@ -36,20 +36,20 @@ export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextR
       throw new Error('Invalid parameters. Expected an object with a "question" property.');
     }
     const question = params.question;
-    log.info("question: " + question);
+    logger.debug("question: " + question);
     let onHumanInputText = context.callback?.hooks.onHumanInputText;
     if (onHumanInputText) {
       let answer;
       try {
         answer = await onHumanInputText(question);
       } catch (e) {
-        log.error(e);
+        logger.error(e);
         return {status: "Error: Cannot get user's answer.", answer: ""};
       }
-      log.info("answer: " + answer);
+      logger.debug("answer: " + answer);
       return {status: "OK", answer: answer};
     } else {
-      log.error("`onHumanInputText` not implemented");
+      logger.error("`onHumanInputText` not implemented");
       return {status: "Error: Cannot get user's answer.", answer: ""};
     }
   }
@@ -85,21 +85,21 @@ export class HumanInputSingleChoice implements Tool<HumanInputSingleChoiceInput,
     }
     const question = params.question;
     const choices = params.choices;
-    log.info("question: " + question);
-    log.info("choices: " + choices);
+    logger.debug("question: " + question);
+    logger.debug("choices: " + choices);
     let onHumanInputSingleChoice = context.callback?.hooks.onHumanInputSingleChoice;
     if (onHumanInputSingleChoice) {
       let answer;
       try {
         answer = await onHumanInputSingleChoice(question, choices);
       } catch (e) {
-        log.error(e);
+        logger.error(e);
         return {status: "Error: Cannot get user's answer.", answer: ""};
       }
-      log.info("answer: " + answer);
+      logger.debug("answer: " + answer);
       return {status: "OK", answer: answer};
     } else {
-      log.error("`onHumanInputSingleChoice` not implemented");
+      logger.error("`onHumanInputSingleChoice` not implemented");
       return {status: "Error: Cannot get user's answer.", answer: ""};
     }
   }
@@ -135,21 +135,21 @@ export class HumanInputMultipleChoice implements Tool<HumanInputMultipleChoiceIn
     }
     const question = params.question;
     const choices = params.choices;
-    log.info("question: " + question);
-    log.info("choices: " + choices);
+    logger.debug("question: " + question);
+    logger.debug("choices: " + choices);
     let onHumanInputMultipleChoice = context.callback?.hooks.onHumanInputMultipleChoice;
     if (onHumanInputMultipleChoice) {
       let answer;
       try {
         answer = await onHumanInputMultipleChoice(question, choices)
       } catch (e) {
-        log.error(e);
+        logger.error(e);
         return {status: "`onHumanInputMultipleChoice` not implemented", answer: []};
       }
-      log.info("answer: " + answer);
+      logger.debug("answer: " + answer);
       return {status: "OK", answer: answer};
     } else {
-      log.error("Cannot get user's answer.");
+      logger.error("Cannot get user's answer.");
       return {status: "Error: Cannot get user's answer.", answer: []};
     }
   }
@@ -180,20 +180,20 @@ export class HumanOperate implements Tool<HumanOperateInput, HumanOperateResult>
       throw new Error('Invalid parameters. Expected an object with a "reason" property.');
     }
     const reason = params.reason;
-    log.info("reason: " + reason);
+    logger.debug("reason: " + reason);
     let onHumanOperate = context.callback?.hooks.onHumanOperate;
     if (onHumanOperate) {
       let userOperation;
       try {
         userOperation = await onHumanOperate(reason);
       } catch (e) {
-        log.error(e);
+        logger.error(e);
         return {status: "`onHumanOperate` not implemented", userOperation: ""};
       }
-      log.info("userOperation: " + userOperation);
+      logger.debug("userOperation: " + userOperation);
       return {status: "OK", userOperation: userOperation};
     } else {
-      log.error("Cannot get user's operation.");
+      logger.error("Cannot get user's operation.");
       return {status: "Error: Cannot get user's operation.", userOperation: ""};
     }
   }

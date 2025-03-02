@@ -17,7 +17,7 @@ import {
   ChatCompletionCreateParamsBase,
   ChatCompletionCreateParamsStreaming,
 } from 'openai/resources/chat/completions';
-import { log } from '../../log';
+import { logger } from '../../log';
 
 interface PartialToolUse {
   id: string;
@@ -46,7 +46,7 @@ export class OpenaiProvider implements LLMProvider {
       typeof document !== 'undefined' &&
       (typeof param == 'string' || param.apiKey)
     ) {
-      log.warn(`
+      logger.warn(`
         ⚠️ Security Warning:
         DO NOT use API Keys in browser/frontend code!
         This will expose your credentials and may lead to unauthorized usage.

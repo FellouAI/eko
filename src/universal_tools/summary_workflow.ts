@@ -1,6 +1,6 @@
 import { SummaryWorkflowInput } from '../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../types/action.types';
-import { log } from '../log';
+import { logger } from '../log';
 
 export class SummaryWorkflow implements Tool<SummaryWorkflowInput, any> {
   name: string;
@@ -27,7 +27,7 @@ export class SummaryWorkflow implements Tool<SummaryWorkflowInput, any> {
       throw new Error('Invalid parameters. Expected an object with a "summary" property.');
     }
     const summary = params.summary;
-    log.info("Summary: " + summary);
+    logger.debug("Summary: " + summary);
 
     await context.callback?.hooks.onSummaryWorkflow?.(summary);
     return {status: "OK"};

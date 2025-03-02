@@ -1,10 +1,9 @@
-import { ExecutionLogger, LogOptions } from "@/log";
 import { Workflow, WorkflowNode, NodeInput, NodeOutput, ExecutionContext, LLMProvider, WorkflowCallback } from "../types";
 import { EkoConfig } from "../types/eko.types";
+import { logger } from "../log";
 
 export class WorkflowImpl implements Workflow {
   abort?: boolean;
-  private logger?: ExecutionLogger;
   abortControllers: Map<string, AbortController> = new Map<string, AbortController>();
 
   constructor(
@@ -15,16 +14,7 @@ export class WorkflowImpl implements Workflow {
     public nodes: WorkflowNode[] = [],
     public variables: Map<string, unknown> = new Map(),
     public llmProvider?: LLMProvider,
-    loggerOptions?: LogOptions
-  ) {
-    if (loggerOptions) {
-      this.logger = new ExecutionLogger(loggerOptions);
-    }
-  }
-
-  setLogger(logger: ExecutionLogger) {
-    this.logger = logger;
-  }
+  ) {}
 
   async cancel(): Promise<void> {
     this.abort = true;
@@ -70,7 +60,6 @@ export class WorkflowImpl implements Workflow {
         ekoConfig: this.ekoConfig,
         tools: new Map(node.action.tools.map(tool => [tool.name, tool])),
         callback,
-        logger: this.logger,
         next: () => context.__skip = true,
         abortAll: () => {
           this.abort = context.__abort = true;

@@ -1,6 +1,5 @@
 import { Action, ExecutionContext, Tool } from "./action.types";
 import { LLMProvider } from "./llm.types";
-import { ExecutionLogger } from "@/log";
 import { ExportFileParam } from "./tools.types";
 
 export interface NodeOutput {
@@ -31,7 +30,6 @@ export interface Workflow {
   variables: Map<string, any>;
   llmProvider?: LLMProvider;
 
-  setLogger(logger: ExecutionLogger): void;
   execute(callback?: WorkflowCallback): Promise<NodeOutput[]>;
   cancel(): Promise<void>;
   addNode(node: WorkflowNode): void;

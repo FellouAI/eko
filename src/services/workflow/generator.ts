@@ -6,7 +6,7 @@ import { ToolRegistry } from '../../core/tool-registry';
 import { createWorkflowPrompts, createWorkflowGenerationTool } from './templates';
 import { v4 as uuidv4 } from 'uuid';
 import { EkoConfig } from '@/types';
-import { log } from '../../log';
+import { logger } from '../../log';
 
 export class WorkflowGenerator {
   message_history: Message[] = [];
@@ -107,9 +107,9 @@ export class WorkflowGenerator {
     }
 
     // debug
-    log.debug("Debug the workflow...")
-    log.debug(workflowData);
-    log.debug("Debug the workflow...Done")    
+    logger.debug("Debug the workflow...")
+    logger.debug(workflowData);
+    logger.debug("Debug the workflow...Done")    
     
     return this.createWorkflowFromData(workflowData, ekoConfig);
   }
@@ -123,10 +123,6 @@ export class WorkflowGenerator {
       [],
       new Map(Object.entries(data.variables || {})),
       this.llmProvider,
-      {
-        logLevel: 'info',
-        includeTimestamp: true,
-      }
     );
 
     // Add nodes to workflow
