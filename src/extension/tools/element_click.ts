@@ -4,7 +4,7 @@ import { executeScript, getTabId, getWindowId } from '../utils';
 import { extractOperableElements, clickOperableElement } from './html_script';
 import { left_click, screenshot } from './browser';
 import { TaskPrompt } from '../../types/tools.types';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 /**
  * Element click
@@ -53,7 +53,7 @@ async function executeWithHtmlElement(
   task_prompt: string
 ): Promise<boolean> {
   let tabId = await getTabId(context);
-  let pseudoHtml = await executeScript(tabId, extractOperableElements, []);
+  let pseudoHtml = await executeScript(context.ekoConfig.chromeProxy, tabId, extractOperableElements, []);
   let messages: Message[] = [
     {
       role: 'user',
@@ -81,7 +81,7 @@ ${pseudoHtml}
   let json = content.substring(content.indexOf('{'), content.indexOf('}') + 1);
   let elementId = JSON.parse(json).elementId;
   if (elementId) {
-    return await executeScript(tabId, clickOperableElement, [elementId]);
+    return await executeScript(context.ekoConfig.chromeProxy, tabId, clickOperableElement, [elementId]);
   }
   return false;
 }
@@ -92,7 +92,7 @@ async function executeWithBrowserUse(
 ): Promise<boolean> {
   let tabId = await getTabId(context);
   let windowId = await getWindowId(context);
-  let screenshot_result = await screenshot(windowId, false);
+  let screenshot_result = await screenshot(context.ekoConfig.chromeProxy, windowId, false);
   let messages: Message[] = [
     {
       role: 'user',
@@ -135,6 +135,6 @@ async function executeWithBrowserUse(
   let response = await context.llmProvider.generateText(messages, llm_params);
   let input = response.toolCalls[0].input;
   let coordinate = input.coordinate as [number, number];
-  let click_result = await left_click(tabId, coordinate);
+  let click_result = await left_click(context.ekoConfig.chromeProxy, tabId, coordinate);
   return click_result;
 }

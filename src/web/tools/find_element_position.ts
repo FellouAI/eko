@@ -3,7 +3,7 @@ import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { TaskPrompt, ElementRect } from '../../types/tools.types';
 import { extractOperableElements, getOperableElementRect } from './html_script';
 import { screenshot } from './browser';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 /**
  * Find Element Position

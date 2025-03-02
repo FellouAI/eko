@@ -17,7 +17,7 @@ import {
   ChatCompletionCreateParamsBase,
   ChatCompletionCreateParamsStreaming,
 } from 'openai/resources/chat/completions';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 interface PartialToolUse {
   id: string;

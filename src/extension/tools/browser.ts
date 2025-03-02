@@ -1,8 +1,9 @@
 import { ScreenshotResult } from '../../types/tools.types';
 import { getPageSize } from '../utils';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 export async function type(
+  chromeProxy: any,
   tabId: number,
   text: string,
   coordinate?: [number, number]
@@ -10,10 +11,10 @@ export async function type(
   logger.debug('Sending type message to tab:', tabId, { text, coordinate });
   try {
     if (!coordinate) {
-      coordinate = (await cursor_position(tabId)).coordinate;
+      coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
     }
-    await mouse_move(tabId, coordinate);
-    const response = await chrome.tabs.sendMessage(tabId, {
+    await mouse_move(chromeProxy, tabId, coordinate);
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:type',
       text,
       coordinate,
@@ -27,6 +28,7 @@ export async function type(
 }
 
 export async function type_by(
+  chromeProxy: any,
   tabId: number,
   text: string,
   xpath?: string,
@@ -34,7 +36,7 @@ export async function type_by(
 ): Promise<any> {
   logger.debug('Sending type message to tab:', tabId, { text, xpath, highlightIndex });
   try {
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:type',
       text,
       xpath,
@@ -48,14 +50,14 @@ export async function type_by(
   }
 }
 
-export async function clear_input(tabId: number, coordinate?: [number, number]): Promise<any> {
-  logger.debug('Sending clear_input message to tab:', tabId, { coordinate });
+export async function clear_input(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any> {
+  console.log('Sending clear_input message to tab:', tabId, { coordinate });
   try {
     if (!coordinate) {
-      coordinate = (await cursor_position(tabId)).coordinate;
+      coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
     }
-    await mouse_move(tabId, coordinate);
-    const response = await chrome.tabs.sendMessage(tabId, {
+    await mouse_move(chromeProxy, tabId, coordinate);
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:type',
       text: '',
       coordinate,
@@ -69,13 +71,14 @@ export async function clear_input(tabId: number, coordinate?: [number, number]):
 }
 
 export async function clear_input_by(
+  chromeProxy: any,
   tabId: number,
   xpath?: string,
   highlightIndex?: number
 ): Promise<any> {
   logger.debug('Sending clear_input_by message to tab:', tabId, { xpath, highlightIndex });
   try {
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:type',
       text: '',
       xpath,
@@ -89,10 +92,10 @@ export async function clear_input_by(
   }
 }
 
-export async function mouse_move(tabId: number, coordinate: [number, number]): Promise<any> {
-  logger.debug('Sending mouse_move message to tab:', tabId, { coordinate });
+export async function mouse_move(chromeProxy: any, tabId: number, coordinate: [number, number]): Promise<any> {
+  console.log('Sending mouse_move message to tab:', tabId, { coordinate });
   try {
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:mouse_move',
       coordinate,
     });
@@ -104,13 +107,13 @@ export async function mouse_move(tabId: number, coordinate: [number, number]): P
   }
 }
 
-export async function left_click(tabId: number, coordinate?: [number, number]): Promise<any> {
-  logger.debug('Sending left_click message to tab:', tabId, { coordinate });
+export async function left_click(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any> {
+  console.log('Sending left_click message to tab:', tabId, { coordinate });
   try {
     if (!coordinate) {
-      coordinate = (await cursor_position(tabId)).coordinate;
+      coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
     }
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:left_click',
       coordinate,
     });
@@ -123,13 +126,14 @@ export async function left_click(tabId: number, coordinate?: [number, number]): 
 }
 
 export async function left_click_by(
+  chromeProxy: any,
   tabId: number,
   xpath?: string,
   highlightIndex?: number
 ): Promise<any> {
   logger.debug('Sending left_click_by message to tab:', tabId, { xpath, highlightIndex });
   try {
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:left_click',
       xpath,
       highlightIndex,
@@ -142,13 +146,13 @@ export async function left_click_by(
   }
 }
 
-export async function right_click(tabId: number, coordinate?: [number, number]): Promise<any> {
-  logger.debug('Sending right_click message to tab:', tabId, { coordinate });
+export async function right_click(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any> {
+  console.log('Sending right_click message to tab:', tabId, { coordinate });
   try {
     if (!coordinate) {
-      coordinate = (await cursor_position(tabId)).coordinate;
+      coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
     }
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:right_click',
       coordinate,
     });
@@ -161,13 +165,14 @@ export async function right_click(tabId: number, coordinate?: [number, number]):
 }
 
 export async function right_click_by(
+  chromeProxy: any,
   tabId: number,
   xpath?: string,
   highlightIndex?: number
 ): Promise<any> {
   logger.debug('Sending right_click_by message to tab:', tabId, { xpath, highlightIndex });
   try {
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:right_click',
       xpath,
       highlightIndex,
@@ -180,13 +185,13 @@ export async function right_click_by(
   }
 }
 
-export async function double_click(tabId: number, coordinate?: [number, number]): Promise<any> {
-  logger.debug('Sending double_click message to tab:', tabId, { coordinate });
+export async function double_click(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any> {
+  console.log('Sending double_click message to tab:', tabId, { coordinate });
   try {
     if (!coordinate) {
-      coordinate = (await cursor_position(tabId)).coordinate;
+      coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
     }
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:double_click',
       coordinate,
     });
@@ -199,13 +204,14 @@ export async function double_click(tabId: number, coordinate?: [number, number])
 }
 
 export async function double_click_by(
+  chromeProxy: any,
   tabId: number,
   xpath?: string,
   highlightIndex?: number
 ): Promise<any> {
   logger.debug('Sending double_click_by message to tab:', tabId, { xpath, highlightIndex });
   try {
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:double_click',
       xpath,
       highlightIndex,
@@ -218,18 +224,18 @@ export async function double_click_by(
   }
 }
 
-export async function screenshot(windowId: number, compress?: boolean): Promise<ScreenshotResult> {
-  logger.debug('Taking screenshot of window:', windowId, { compress });
+export async function screenshot(chromeProxy: any, windowId: number, compress?: boolean): Promise<ScreenshotResult> {
+  console.log('Taking screenshot of window:', windowId, { compress });
   try {
     let dataUrl;
     if (compress) {
-      dataUrl = await chrome.tabs.captureVisibleTab(windowId as number, {
+      dataUrl = await chromeProxy.tabs.captureVisibleTab(windowId as number, {
         format: 'jpeg',
         quality: 60, // 0-100
       });
       dataUrl = await compress_image(dataUrl, 0.7, 1);
     } else {
-      dataUrl = await chrome.tabs.captureVisibleTab(windowId as number, {
+      dataUrl = await chromeProxy.tabs.captureVisibleTab(windowId as number, {
         format: 'jpeg',
         quality: 50,
       });
@@ -282,11 +288,11 @@ export async function compress_image(
   }
 }
 
-export async function scroll_to(tabId: number, coordinate: [number, number]): Promise<any> {
-  logger.debug('Sending scroll_to message to tab:', tabId, { coordinate });
+export async function scroll_to(chromeProxy: any, tabId: number, coordinate: [number, number]): Promise<any> {
+  console.log('Sending scroll_to message to tab:', tabId, { coordinate });
   try {
-    let from_coordinate = (await cursor_position(tabId)).coordinate;
-    const response = await chrome.tabs.sendMessage(tabId, {
+    let from_coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:scroll_to',
       from_coordinate,
       to_coordinate: coordinate,
@@ -300,13 +306,14 @@ export async function scroll_to(tabId: number, coordinate: [number, number]): Pr
 }
 
 export async function scroll_to_by(
+  chromeProxy: any,
   tabId: number,
   xpath?: string,
   highlightIndex?: number
 ): Promise<any> {
   logger.debug('Sending scroll_to_by message to tab:', tabId, { xpath, highlightIndex });
   try {
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:scroll_to',
       xpath,
       highlightIndex,
@@ -320,13 +327,14 @@ export async function scroll_to_by(
 }
 
 export async function get_dropdown_options(
+  chromeProxy: any,
   tabId: number,
   xpath?: string,
   highlightIndex?: number
 ): Promise<any> {
   logger.debug('Sending get_dropdown_options message to tab:', tabId, { xpath, highlightIndex });
   try {
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:get_dropdown_options',
       xpath,
       highlightIndex,
@@ -340,6 +348,7 @@ export async function get_dropdown_options(
 }
 
 export async function select_dropdown_option(
+  chromeProxy: any,
   tabId: number,
   text: string,
   xpath?: string,
@@ -347,7 +356,7 @@ export async function select_dropdown_option(
 ): Promise<any> {
   logger.debug('Sending select_dropdown_option message to tab:', tabId, { text, xpath, highlightIndex });
   try {
-    const response = await chrome.tabs.sendMessage(tabId, {
+    const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:select_dropdown_option',
       text,
       xpath,
@@ -361,12 +370,12 @@ export async function select_dropdown_option(
   }
 }
 
-export async function cursor_position(tabId: number): Promise<{
+export async function cursor_position(chromeProxy: any, tabId: number): Promise<{
   coordinate: [number, number];
 }> {
   logger.debug('Sending cursor_position message to tab:', tabId);
   try {
-    let result: any = await chrome.tabs.sendMessage(tabId, {
+    let result: any = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:cursor_position',
     });
     logger.debug('Got cursor position:', result.coordinate);
@@ -377,11 +386,11 @@ export async function cursor_position(tabId: number): Promise<{
   }
 }
 
-export async function size(tabId?: number): Promise<[number, number]> {
-  logger.debug('Getting page size for tab:', tabId);
+export async function size(chromeProxy: any, tabId?: number): Promise<[number, number]> {
+  console.log('Getting page size for tab:', tabId);
   try {
-    const pageSize = await getPageSize(tabId);
-    logger.debug('Got page size:', pageSize);
+    const pageSize = await getPageSize(chromeProxy, tabId);
+    console.log('Got page size:', pageSize);
     return pageSize;
   } catch (e) {
     logger.error('Failed to get page size:', e);

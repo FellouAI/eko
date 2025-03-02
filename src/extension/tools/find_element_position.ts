@@ -4,7 +4,7 @@ import { TaskPrompt, ElementRect } from '../../types/tools.types';
 import { executeScript, getTabId, getWindowId } from '../utils';
 import { extractOperableElements, getOperableElementRect } from './html_script';
 import { screenshot } from './browser';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 /**
  * Find Element Position
@@ -53,7 +53,7 @@ async function executeWithHtmlElement(
   task_prompt: string
 ): Promise<ElementRect | null> {
   let tabId = await getTabId(context);
-  let pseudoHtml = await executeScript(tabId, extractOperableElements, []);
+  let pseudoHtml = await executeScript(context.ekoConfig.chromeProxy, tabId, extractOperableElements, []);
   let messages: Message[] = [
     {
       role: 'user',
@@ -82,7 +82,7 @@ ${pseudoHtml}
   let json = content.substring(content.indexOf('{'), content.indexOf('}') + 1);
   let elementId = JSON.parse(json).elementId;
   if (elementId) {
-    return await executeScript(tabId, getOperableElementRect, [elementId]);
+    return await executeScript(context.ekoConfig.chromeProxy, tabId, getOperableElementRect, [elementId]);
   }
   return null;
 }
@@ -93,7 +93,7 @@ async function executeWithBrowserUse(
 ): Promise<ElementRect | null> {
   let tabId = await getTabId(context);
   let windowId = await getWindowId(context);
-  let screenshot_result = await screenshot(windowId, false);
+  let screenshot_result = await screenshot(context.ekoConfig.chromeProxy, windowId, false);
   let messages: Message[] = [
     {
       role: 'user',

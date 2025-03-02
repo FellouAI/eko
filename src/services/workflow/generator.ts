@@ -6,7 +6,7 @@ import { ToolRegistry } from '../../core/tool-registry';
 import { createWorkflowPrompts, createWorkflowGenerationTool } from './templates';
 import { v4 as uuidv4 } from 'uuid';
 import { EkoConfig } from '@/types';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 export class WorkflowGenerator {
   message_history: Message[] = [];
@@ -92,8 +92,26 @@ export class WorkflowGenerator {
 
     const workflowData = response.toolCalls[0].input.workflow as any;
 
-    
+    // debug
+    console.log("Debug the workflow...")
+    console.log({ ...workflowData});
 
+    // Add workflow summary subtask
+    (workflowData.nodes as any[]).push({
+      "id": "final",
+      "type": "action",
+      "dependencies": workflowData.nodes.map((node: { id: any; }) => node.id),
+      "action": {
+        "type": "prompt",
+        "name": "Summarize the workflow.",
+        "description": "Summarize briefly what this workflow has accomplished. Your summary should be based on user\'s original query. You MUST use the 'summary_workflow' tool.",
+        "tools": [
+          "summary_workflow"
+        ]
+      },
+    })
+    console.log("Debug the workflow...Done")    
+    
     // Validate all tools exist
     for (const node of workflowData.nodes) {
       if (!this.toolRegistry.hasTools(node.action.tools)) {
@@ -106,11 +124,6 @@ export class WorkflowGenerator {
       workflowData.id = uuidv4();
     }
 
-    // debug
-    logger.debug("Debug the workflow...")
-    logger.debug(workflowData);
-    logger.debug("Debug the workflow...Done")    
-    
     return this.createWorkflowFromData(workflowData, ekoConfig);
   }
 

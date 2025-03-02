@@ -25,7 +25,7 @@ export class RequestLogin implements Tool<any, any> {
     let tabId = await getTabId(context);
     let task_id = 'login_required_' + tabId;
     const request_user_help = async () => {
-      await chrome.tabs.sendMessage(tabId, {
+      await context.ekoConfig.chromeProxy.tabs.sendMessage(tabId, {
         type: 'request_user_help',
         task_id,
         failure_type: 'login_required',
@@ -40,20 +40,20 @@ export class RequestLogin implements Tool<any, any> {
       }
     }, 2000);
     try {
-      return await this.awaitLogin(tabId, task_id);
+      return await this.awaitLogin(context.ekoConfig.chromeProxy, tabId, task_id);
     } finally {
       clearInterval(login_interval);
     }
   }
 
-  async awaitLogin(tabId: number, task_id: string): Promise<boolean> {
+  async awaitLogin(chromeProxy: any, tabId: number, task_id: string): Promise<boolean> {
     return new Promise((resolve) => {
       const checkTabClosedInterval = setInterval(async () => {
-        const tabExists = await doesTabExists(tabId);
+        const tabExists = await doesTabExists(chromeProxy, tabId);
         if (!tabExists) {
           clearInterval(checkTabClosedInterval);
           resolve(false);
-          chrome.runtime.onMessage.removeListener(listener);
+          chromeProxy.runtime.onMessage.removeListener(listener);
         }
       }, 1000);
       const listener = (message: any) => {
@@ -62,13 +62,13 @@ export class RequestLogin implements Tool<any, any> {
           clearInterval(checkTabClosedInterval);
         }
       };
-      chrome.runtime.onMessage.addListener(listener);
+      chromeProxy.runtime.onMessage.addListener(listener);
     });
   }
 
   async isLoginIn(context: ExecutionContext): Promise<boolean> {
     let windowId = await getWindowId(context);
-    let screenshot_result = await screenshot(windowId, true);
+    let screenshot_result = await screenshot(context.ekoConfig.chromeProxy, windowId, true);
     let messages: Message[] = [
       {
         role: 'user',

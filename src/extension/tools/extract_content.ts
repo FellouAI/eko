@@ -27,10 +27,10 @@ export class ExtractContent implements Tool<any, ExtractContentResult> {
    */
   async execute(context: ExecutionContext, params: any): Promise<ExtractContentResult> {
     let tabId = await getTabId(context);
-    let tab = await chrome.tabs.get(tabId);
-    await injectScript(tabId);
+    let tab = await context.ekoConfig.chromeProxy.tabs.get(tabId);
+    await injectScript(context.ekoConfig.chromeProxy, tabId);
     await sleep(500);
-    let content = await executeScript(tabId, () => {
+    let content = await executeScript(context.ekoConfig.chromeProxy, tabId, () => {
       return eko.extractHtmlContent();
     }, []);
     return {

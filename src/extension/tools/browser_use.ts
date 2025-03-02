@@ -2,7 +2,7 @@ import { BrowserUseParam, BrowserUseResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { getWindowId, getTabId, sleep, injectScript, executeScript } from '../utils';
 import * as browser from './browser';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 /**
  * Browser Use for general
@@ -77,6 +77,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
    * @returns > { success: true, image?: { type: 'base64', media_type: 'image/jpeg', data: '/9j...' }, text?: string }
    */
   async execute(context: ExecutionContext, params: BrowserUseParam): Promise<BrowserUseResult> {
+    console.log("execute 'browser_use'...");
     try {
       if (params === null || !params.action) {
         throw new Error('Invalid parameters. Expected an object with a "action" property.');
@@ -109,43 +110,43 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
           if (params.text == null) {
             throw new Error('text parameter is required');
           }
-          await browser.clear_input_by(tabId, selector_xpath, params.index);
-          result = await browser.type_by(tabId, params.text, selector_xpath, params.index);
+          await browser.clear_input_by(context.ekoConfig.chromeProxy, tabId, selector_xpath, params.index);
+          result = await browser.type_by(context.ekoConfig.chromeProxy, tabId, params.text, selector_xpath, params.index);
           await sleep(200);
           break;
         case 'click':
           if (params.index == null) {
             throw new Error('index parameter is required');
           }
-          result = await browser.left_click_by(tabId, selector_xpath, params.index);
+          result = await browser.left_click_by(context.ekoConfig.chromeProxy, tabId, selector_xpath, params.index);
           await sleep(100);
           break;
         case 'right_click':
           if (params.index == null) {
             throw new Error('index parameter is required');
           }
-          result = await browser.right_click_by(tabId, selector_xpath, params.index);
+          result = await browser.right_click_by(context.ekoConfig.chromeProxy, tabId, selector_xpath, params.index);
           await sleep(100);
           break;
         case 'double_click':
           if (params.index == null) {
             throw new Error('index parameter is required');
           }
-          result = await browser.double_click_by(tabId, selector_xpath, params.index);
+          result = await browser.double_click_by(context.ekoConfig.chromeProxy, tabId, selector_xpath, params.index);
           await sleep(100);
           break;
         case 'scroll_to':
           if (params.index == null) {
             throw new Error('index parameter is required');
           }
-          result = await browser.scroll_to_by(tabId, selector_xpath, params.index);
+          result = await browser.scroll_to_by(context.ekoConfig.chromeProxy, tabId, selector_xpath, params.index);
           await sleep(500);
           break;
         case 'extract_content':
-          let tab = await chrome.tabs.get(tabId);
-          await injectScript(tabId);
+          let tab = await context.ekoConfig.chromeProxy.tabs.get(tabId);
+          await injectScript(context.ekoConfig.chromeProxy, tabId);
           await sleep(200);
-          let content = await executeScript(tabId, () => {
+          let content = await executeScript(context.ekoConfig.chromeProxy, tabId, () => {
             return eko.extractHtmlContent();
           }, []);
           result = {
@@ -158,7 +159,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
           if (params.index == null) {
             throw new Error('index parameter is required');
           }
-          result = await browser.get_dropdown_options(tabId, selector_xpath, params.index);
+          result = await browser.get_dropdown_options(context.ekoConfig.chromeProxy, tabId, selector_xpath, params.index);
           break;
         case 'select_dropdown_option':
           if (params.index == null) {
@@ -168,6 +169,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
             throw new Error('text parameter is required');
           }
           result = await browser.select_dropdown_option(
+            context.ekoConfig.chromeProxy, 
             tabId,
             params.text,
             selector_xpath,
@@ -175,24 +177,32 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
           );
           break;
         case 'screenshot_extract_element':
+          console.log("execute 'screenshot_extract_element'...");
           await sleep(100);
-          await injectScript(tabId, 'build_dom_tree.js');
+          console.log("injectScript...");
+          await injectScript(context.ekoConfig.chromeProxy, tabId, 'build_dom_tree.js');
           await sleep(100);
-          let element_result = await executeScript(tabId, () => {
+          console.log("executeScript...");
+          let element_result = await executeScript(context.ekoConfig.chromeProxy, tabId, () => {
             return (window as any).get_clickable_elements(true);
           }, []);
           context.selector_map = element_result.selector_map;
-          let screenshot = await browser.screenshot(windowId, true);
-          await executeScript(tabId, () => {
+          console.log("browser.screenshot...");
+          let screenshot = await browser.screenshot(context.ekoConfig.chromeProxy, windowId, true);
+          console.log("executeScript #2...");
+          await executeScript(context.ekoConfig.chromeProxy, tabId, () => {
             return (window as any).remove_highlight();
           }, []);
           result = { image: screenshot.image, text: element_result.element_str };
+          console.log("execute 'screenshot_extract_element'...done");
           break;
         default:
           throw Error(
             `Invalid parameters. The "${params.action}" value is not included in the "action" enumeration.`
           );
       }
+      console.log("execute 'browser_use'...done, result=");
+      console.log(result);
       if (result) {
         return { success: true, ...result };
       } else {

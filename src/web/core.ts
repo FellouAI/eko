@@ -1,6 +1,6 @@
 import * as tools from './tools';
 import { Tool } from '../types';
-import { logger } from '../log';
+import { logger } from '../common/log';
 
 export function loadTools(): Map<string, Tool<any, any>> {
   let toolsMap = new Map<string, Tool<any, any>>();

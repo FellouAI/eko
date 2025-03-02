@@ -4,6 +4,9 @@ import typescript from '@rollup/plugin-typescript';
 import json from '@rollup/plugin-json';
 import copy from 'rollup-plugin-copy';
 import replace from '@rollup/plugin-replace';
+import { execSync } from 'child_process';
+
+const commitHash = execSync('git rev-parse HEAD').toString().trim();
 
 export default [
   {
@@ -27,7 +30,10 @@ export default [
         declarationDir: 'dist',
         include: ['src/**/*'],
         exclude: ['node_modules', 'dist', 'src/extension/**/*', 'src/web/**/*', 'src/nodejs/**/*', 'src/fellou/**/*']
-      })
+      }),
+      replace({
+        'process.env.COMMIT_HASH': JSON.stringify(commitHash),
+      }),
     ]
   },
   {
@@ -49,8 +55,11 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/extension/**/*', 'src/universal_tools/**/*'],
+        include: ['src/common/**/*', 'src/types/*', 'src/extension/**/*'],
         exclude: ['src/extension/script']
+      }),
+      replace({
+        'process.env.COMMIT_HASH': JSON.stringify(commitHash),
       }),
       copy({
         targets: [
@@ -71,9 +80,12 @@ export default [
       typescript({ 
         tsconfig: './tsconfig.json',
         declaration: false,
-        include: ['src/extension/content/*'],
+        include: ['src/common/**/*', 'src/extension/content/*'],
         declarationDir: 'dist'
-      })
+      }),
+      replace({
+        'process.env.COMMIT_HASH': JSON.stringify(commitHash),
+      }),
     ]
   },
   {
@@ -95,8 +107,11 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/web/**/*', 'src/universal_tools/**/*']
-      })
+        include: ['src/common/**/*', 'src/types/*', 'src/web/**/*']
+      }),
+      replace({
+        'process.env.COMMIT_HASH': JSON.stringify(commitHash),
+      }),
     ]
   },
   {
@@ -115,8 +130,11 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/nodejs/**/*', 'src/universal_tools/**/*']
-      })
+        include: ['src/common/**/*', 'src/types/*', 'src/nodejs/**/*']
+      }),
+      replace({
+        'process.env.COMMIT_HASH': JSON.stringify(commitHash),
+      }),
     ]
   },
   {
@@ -135,7 +153,10 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/nodejs/**/*', 'src/universal_tools/**/*']
+        include: ['src/common/**/*', 'src/types/*', 'src/nodejs/**/*']
+      }),
+      replace({
+        'process.env.COMMIT_HASH': JSON.stringify(commitHash),
       }),
       replace({
         preventAssignment: true,
@@ -164,8 +185,11 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/types/*', 'src/fellou/**/*']
-      })
+        include: ['src/common/**/*', 'src/types/*', 'src/fellou/**/*']
+      }),
+      replace({
+        'process.env.COMMIT_HASH': JSON.stringify(commitHash),
+      }),
     ]
   }
 ];

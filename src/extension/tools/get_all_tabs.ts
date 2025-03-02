@@ -1,7 +1,7 @@
 import { BrowserTab } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { getTabId, executeScript, injectScript, sleep } from '../utils';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 export class GetAllTabs implements Tool<any, BrowserTab[]> {
   name: string;
@@ -18,9 +18,9 @@ export class GetAllTabs implements Tool<any, BrowserTab[]> {
   }
 
   async execute(context: ExecutionContext, params: any): Promise<BrowserTab[]> {
-    const currentWindow = await chrome.windows.getCurrent();
+    const currentWindow = await context.ekoConfig.chromeProxy.windows.getCurrent();
     const windowId = currentWindow.id;
-    const tabs = await chrome.tabs.query({ windowId });
+    const tabs = await context.ekoConfig.chromeProxy.tabs.query({ windowId });
     const tabsInfo: BrowserTab[] = [];
   
     for (const tab of tabs) {
@@ -29,9 +29,9 @@ export class GetAllTabs implements Tool<any, BrowserTab[]> {
         continue;
       }
   
-      await injectScript(tab.id);
+      await injectScript(context.ekoConfig.chromeProxy, tab.id);
       await sleep(500);
-      let content = await executeScript(tab.id, () => {
+      let content = await executeScript(context.ekoConfig.chromeProxy, tab.id, () => {
         return eko.extractHtmlContent();
       }, []);
   

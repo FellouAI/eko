@@ -5,6 +5,7 @@ import { OpenaiProvider } from './services/llm/openai-provider';
 import { WorkflowParser } from './services/parser/workflow-parser';
 import { WorkflowGenerator } from "./services/workflow/generator"
 import { LLMProviderFactory } from './services/llm/provider-factory';
+import { createChromeApiProxy } from './common/chrome/proxy';
 
 export default Eko;
 
@@ -16,4 +17,5 @@ export {
   ToolRegistry,
   WorkflowParser,
   LLMProviderFactory,
+  createChromeApiProxy,
 }

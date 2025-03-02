@@ -27,7 +27,7 @@ Generate a complete workflow that:
 3. Ensures each action has appropriate input/output schemas, and that the "tools" field in each action is populated with the sufficient subset of all available tools needed to complete the action
 4. Creates a clear, logical flow to accomplish the user's goal
 5. Includes detailed descriptions for each action, ensuring that the actions, when combined, is a complete solution to the user's problem
-6. You should always add a SubTask at the end of the workflow to summarize it, and this SubTask should always call the "summary_workflow" tool. It's dependencies should be all of the SubTasks`;
+6. Do not use 'summary_workflow' tool`;
     },
 
     formatUserPrompt: (requirement: string) =>

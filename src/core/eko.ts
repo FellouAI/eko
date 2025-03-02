@@ -3,16 +3,17 @@ import { WorkflowGenerator } from '../services/workflow/generator';
 import {
   LLMConfig,
   EkoConfig,
+  DefaultEkoConfig,
   EkoInvokeParam,
   LLMProvider,
   Tool,
   Workflow,
   WorkflowCallback,
-  NodeOutput,
   ExecutionContext,
+  WorkflowResult
 } from '../types';
 import { ToolRegistry } from './tool-registry';
-import { logger } from '../log';
+import { logger } from '../common/log';
 
 /**
  * Eko core
@@ -26,16 +27,20 @@ export class Eko {
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
 
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
+    console.info("using Eko@" + process.env.COMMIT_HASH);
     this.llmProvider = LLMProviderFactory.buildLLMProvider(llmConfig);
-    
-    if (ekoConfig) {
-      this.ekoConfig = ekoConfig;
-    } else {
-      logger.warn("`ekoConfig` is missing when construct `Eko` instance, default to `{}`");
-      this.ekoConfig = {};
-    }
-    
+    this.ekoConfig = this.buildEkoConfig(ekoConfig);
     this.registerTools();
+  }
+
+  private buildEkoConfig(ekoConfig: Partial<EkoConfig> | undefined): EkoConfig {
+    if (!ekoConfig) {
+      console.warn("`ekoConfig` is missing when construct `Eko` instance");
+    }
+    return {
+      ...DefaultEkoConfig,
+      ...ekoConfig,
+    };
   }
 
   private registerTools() {
@@ -87,7 +92,7 @@ export class Eko {
     return workflow;
   }
 
-  public async execute(workflow: Workflow): Promise<NodeOutput[]> {
+  public async execute(workflow: Workflow): Promise<WorkflowResult> {
     // Inject LLM provider at workflow level
     workflow.llmProvider = this.llmProvider;
 
@@ -107,7 +112,9 @@ export class Eko {
       }
     }
 
-    return await workflow.execute(this.ekoConfig.callback);
+    const result = await workflow.execute(this.ekoConfig.callback);
+    console.log(result);
+    return result;
   }
 
   public async cancel(workflow: Workflow): Promise<void> {

@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas';
 import { ScreenshotResult } from '../../types/tools.types';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 export function type(text: string, xpath?: string, highlightIndex?: number): boolean {
   return do_input(text, xpath, highlightIndex);

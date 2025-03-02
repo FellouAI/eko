@@ -9,7 +9,7 @@ function get_clickable_elements(doHighlightElements = true, includeAttributes) {
   window.clickable_elements = {};
   let page_tree = build_dom_tree(doHighlightElements);
   let element_tree = parse_node(page_tree);
-  let selector_map = create_selector_map(element_tree);
+  let selector_map = create_selector_map(element_tree, true);
   let element_str = clickable_elements_to_string(element_tree, includeAttributes);
   return { element_str, selector_map };
 }
@@ -105,12 +105,12 @@ function clickable_elements_to_string(element_tree, includeAttributes) {
   return formatted_text.join('\n');
 }
 
-function create_selector_map(element_tree) {
+function create_selector_map(element_tree, ignore_element_obj) {
   let selector_map = {};
   function process_node(node) {
     if (node.tagName) {
       if (node.highlightIndex != null) {
-        selector_map[node.highlightIndex] = node;
+        selector_map[node.highlightIndex] = ignore_element_obj ? { xpath: node.xpath } : node;
       }
       for (let i = 0; i < node.children.length; i++) {
         process_node(node.children[i]);

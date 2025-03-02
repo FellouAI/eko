@@ -28,6 +28,6 @@ export class Screenshot implements Tool<any, ScreenshotResult> {
    */
   async execute(context: ExecutionContext, params: unknown): Promise<ScreenshotResult> {
     let windowId = await getWindowId(context);
-    return await screenshot(windowId);
+    return await screenshot(context.ekoConfig.chromeProxy, windowId);
   }
 }

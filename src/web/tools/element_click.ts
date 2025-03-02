@@ -3,7 +3,7 @@ import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { extractOperableElements, clickOperableElement, xpath } from './html_script';
 import { left_click, screenshot } from './browser';
 import { TaskPrompt } from '../../types/tools.types';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 /**
  * Element click

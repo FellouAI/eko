@@ -7,7 +7,7 @@ import {
   LLMStreamHandler,
   ToolCall,
 } from '../../types/llm.types';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 interface PartialToolUse {
   id: string;

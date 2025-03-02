@@ -2,7 +2,7 @@ import { BrowserUseParam, BrowserUseResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { chromium, Browser, Page, ElementHandle, BrowserContext } from 'playwright';
 import { run_build_dom_tree } from '../script/build_dom_tree';
-import { logger } from '../../log';
+import { logger } from '../../common/log';
 
 /**
  * Browser Use => `npx playwright install`

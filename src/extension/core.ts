@@ -1,22 +1,22 @@
 import * as tools from './tools';
 import { Tool } from '../types';
-import { logger } from '../log';
+import { logger } from '../common/log';
 
-export async function pub(tabId: number, event: string, params: any): Promise<any> {
-  return await chrome.tabs.sendMessage(tabId as number, {
+export async function pub(chromeProxy: any, tabId: number, event: string, params: any): Promise<any> {
+  return await chromeProxy.tabs.sendMessage(tabId as number, {
     type: 'eko:message',
     event,
     params,
   });
 }
 
-export async function getLLMConfig(name: string = 'llmConfig'): Promise<{
+export async function getLLMConfig(chromeProxy: any, name: string = 'llmConfig'): Promise<{
   llm?: string;
   apiKey?: string;
   modelName?: string;
   options?: {[key:string]:any};
 } | undefined> {
-  let result = await chrome.storage.sync.get([name]);
+  let result = await chromeProxy.storage.sync.get([name]);
   return result[name];
 }
 
