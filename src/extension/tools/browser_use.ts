@@ -77,7 +77,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
    * @returns > { success: true, image?: { type: 'base64', media_type: 'image/jpeg', data: '/9j...' }, text?: string }
    */
   async execute(context: ExecutionContext, params: BrowserUseParam): Promise<BrowserUseResult> {
-    console.log("execute 'browser_use'...");
+    logger.debug("execute 'browser_use'...");
     try {
       if (params === null || !params.action) {
         throw new Error('Invalid parameters. Expected an object with a "action" property.');
@@ -177,32 +177,32 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
           );
           break;
         case 'screenshot_extract_element':
-          console.log("execute 'screenshot_extract_element'...");
+          logger.debug("execute 'screenshot_extract_element'...");
           await sleep(100);
-          console.log("injectScript...");
+          logger.debug("injectScript...");
           await injectScript(context.ekoConfig.chromeProxy, tabId, 'build_dom_tree.js');
           await sleep(100);
-          console.log("executeScript...");
+          logger.debug("executeScript...");
           let element_result = await executeScript(context.ekoConfig.chromeProxy, tabId, () => {
             return (window as any).get_clickable_elements(true);
           }, []);
           context.selector_map = element_result.selector_map;
-          console.log("browser.screenshot...");
+          logger.debug("browser.screenshot...");
           let screenshot = await browser.screenshot(context.ekoConfig.chromeProxy, windowId, true);
-          console.log("executeScript #2...");
+          logger.debug("executeScript #2...");
           await executeScript(context.ekoConfig.chromeProxy, tabId, () => {
             return (window as any).remove_highlight();
           }, []);
           result = { image: screenshot.image, text: element_result.element_str };
-          console.log("execute 'screenshot_extract_element'...done");
+          logger.debug("execute 'screenshot_extract_element'...done");
           break;
         default:
           throw Error(
             `Invalid parameters. The "${params.action}" value is not included in the "action" enumeration.`
           );
       }
-      console.log("execute 'browser_use'...done, result=");
-      console.log(result);
+      logger.debug("execute 'browser_use'...done, result=");
+      logger.debug(result);
       if (result) {
         return { success: true, ...result };
       } else {

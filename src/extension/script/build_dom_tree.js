@@ -643,7 +643,7 @@ function build_dom_tree(doHighlightElements) {
           nodeData.children.push(...iframeChildren);
         }
       } catch (e) {
-        console.warn('Unable to access iframe:', node);
+        logger.warn('Unable to access iframe:', node);
       }
     } else {
       const children = Array.from(node.childNodes).map((child) =>

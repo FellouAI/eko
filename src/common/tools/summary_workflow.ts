@@ -1,5 +1,6 @@
 import { SummaryWorkflowInput } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
+import { logger } from '../log';
 
 export class SummaryWorkflow implements Tool<SummaryWorkflowInput, any> {
   name: string;
@@ -29,8 +30,8 @@ export class SummaryWorkflow implements Tool<SummaryWorkflowInput, any> {
     if (typeof params !== 'object' || params === null || !params.summary) {
       throw new Error('Invalid parameters. Expected an object with a "summary" property.');
     }
-    console.log("isSuccessful: " + params.isSuccessful);
-    console.log("summary: " + params.summary);
+    logger.debug("isSuccessful: " + params.isSuccessful);
+    logger.debug("summary: " + params.summary);
     context.variables.set("workflow_is_successful", params.isSuccessful);
     context.variables.set("workflow_summary", params.summary);
     await context.callback?.hooks.onSummaryWorkflow?.(params.summary);

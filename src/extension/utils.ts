@@ -32,7 +32,7 @@ export async function getWindowId(context: ExecutionContext): Promise<number> {
   }
 
   if (!windowId) {
-    console.warn("`getWindowId()` returns " + windowId);
+    logger.warn("`getWindowId()` returns " + windowId);
   }
 
   return windowId as number;
@@ -75,7 +75,7 @@ export function getCurrentTabId(chromeProxy: any, windowId?: number | undefined)
   return new Promise((resolve, reject) => {
     chromeProxy.tabs.query({ windowId, active: true, lastFocusedWindow: true }, function (tabs: any) {
       if (chromeProxy.runtime.lastError) {
-        console.error('Chrome runtime error:', chromeProxy.runtime.lastError);
+        logger.error('Chrome runtime error:', chromeProxy.runtime.lastError);
         reject(chromeProxy.runtime.lastError);
         return;
       }

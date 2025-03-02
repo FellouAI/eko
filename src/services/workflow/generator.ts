@@ -93,8 +93,8 @@ export class WorkflowGenerator {
     const workflowData = response.toolCalls[0].input.workflow as any;
 
     // debug
-    console.log("Debug the workflow...")
-    console.log({ ...workflowData});
+    logger.debug("Debug the workflow...")
+    logger.debug({ ...workflowData});
 
     // Add workflow summary subtask
     (workflowData.nodes as any[]).push({
@@ -110,7 +110,7 @@ export class WorkflowGenerator {
         ]
       },
     })
-    console.log("Debug the workflow...Done")    
+    logger.debug("Debug the workflow...Done")    
     
     // Validate all tools exist
     for (const node of workflowData.nodes) {

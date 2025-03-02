@@ -114,13 +114,13 @@ export class WorkflowImpl implements Workflow {
     let node_outputs = terminalNodes.map(node => node.output);
     
     // Special context variables
-    console.log("debug special context variables...");
+    logger.debug("debug special context variables...");
     const workflowIsSuccessful = this.variables.get("workflow_is_successful");
-    console.log(workflowIsSuccessful);
+    logger.debug(workflowIsSuccessful);
     const workflowSummary = this.variables.get("workflow_summary");
-    console.log(workflowSummary);
+    logger.debug(workflowSummary);
     const workflowTranscript = this.variables.get("workflow_transcript");
-    console.log(workflowTranscript);
+    logger.debug(workflowTranscript);
 
     return {
       isSuccessful: workflowIsSuccessful as boolean,

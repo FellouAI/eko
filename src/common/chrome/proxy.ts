@@ -21,9 +21,10 @@
  * ```
  * In this example, `tabs_get` is a mock implementation that logs the `tabId` before calling the original `chrome.tabs.get` method, and the same as `chrome.windows.create` method.
  */
+import { logger } from '../log';
 export function createChromeApiProxy(mockClass: any): any {
-  console.log("debug mockClass:");
-  console.log(mockClass);
+  logger.debug("debug mockClass:");
+  logger.debug(mockClass);
 
   return new Proxy(chrome, {
     get(target: any, prop: string | symbol) {
