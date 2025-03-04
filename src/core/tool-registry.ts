@@ -8,12 +8,18 @@ export class ToolRegistry {
   private tools: Map<string, Tool<any, any>> = new Map();
 
   registerTool(tool: Tool<any, any>): void {
+    if (this.tools.has(tool.name)) {
+      throw new Error(`Tool with name "${tool.name}" is already registered`);
+    }
     this.tools.set(tool.name, tool);
-  }
+  }  
 
   unregisterTool(toolName: string): boolean {
+    if (!this.tools.has(toolName)) {
+      throw new Error(`Tool with name "${toolName}" does not exist`);
+    }
     return this.tools.delete(toolName);
-  }
+  }  
 
   getTool(toolName: string): Tool<any, any> {
     const tool = this.tools.get(toolName);
