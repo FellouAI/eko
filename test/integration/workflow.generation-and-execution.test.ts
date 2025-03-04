@@ -131,21 +131,13 @@ describeIntegration('Minimal Workflow Integration with Generation', () => {
     await saveWorkflowToFile(dsl, 'calculator.json');
 
     // Execute workflow
-    await workflow.execute();
+    const workflowResult = await workflow.execute();
 
-    // Log all context variables
-    console.log('Context variables:', Object.fromEntries(workflow.variables));
+    // Log final output
+    const workflowResultJson = JSON.stringify(workflowResult, null, 2);
+    console.log('Workflow result:', workflowResultJson);
 
-    // Find numerical result in context variables
-    const numberResults = Array.from(workflow.variables.entries()).filter(
-      ([_, value]) => typeof value === 'number'
-    );
-
-    expect(numberResults.length).toBeGreaterThan(0);
-
-    // Find the final calculation result (1102)
-    const finalResult = numberResults.find(([_, value]) => value === 1102);
-    expect(finalResult).toBeDefined();
-    console.log('Found result:', finalResult);
+    // Find substring (1102) in the result string
+    expect(workflowResultJson).toContain('1102');
   }, 60000);
 });

@@ -1,0 +1,46 @@
+name: "🐞 Bug Report"
+description: "Report an issue or bug in the project"
+title: "[BUG] Describe the problem"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please follow this template to report bugs and help us address the issue efficiently.
+  - type: input
+    id: description
+    attributes:
+      label: "Description"
+      description: "Briefly describe the issue"
+      placeholder: "Write a short description of the problem here"
+    validations:
+      required: true
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: "Steps to Reproduce"
+      description: "List the steps to reproduce the issue"
+      placeholder: |
+        1. Go to...
+        2. Click on...
+        3. Observe the issue...
+    validations:
+      required: true
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: "Expected Behavior"
+      description: "What should happen instead of the issue"
+      placeholder: "Describe the expected behavior here"
+  - type: input
+    id: environment
+    attributes:
+      label: "Environment"
+      description: "Provide details about the environment where the issue occurred"
+      placeholder: "OS, browser version, dependency versions, etc."
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Include any additional information that might help"
+      placeholder: "For example: logs, screenshots, or screen recordings"

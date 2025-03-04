@@ -1,0 +1,43 @@
+name: Build and Push to Develop-Dist Branch
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:                # Job-level permissions configuration starts here
+      contents: write           # 'write' access to repository contents
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Add dist changes
+        run: |
+          git config --global user.email "ci@eko.fellou.ai"
+          git config --global user.name "Eko CI"
+          git config set advice.addIgnoredFile false
+          git add dist/ package.json -f
+          git commit -m "Auto Build Dist: ({sha}) {msg}"
+
+      - name: Push
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: develop-dist
+          force: true

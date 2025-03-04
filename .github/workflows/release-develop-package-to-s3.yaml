@@ -1,0 +1,42 @@
+name: Release Develop Package to S3
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Zip the build folder
+        run: |
+          zip -r dist.zip dist
+
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
+
+      - name: Upload files to S3
+        run: |
+          aws s3 cp dist.zip s3://fellou/eko/releases/develop.zip
+          # aws s3 cp dist/ s3://fellou/eko/releases/develop/ --recursive
+
+      - name: Make uploaded files public
+        run: |
+          aws s3api put-object-acl --bucket fellou --key eko/releases/develop.zip --acl public-read
+
+      - name: Output S3 URLs
+        run: |
+          echo "Uploaded Zip file to S3 URL: https://fellou.s3.us-west-1.amazonaws.com/eko/releases/develop.zip"

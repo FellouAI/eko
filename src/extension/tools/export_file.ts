@@ -45,6 +45,7 @@ export class ExportFile implements Tool<ExportFileParam, unknown> {
     if (typeof params !== 'object' || params === null || !('content' in params)) {
       throw new Error('Invalid parameters. Expected an object with a "content" property.');
     }
+    await context.callback?.hooks?.onExportFile?.(params);
     let type = 'text/plain';
     switch (params.fileType) {
       case 'csv':
@@ -74,22 +75,29 @@ export class ExportFile implements Tool<ExportFileParam, unknown> {
     } else {
       filename = params.filename;
     }
-    let tabId = await getTabId(context);
     try {
+      let tabId = await getTabId(context);
       await chrome.scripting.executeScript({
         target: { tabId: tabId as number },
         func: exportFile,
         args: [filename, type, params.content],
       });
     } catch (e) {
-      let tab = await open_new_tab('https://www.google.com', true);
-      tabId = tab.id as number;
+      let tab;
+      const url = 'https://www.google.com';
+      if (context.ekoConfig.workingWindowId) {
+        tab = await open_new_tab(url, false, context.ekoConfig.workingWindowId);
+      } else {
+        tab = await open_new_tab(url, true);
+      }
+      context.callback?.hooks?.onTabCreated?.(tab.id as number);
+      let tabId = tab.id as number;
       await chrome.scripting.executeScript({
         target: { tabId: tabId as number },
         func: exportFile,
         args: [filename, type, params.content],
       });
-      await sleep(1000);
+      await sleep(5000);
       await chrome.tabs.remove(tabId);
     }
     return { success: true };

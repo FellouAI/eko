@@ -12,7 +12,7 @@ export class WebSearch implements Tool<WebSearchParam, WebSearchResult[]> {
 
   constructor() {
     this.name = 'web_search';
-    this.description = 'Use web search to return search results';
+    this.description = 'Search the web based on keywords and return relevant extracted content from webpages.';
     this.input_schema = {
       type: 'object',
       properties: {
@@ -47,7 +47,7 @@ export class WebSearch implements Tool<WebSearchParam, WebSearchResult[]> {
     }
     let taskId = new Date().getTime() + '';
     let searchs = [{ url: url as string, keyword: query as string }];
-    let searchInfo = await deepSearch(taskId, searchs, maxResults || 5);
+    let searchInfo = await deepSearch(context, taskId, searchs, maxResults || 5, context.ekoConfig.workingWindowId);
     let links = searchInfo.result[0]?.links || [];
     return links.filter((s: any) => s.content) as WebSearchResult[];
   }
@@ -127,29 +127,32 @@ chrome.tabs.onUpdated.addListener(async function (tabId, changeInfo, tab) {
  * @param {number} detailsMaxNum Maximum crawling quantity per search detail page
  */
 async function deepSearch(
+  context: ExecutionContext,
   taskId: string,
   searchs: Array<{ url: string; keyword: string }>,
   detailsMaxNum: number,
-  window?: chrome.windows.Window
+  windowId?: number,
 ) {
   let closeWindow = false;
-  if (!window) {
+  if (!windowId) {
     // open new window
-    window = await chrome.windows.create({
+    let window = await chrome.windows.create({
       type: 'normal',
       state: 'maximized',
       url: null,
     } as any as chrome.windows.CreateData);
+    windowId = window.id;
     closeWindow = true;
   }
+  windowId = windowId as number;
   // crawler the search page details page link
   // [{ links: [{ title, url }] }]
-  let detailLinkGroups = await doDetailLinkGroups(taskId, searchs, detailsMaxNum, window);
+  let detailLinkGroups = await doDetailLinkGroups(context, taskId, searchs, detailsMaxNum, windowId);
   // crawler all details page content and comments
-  let searchInfo = await doPageContent(taskId, detailLinkGroups, window);
+  let searchInfo = await doPageContent(context, taskId, detailLinkGroups, windowId);
   console.log('searchInfo: ', searchInfo);
   // close window
-  closeWindow && chrome.windows.remove(window.id as number);
+  closeWindow && chrome.windows.remove(windowId);
   return searchInfo;
 }
 
@@ -163,10 +166,11 @@ async function deepSearch(
  * @returns [{ links: [{ title, url }] }]
  */
 async function doDetailLinkGroups(
+  context: ExecutionContext,
   taskId: string,
   searchs: Array<{ url: string; keyword: string }>,
   detailsMaxNum: number,
-  window: chrome.windows.Window
+  windowId: number,
 ) {
   let detailLinkGroups = [] as Array<any>;
   let countDownLatch = new CountDownLatch(searchs.length);
@@ -177,8 +181,9 @@ async function doDetailLinkGroups(
       // open new Tab
       let tab = await chrome.tabs.create({
         url: url,
-        windowId: window.id,
+        windowId,
       });
+      context.callback?.hooks?.onTabCreated?.(tab.id as number);
       let eventId = taskId + '_' + i;
       // monitor Tab status
       tabsUpdateEvent.addListener(async function (obj: any) {
@@ -229,9 +234,10 @@ async function doDetailLinkGroups(
  * @returns search info
  */
 async function doPageContent(
+  context: ExecutionContext,
   taskId: string,
   detailLinkGroups: Array<any>,
-  window: chrome.windows.Window
+  windowId: number,
 ) {
   const searchInfo: any = {
     total: 0,
@@ -246,59 +252,83 @@ async function doPageContent(
     searchInfo.total += links.length;
   }
   let countDownLatch = new CountDownLatch(searchInfo.total);
+
   for (let i = 0; i < detailLinkGroups.length; i++) {
     let filename = detailLinkGroups[i].filename;
     let links = detailLinkGroups[i].links;
+
     for (let j = 0; j < links.length; j++) {
       let link = links[j];
       // open new tab
       let tab = await chrome.tabs.create({
         url: link.url,
-        windowId: window.id,
+        windowId,
       });
+      context.callback?.hooks?.onTabCreated?.(tab.id as number);
       searchInfo.running++;
       let eventId = taskId + '_' + i + '_' + j;
-      // monitor Tab status
-      tabsUpdateEvent.addListener(async function (obj: any) {
-        if (obj.tabId != tab.id) {
-          return;
-        }
-        if (obj.changeInfo.status === 'complete') {
-          try {
+
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Page load timeout')), 10000); // Timeout after 10 seconds
+      });
+
+      // Create a tab monitoring promise
+      const monitorTabPromise = new Promise<void>(async (resolve, reject) => {
+        tabsUpdateEvent.addListener(async function onTabUpdated(obj: any) {
+          if (obj.tabId !== tab.id) return;
+
+          if (obj.changeInfo.status === 'complete') {
             tabsUpdateEvent.removeListener(eventId);
-            // inject js
-            await injectScript(tab.id as number, filename);
-            await sleep(1000);
-            // cralwer content and comments
-            // { title, content }
-            let result: any = await chrome.tabs.sendMessage(tab.id as number, {
-              type: 'page:getContent',
-            });
-            if (!result) {
-              throw Error('No Result');
+            try {
+              // Inject script and get page content
+              await injectScript(tab.id as number, filename);
+              await sleep(1000);
+
+              let result: any = await chrome.tabs.sendMessage(tab.id as number, {
+                type: 'page:getContent',
+              });
+
+              if (!result) throw new Error('No Result');
+
+              link.content = result.content;
+              link.page_title = result.title;
+              searchInfo.succeed++;
+              resolve(); // Resolve the promise if successful
+            } catch (error) {
+              searchInfo.failed++;
+              searchInfo.failedLinks.push(link);
+              reject(error); // Reject the promise on error
+            } finally {
+              searchInfo.running--;
+              countDownLatch.countDown();
+              chrome.tabs.remove(tab.id as number);
+              tabsUpdateEvent.removeListener(eventId);
             }
-            link.content = result.content;
-            link.page_title = result.title;
-            searchInfo.succeed++;
-          } catch (e) {
-            searchInfo.failed++;
-            searchInfo.failedLinks.push(link);
-            console.error(link.title + ' crawler error', link.url, e);
-          } finally {
+          } else if (obj.changeInfo.status === 'unloaded') {
             searchInfo.running--;
             countDownLatch.countDown();
             chrome.tabs.remove(tab.id as number);
             tabsUpdateEvent.removeListener(eventId);
+            reject(new Error('Tab unloaded')); // Reject if the tab is unloaded
           }
-        } else if (obj.changeInfo.status === 'unloaded') {
-          searchInfo.running--;
-          countDownLatch.countDown();
-          chrome.tabs.remove(tab.id as number);
-          tabsUpdateEvent.removeListener(eventId);
-        }
-      }, eventId);
+        }, eventId);
+      });
+
+      // Use Promise.race to enforce the timeout
+      try {
+        await Promise.race([monitorTabPromise, timeoutPromise]);
+      } catch (e) {
+        console.error(`${link.title} failed:`, e);
+        searchInfo.running--;
+        searchInfo.failed++;
+        searchInfo.failedLinks.push(link);
+        countDownLatch.countDown();
+        chrome.tabs.remove(tab.id as number); // Clean up tab on failure
+      }
     }
   }
+
   await countDownLatch.await(60_000);
   return searchInfo;
 }

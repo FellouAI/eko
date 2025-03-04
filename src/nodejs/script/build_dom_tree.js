@@ -34,6 +34,7 @@ export function run_build_dom_tree() {
         'type',
         'name',
         'role',
+        'class',
         // 'href',
         'tabindex',
         'aria-label',

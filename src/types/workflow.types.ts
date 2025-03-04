@@ -1,5 +1,7 @@
 import { Action, ExecutionContext, Tool } from "./action.types";
 import { LLMProvider } from "./llm.types";
+import { ExecutionLogger } from "@/utils/execution-logger";
+import { ExportFileParam } from "./tools.types";
 
 export interface NodeOutput {
   name: string;
@@ -29,7 +31,9 @@ export interface Workflow {
   variables: Map<string, any>;
   llmProvider?: LLMProvider;
 
-  execute(callback?: WorkflowCallback): Promise<void>;
+  setLogger(logger: ExecutionLogger): void;
+  execute(callback?: WorkflowCallback): Promise<NodeOutput[]>;
+  cancel(): Promise<void>;
   addNode(node: WorkflowNode): void;
   removeNode(nodeId: string): void;
   getNode(nodeId: string): WorkflowNode;
@@ -44,5 +48,13 @@ export interface WorkflowCallback {
     afterToolUse?: (tool: Tool<any, any>, context: ExecutionContext, result: any) => Promise<any>;
     afterSubtask?: (subtask: WorkflowNode, context: ExecutionContext, result: any) => Promise<void>;
     afterWorkflow?: (workflow: Workflow, variables: Map<string, unknown>) => Promise<void>;
+    onTabCreated?: (tabId: number) => Promise<void>;
+    onLlmMessage?: (textContent: string) => Promise<void>;
+    onHumanInputText?: (question: string) => Promise<string>;
+    onHumanInputSingleChoice?: (question: string, choices: string[]) => Promise<string>;
+    onHumanInputMultipleChoice?: (question: string, choices: string[]) => Promise<string[]>;
+    onHumanOperate?: (reason: string) => Promise<string>;
+    onSummaryWorkflow?: (summary: string) => Promise<void>;
+    onExportFile?: (param: ExportFileParam) => Promise<void>;
   }
 };

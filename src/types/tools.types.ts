@@ -49,6 +49,14 @@ export interface OpenUrlResult {
   title?: string;
 }
 
+export interface BrowserTab {
+  id: number,
+  url?: string,
+  title?: string,
+  content: string,
+  description: string,
+}
+
 export interface ScreenshotResult {
   image: ScreenshotImage;
 }
@@ -60,7 +68,7 @@ export interface ScreenshotImage {
 }
 
 export interface TabManagementParam {
-  commond: string;
+  command: string;
 }
 
 export type TabManagementResult = TabInfo | CloseTabInfo | TabInfo[];
@@ -102,4 +110,50 @@ export interface ElementRect {
   bottom?: number;
   width?: number;
   height?: number;
+}
+
+export interface CancelWorkflowInput {
+  reason: string;
+}
+
+export interface HumanInputTextInput {
+  question: string;
+}
+
+export interface HumanInputTextResult {
+  status: string;
+  answer: string;
+}
+
+export interface HumanInputSingleChoiceInput {
+  question: string;
+  choices: string[];
+}
+
+export interface HumanInputSingleChoiceResult {
+  status: string;
+  answer: string;
+}
+
+export interface HumanInputMultipleChoiceInput {
+  question: string;
+  choices: string[];
+}
+
+export interface HumanInputMultipleChoiceResult {
+  status: string;
+  answer: string[];
+}
+
+export interface HumanOperateInput {
+  reason: string,
+}
+
+export interface HumanOperateResult {
+  status: string,
+  userOperation: string,
+}
+
+export interface SummaryWorkflowInput {
+  summary: string,
 }

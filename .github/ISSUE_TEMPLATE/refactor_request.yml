@@ -1,0 +1,33 @@
+name: "🔄 Refactor Request"
+description: "Suggest code refactoring or improvements"
+title: "[REFACTOR] Describe the improvement"
+labels: ["refactor"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to request code refactoring or suggest quality improvements.
+  - type: input
+    id: affected_code
+    attributes:
+      label: "Affected Code"
+      description: "Which part of the codebase needs refactoring?"
+      placeholder: "E.g., Module X, Function Y"
+  - type: textarea
+    id: refactor_reason
+    attributes:
+      label: "Reason for Refactoring"
+      description: "Why does this part of the code need improvement?"
+      placeholder: "Describe the reasons for refactoring here"
+  - type: textarea
+    id: suggestions
+    attributes:
+      label: "Suggested Improvements"
+      description: "Provide suggestions or ideas for the refactor"
+      placeholder: "Write your suggestions here"
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Include any supporting details or resources"
+      placeholder: "E.g., code examples, performance issues, or relevant discussions"

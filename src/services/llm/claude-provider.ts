@@ -18,11 +18,12 @@ export class ClaudeProvider implements LLMProvider {
   private client: Anthropic;
   private defaultModel = 'claude-3-5-sonnet-20241022';
 
+  constructor(options: Anthropic, defaultModel?: string);
   constructor(options: ClientOptions, defaultModel?: string);
   constructor(apiKey: string, defaultModel?: string | null, options?: ClientOptions);
 
   constructor(
-    param: string | ClientOptions,
+    param: string | ClientOptions | Anthropic,
     defaultModel?: string | null,
     options?: ClientOptions
   ) {
@@ -50,8 +51,12 @@ export class ClaudeProvider implements LLMProvider {
         dangerouslyAllowBrowser: true,
         ...options,
       });
+    } else if ((param as Anthropic).messages && (param as Anthropic).completions) {
+      this.client = param as Anthropic;
     } else {
-      this.client = new Anthropic(param);
+      let options = param as ClientOptions;
+      options.dangerouslyAllowBrowser = true;
+      this.client = new Anthropic(options);
     }
   }
 

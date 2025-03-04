@@ -1,14 +1,15 @@
 import { Workflow, WorkflowNode, NodeInput, NodeOutput } from '../../types/workflow.types';
 import { ValidationResult, ValidationError } from '../../types/parser.types';
 import { WorkflowImpl } from '../../models/workflow';
-import { workflowSchema } from '../../schemas/workflow.schema';
+import { ActionImpl } from '../../models/action';
+import { EkoConfig } from '@/types';
 
 export class WorkflowParser {
   /**
    * Parse JSON string into runtime Workflow object
    * @throws {Error} if JSON is invalid or schema validation fails
    */
-  static parse(json: string): Workflow {
+  static parse(json: string, ekoConfig: EkoConfig): Workflow {
     let parsed: any;
 
     try {
@@ -24,7 +25,7 @@ export class WorkflowParser {
       );
     }
 
-    return this.toRuntime(parsed);
+    return this.toRuntime(parsed, ekoConfig);
   }
 
   /**
@@ -154,33 +155,45 @@ export class WorkflowParser {
     };
   }
 
-  /**
-   * Convert parsed JSON to runtime Workflow object
-   */
-  private static toRuntime(json: any): Workflow {
+  private static toRuntime(json: any, ekoConfig: EkoConfig): Workflow {
     const variables = new Map(Object.entries(json.variables || {}));
-
-    const workflow = new WorkflowImpl(json.id, json.name, json.description, [], variables);
+    const workflow = new WorkflowImpl(
+      json.id,
+      json.name,
+      ekoConfig,
+      json.description,
+      [],
+      variables,
+      undefined,
+      {
+        logLevel: 'info',
+        includeTimestamp: true,
+      }
+    );
 
     // Convert nodes
     json.nodes.forEach((nodeJson: any) => {
+      const action = ActionImpl.createPromptAction(
+        nodeJson.action.name,
+        nodeJson.action.description,
+        // Pass tool names as strings, they'll be resolved at execution time
+        nodeJson.action.tools || [],
+        undefined, // LLM provider will be injected at execution time
+        { maxTokens: 1000 }
+      );
+
       const node: WorkflowNode = {
         id: nodeJson.id,
         name: nodeJson.name || nodeJson.id,
         description: nodeJson.description,
         dependencies: nodeJson.dependencies || [],
-        input: {items: []},
-        output: nodeJson.output as NodeOutput || {name: (nodeJson.name || nodeJson.id) + '_output', description: 'Output of node ' + (nodeJson.name || nodeJson.id), value: null},
-        action: {
-          type: nodeJson.action.type,
-          name: nodeJson.action.name,
-          description: nodeJson.action.description,
-          tools: nodeJson.action.tools || [],
-          execute: async (input: unknown, context: any) => {
-            // Default implementation - should be overridden by specific action types
-            return input;
-          },
+        input: { items: [] },
+        output: nodeJson.output || {
+          name: `${nodeJson.name || nodeJson.id}_output`,
+          description: `Output of node ${nodeJson.name || nodeJson.id}`,
+          value: null,
         },
+        action: action,
       };
 
       workflow.addNode(node);
@@ -208,7 +221,9 @@ export class WorkflowParser {
           type: node.action.type,
           name: node.action.name,
           description: node.action.description,
-          tools: node.action.tools,
+          tools: node.action.tools
+            .map((tool) => (typeof tool === 'string' ? tool : tool.name))
+            .filter((tool) => tool !== 'write_context'),
         },
       })),
       variables: Object.fromEntries(workflow.variables),

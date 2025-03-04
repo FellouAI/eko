@@ -1,0 +1,42 @@
+# Enable/Disable blank issues (if false, users must use a template)
+blank_issues_enabled: false
+
+# Contact links for users seeking additional support or discussions
+contact_links:
+  - name: "Community Discussions"
+    url: "https://join.slack.com/t/eko-ai/shared_invite/zt-2xhvkudv9-nHvD1g8Smp227sM51x_Meg"
+    about: "For general questions, ideas, or open-ended discussions, please visit our community forum."
+  - name: "Support Documentation"
+    url: "https://eko.fellou.ai/docs/"
+    about: "Find answers and guides in our official documentation."
+
+# Issue templates configuration
+issue_templates:
+  - name: "🐞 Bug Report"
+    description: "Report an issue or bug in the project"
+    title: "[BUG] Describe the problem"
+    labels: ["bug"]
+  - name: "✨ Feature Request"
+    description: "Propose a new feature or improvement"
+    title: "[FEATURE] Describe your feature request"
+    labels: ["enhancement"]
+  - name: "📚 Documentation Improvement"
+    description: "Suggest updates or improvements to the documentation"
+    title: "[DOC] Suggest improvements"
+    labels: ["documentation"]
+  - name: "❓ Support Request"
+    description: "Ask a question or request support for using the project"
+    title: "[SUPPORT] Your question or issue"
+    labels: ["support"]
+  - name: "📝 Proposal"
+    description: "Propose a significant change or enhancement to the project"
+    title: "[PROPOSAL] Describe your proposal"
+    labels: ["proposal", "enhancement"]
+  - name: "🔄 Refactor Request"
+    description: "Suggest code refactoring or quality improvements"
+    title: "[REFACTOR] Describe the improvement"
+    labels: ["refactor"]
+
+# Optional: Additional settings
+default_assignees:
+  - "your-username" # Automatically assign issues to specific contributors

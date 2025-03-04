@@ -1,6 +1,8 @@
+import { Workflow } from "./workflow.types";
 import { LLMProvider } from "./llm.types";
-import { WorkflowCallback } from "./workflow.types";
+import { NodeOutput, WorkflowCallback } from "./workflow.types";
 import { NodeInput } from "./workflow.types";
+import { EkoConfig } from "./eko.types";
 
 export interface Tool<T, R> {
   name: string;
@@ -30,9 +32,12 @@ export interface Property {
 
 export interface ExecutionContext {
   llmProvider: LLMProvider;
+  ekoConfig: EkoConfig;
   variables: Map<string, unknown>;
+  workflow?: Workflow;
   tools?: Map<string, Tool<any, any>>;
   callback?: WorkflowCallback;
+  signal?: AbortSignal;
   [key: string]: any;
 }
 
@@ -40,6 +45,7 @@ export interface Action {
   type: 'prompt' | 'script' | 'hybrid';
   name: string;
   description: string;
-  execute: (input: NodeInput, context: ExecutionContext) => Promise<unknown>;
-  tools: Tool<any, any>[];
+  execute: (input: NodeInput, output: NodeOutput, context: ExecutionContext) => Promise<unknown>;
+  tools: Array<Tool<any, any>>; // Allow both Tool objects and tool names
+  llmProvider?: LLMProvider;
 }

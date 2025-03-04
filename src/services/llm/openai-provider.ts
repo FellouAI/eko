@@ -28,11 +28,12 @@ export class OpenaiProvider implements LLMProvider {
   private client: OpenAI;
   private defaultModel = 'gpt-4o';
 
+  constructor(client: OpenAI, defaultModel?: string);
   constructor(options: ClientOptions, defaultModel?: string);
   constructor(apiKey: string, defaultModel?: string | null, options?: ClientOptions);
 
   constructor(
-    param: string | ClientOptions,
+    param: string | ClientOptions | OpenAI,
     defaultModel?: string | null,
     options?: ClientOptions
   ) {
@@ -60,8 +61,12 @@ export class OpenaiProvider implements LLMProvider {
         dangerouslyAllowBrowser: true,
         ...options,
       });
+    } else if ((param as OpenAI).chat && (param as OpenAI).chat.completions) {
+      this.client = param as OpenAI;
     } else {
-      this.client = new OpenAI(param);
+      let options = param as ClientOptions;
+      options.dangerouslyAllowBrowser = true;
+      this.client = new OpenAI(options);
     }
   }
 

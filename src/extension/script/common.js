@@ -88,10 +88,14 @@ eko.click = function(element) {
 eko.sendKeys = function(element, str, clear, keypress) {
     element.focus && element.focus()
     if (clear) {
-        for (let i = 0; i < element.value.length; i++) {
-            element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace' }))
+        if (element.value == undefined) {
+            element.textContent = ''
+        } else {
+            for (let i = 0; i < element.value.length; i++) {
+                element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace' }))
+            }
+            element.value = ''
         }
-        element.value = ''
     }
     if (keypress) {
         Array.from(str).forEach(key => {
@@ -100,7 +104,11 @@ eko.sendKeys = function(element, str, clear, keypress) {
         element.value += str
         element.dispatchEvent(new Event('input'))
     } else {
-        element.value += str
+        if (element.value == undefined) {
+          element.textContent += str
+        } else {
+          element.value += str
+        }
         element.dispatchEvent(new Event('input', { bubbles: true }))
     }
 }
