@@ -84,7 +84,9 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
       }
       let tabId: number;
       try {
+        console.log("getTabId(context)...");
         tabId = await getTabId(context);
+        console.log("getTabId(context)...done");
         if (!tabId || !Number.isInteger(tabId)) {
           throw new Error('Could not get valid tab ID');
         }
