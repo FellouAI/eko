@@ -1,6 +1,6 @@
 import log from 'loglevel';
 
-export class EkoLogger {
+export class EkoLoggerFactory {
   private logger: log.Logger;
   private logStorage: string[] = [];
 
@@ -40,4 +40,4 @@ export class EkoLogger {
   }
 }
 
-export const logger = new EkoLogger().getLoggerInstance();
+export const logger = new EkoLoggerFactory().getLoggerInstance();
