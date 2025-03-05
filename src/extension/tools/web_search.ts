@@ -18,6 +18,10 @@ export class WebSearch implements Tool<WebSearchParam, WebSearchResult[]> {
     this.input_schema = {
       type: 'object',
       properties: {
+        url: {
+          type: 'string',
+          description: 'the URL of search engine, like https://www.bing.com'
+        },
         query: {
           type: 'string',
           description: 'search for keywords',
@@ -45,7 +49,7 @@ export class WebSearch implements Tool<WebSearchParam, WebSearchResult[]> {
     let query = params.query;
     let maxResults = params.maxResults;
     if (!url) {
-      url = 'https://www.google.com';
+      url = 'https://www.bing.com';
     }
     let taskId = new Date().getTime() + '';
     let searchs = [{ url: url as string, keyword: query as string }];
@@ -118,9 +122,11 @@ function buildDeepSearchUrl(url: string, keyword: string) {
 // Event
 const tabsUpdateEvent = new MsgEvent();
 // TODO: replace `chrome` with `context.ekoConfig.chromeProxy`
-chrome.tabs.onUpdated.addListener(async function (tabId, changeInfo, tab) {
-  await tabsUpdateEvent.publish({ tabId, changeInfo, tab });
-});
+if (typeof chrome !== 'undefined') {
+  chrome.tabs.onUpdated.addListener(async function (tabId, changeInfo, tab) {
+    await tabsUpdateEvent.publish({ tabId, changeInfo, tab });
+  });
+}
 
 /**
  * deep search

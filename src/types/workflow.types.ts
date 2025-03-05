@@ -37,6 +37,7 @@ export interface Workflow {
   removeNode(nodeId: string): void;
   getNode(nodeId: string): WorkflowNode;
   validateDAG(): boolean;
+  getRawWorkflowJson(): string,
 }
 
 export interface WorkflowCallback {

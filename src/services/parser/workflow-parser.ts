@@ -161,6 +161,7 @@ export class WorkflowParser {
       json.id,
       json.name,
       ekoConfig,
+      json,
       json.description,
       [],
       variables,

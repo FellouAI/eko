@@ -447,6 +447,10 @@ export class ActionImpl implements Action {
     // Get and clean up output value
     const outputKey = `__action_${this.name}_output`;
     const outputParams = context.variables.get(outputKey) as any;
+    if (!outputParams) {
+      console.warn("outputParams is `undefined`, action return `{}`");
+      return {}
+    }
     context.variables.delete(outputKey);
 
     // Get output value, first checking for use_tool_result

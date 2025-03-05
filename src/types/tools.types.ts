@@ -154,7 +154,7 @@ export interface HumanOperateResult {
   userOperation: string,
 }
 
-export interface SummaryWorkflowInput {
+export interface WorkflowSummary {
   isSuccessful: boolean,
   summary: string,
 }

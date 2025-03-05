@@ -93,24 +93,9 @@ export class WorkflowGenerator {
     const workflowData = response.toolCalls[0].input.workflow as any;
 
     // debug
-    logger.debug("Debug the workflow...")
-    logger.debug({ ...workflowData});
-
-    // Add workflow summary subtask
-    (workflowData.nodes as any[]).push({
-      "id": "final",
-      "type": "action",
-      "dependencies": workflowData.nodes.map((node: { id: any; }) => node.id),
-      "action": {
-        "type": "prompt",
-        "name": "Summarize the workflow.",
-        "description": "Summarize briefly what this workflow has accomplished. Your summary should be based on user\'s original query. You MUST use the 'summary_workflow' tool.",
-        "tools": [
-          "summary_workflow"
-        ]
-      },
-    })
-    logger.debug("Debug the workflow...Done")    
+    console.log("Debug the workflow...")
+    console.log({ ...workflowData});
+    console.log("Debug the workflow...Done")    
     
     // Validate all tools exist
     for (const node of workflowData.nodes) {
@@ -132,6 +117,7 @@ export class WorkflowGenerator {
       data.id,
       data.name,
       ekoConfig,
+      data,
       data.description || '',
       [],
       new Map(Object.entries(data.variables || {})),
