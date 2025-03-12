@@ -122,7 +122,7 @@ function buildDeepSearchUrl(url: string, keyword: string) {
 // Event
 const tabsUpdateEvent = new MsgEvent();
 // TODO: replace `chrome` with `context.ekoConfig.chromeProxy`
-if (typeof chrome !== 'undefined') {
+if (typeof chrome !== 'undefined' && typeof chrome.tabs !== 'undefined') {
   chrome.tabs.onUpdated.addListener(async function (tabId, changeInfo, tab) {
     await tabsUpdateEvent.publish({ tabId, changeInfo, tab });
   });
