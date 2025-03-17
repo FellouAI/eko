@@ -147,11 +147,13 @@ function type(request: any): boolean {
   ) {
     input = element;
   } else {
-    input =
-      element.querySelector('input') ||
-      element.querySelector('textarea') ||
-      element.querySelector('*[contenteditable="true"]') ||
-      element;
+    input = element.querySelector('input') || element.querySelector('textarea');
+    if (!input) {
+      input = element.querySelector('*[contenteditable="true"]') || element;
+      if (input.tagName == 'DIV') {
+        input = input.querySelector('span') || input.querySelector('div') || input;
+      }
+    }
   }
   input.focus && input.focus();
   if (!text) {
