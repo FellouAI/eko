@@ -72,6 +72,7 @@
     "chromium-bidi": "^0.12.0",
     "dotenv": "^16.0.0",
     "html2canvas": "^1.4.1",
+    "loglevel": "^1.9.2",
     "openai": "^4.77.0",
     "playwright": "^1.49.1",
     "uuid": "^11.0.3",

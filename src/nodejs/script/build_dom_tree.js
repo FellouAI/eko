@@ -1,3 +1,5 @@
+import { logger } from "@/common/log";
+
 export function run_build_dom_tree() {
   /**
    * Get clickable elements on the page
@@ -644,7 +646,7 @@ export function run_build_dom_tree() {
             nodeData.children.push(...iframeChildren);
           }
         } catch (e) {
-          console.warn('Unable to access iframe:', node);
+          logger.warn('Unable to access iframe:', node);
         }
       } else {
         const children = Array.from(node.childNodes).map((child) =>

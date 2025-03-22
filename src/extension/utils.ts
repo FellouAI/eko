@@ -1,3 +1,4 @@
+import { logger } from '../common/log';
 import { ExecutionContext } from '../types/action.types';
 
 export async function getWindowId(context: ExecutionContext): Promise<number> {
@@ -31,7 +32,7 @@ export async function getWindowId(context: ExecutionContext): Promise<number> {
   }
 
   if (!windowId) {
-    console.warn("`getWindowId()` returns " + windowId);
+    logger.warn("`getWindowId()` returns " + windowId);
   }
 
   return windowId as number;
@@ -246,7 +247,7 @@ export class MsgEvent {
           await result;
         }
       } catch (e) {
-        console.error(e);
+        logger.error(e);
       }
     }
   }

@@ -12,6 +12,7 @@ import {
   WorkflowResult
 } from '../types';
 import { ToolRegistry } from './tool-registry';
+import { logger } from '../common/log';
 
 /**
  * Eko core
@@ -25,7 +26,7 @@ export class Eko {
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
 
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
-    console.info("using Eko@" + process.env.COMMIT_HASH);
+    logger.info("using Eko@" + process.env.COMMIT_HASH);
     this.llmProvider = LLMProviderFactory.buildLLMProvider(llmConfig);
     this.ekoConfig = this.buildEkoConfig(ekoConfig);
     this.registerTools();
@@ -33,7 +34,7 @@ export class Eko {
 
   private buildEkoConfig(ekoConfig: Partial<EkoConfig> | undefined): EkoConfig {
     if (!ekoConfig) {
-      console.warn("`ekoConfig` is missing when construct `Eko` instance");
+      logger.warn("`ekoConfig` is missing when construct `Eko` instance");
     }
     const defaultEkoConfig: EkoConfig = {
       workingWindowId: undefined,
@@ -70,7 +71,7 @@ export class Eko {
         }
       });
     } else {
-      console.warn("`ekoConfig.callback` is missing when construct `Eko` instance.")
+      logger.warn("`ekoConfig.callback` is missing when construct `Eko` instance.")
     }
     
     tools.forEach(tool => this.toolRegistry.registerTool(tool));
@@ -116,7 +117,7 @@ export class Eko {
     }
 
     const result = await workflow.execute(this.ekoConfig.callback);
-    console.log(result);
+    logger.debug(result);
     return result;
   }
 

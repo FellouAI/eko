@@ -34,6 +34,7 @@ Thumbs.db
 # npm package lock files (if you don't want them tracked by Git)
 package-lock.json
 yarn.lock
+pnpm-lock.yaml
 
 # Test coverage directory
 coverage/
