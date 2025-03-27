@@ -17,7 +17,7 @@ export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextR
 
   constructor() {
     this.name = 'human_input_text';
-    this.description = 'When you are unsure about the details of your next action, call me and ask the user for details in the "question" field. The user will provide you with a text as an answer.';
+    this.description = 'When you are unsure about the details of your next action or need the user to perform a local action, call me and ask the user for details in the "question" field. The user will provide you with a text as an answer.';
     this.input_schema = {
       type: 'object',
       properties: {
@@ -177,7 +177,7 @@ export class HumanOperate implements Tool<HumanOperateInput, HumanOperateResult>
 
   constructor() {
     this.name = 'human_operate';
-    this.description = 'When you encounter operations necessitating login, CAPTCHA verification, or any other tasks beyond your reach, kindly invoke this tool, relinquish control to the user, and elucidate the reasons behind this action.\n\nBefore executing the final step of any task that entails external repercussions, such as submitting purchases, deleting entries, editing data, scheduling appointments, sending messages, managing accounts, moving files, and the like, seek the user\'s definitive confirmation.';
+    this.description = 'When you encounter tasks that require login, captcha, file upload, or any other task beyond your capabilities, call this tool to hand over control to the user and clarify the reason behind this action. \n\nBefore performing the last step of any task involving external influences, such as submitting a purchase, deleting an item, editing data, scheduling an appointment, sending a message, managing an account, moving files, etc., please seek explicit confirmation from the user. ';
     this.input_schema = {
       type: 'object',
       properties: {
