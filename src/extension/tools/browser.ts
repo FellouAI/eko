@@ -159,27 +159,6 @@ export async function left_click_by(
   throw Error(msg);
 }
 
-export async function enter_by(
-  chromeProxy: any,
-  tabId: number,
-  xpath?: string,
-  highlightIndex?: number
-): Promise<any> {
-  console.log('Sending enter_by message to tab:', tabId, { xpath, highlightIndex });
-  try {
-    const response = await chromeProxy.tabs.sendMessage(tabId, {
-      type: 'computer:enter',
-      xpath,
-      highlightIndex,
-    });
-    console.log('Got response:', response);
-    return response;
-  } catch (e) {
-    console.error('Failed to send enter_by message:', e);
-    throw e;
-  }
-}
-
 export async function right_click(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any> {
   console.log('Sending right_click message to tab:', tabId, { coordinate });
   try {

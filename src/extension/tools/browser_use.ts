@@ -42,8 +42,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
 * \`scroll_to\`: Scroll to the specified element.
 * \`extract_content\`: Extract the text content of the current webpage.
 * \`get_dropdown_options\`: Get all options from a native dropdown element.
-* \`select_dropdown_option\`: Select dropdown option for interactive element index by the text of the option you want to select.
-* \`enter\`: Simulate pressing the "Enter" key on the specified element.`,
+* \`select_dropdown_option\`: Select dropdown option for interactive element index by the text of the option you want to select.`,
           enum: [
             'screenshot_extract_element',
             'input_text',
@@ -53,8 +52,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
             'scroll_to',
             'extract_content',
             'get_dropdown_options',
-            'select_dropdown_option',
-            'enter'
+            'select_dropdown_option'
           ],
         },
         index: {
@@ -178,13 +176,6 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
             selector_xpath,
             params.index
           );
-          break;
-        case 'enter':
-          if (params.index == null) {
-            throw new Error('index parameter is required');
-          }
-          result = await browser.enter_by(context.ekoConfig.chromeProxy, tabId, selector_xpath, params.index);
-          await sleep(100);
           break;
         case 'screenshot_extract_element':
           console.log("execute 'screenshot_extract_element'...");
