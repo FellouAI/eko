@@ -165,36 +165,33 @@ export async function enter_by(
   xpath?: string,
   highlightIndex?: number
 ): Promise<any> {
-  console.log('Sending enter_by message to tab:', tabId, { xpath, highlightIndex });
+  console.log('打印出enter_by需要点击的参数:', tabId, { xpath, highlightIndex });
   let tries = 3;
   for (let retry_counter = 0; retry_counter <= tries; retry_counter++) {
-    console.log("retry_counter: " + retry_counter);
+    console.log("重试次数: " + retry_counter);
     let response: any;
+    console.log('开始发送enter_by消息到tab:', tabId, { xpath, highlightIndex });
     try {
       await sleep(1000);
-      console.log('sendMessage...', JSON.stringify({
-        tabId,
-        xpath,
-        highlightIndex
-      }, null, 2));
+      console.log('发送enter_by消息到tab:', tabId, { xpath, highlightIndex });
       response = await chromeProxy.tabs.sendMessage(tabId, {
         type: 'computer:enter',
         xpath,
         highlightIndex,
       });
-      console.log('Got response:', JSON.stringify(response, null, 2));
     } catch (e) {
-      console.error('消息发送错误:', e);
+      console.error(e);
       continue;
     }
+    console.log('enter_by消息返回结果:', response);
     if (response === true) {
       return response;
     } else {
-      console.warn("无效响应:", response);
+      console.warn("enter_by消息返回结果无效:", response);
       continue;
     }
   }
-  let msg = "Failed to send enter_by message, please retry";
+  let msg = "enter_by消息发送失败,请重试";
   console.error(msg);
   throw Error(msg);
 }

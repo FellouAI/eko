@@ -93,7 +93,7 @@ if (typeof chrome !== 'undefined') {
             break;
           }
           case 'computer:enter': {
-            sendResponse(simulateEnterEvent(request, ['keydown', 'keypress', 'keyup'], 'Enter'));
+            sendResponse(simulateEnterEvent(request, ['keydown', 'keypress', 'keyup'], 'enter'));
             break;
           }
         }
@@ -246,88 +246,84 @@ function simulateMouseEvent(request: any, eventTypes: Array<string>, button: 0 |
   return true;
 }
 
-function simulateEnterEvent(request: any, eventTypes: Array<string>, key: string): boolean{
+function simulateEnterEvent(request: any, eventTypes: Array<string>, key: string): boolean {
   let element: any;
-  console.log('simulateEnterEvent开始...');
-  console.log('simulateEnterEvent request:', JSON.stringify(request, null, 2));
-  // 尝试找到元素
-  if(request.highlightIndex != null){
-    console.log('simulateEnterEvent通过highlightIndex查找:', request.highlightIndex);
+  let coordinate;
+  if (request.highlightIndex != null) {
     element = window.get_highlight_element(request.highlightIndex);
+    console.log('获取到element元素的highlightIndex', element, { ...request });
   } else if (request.xpath) {
-    console.log('simulateEnterEvent通过xpath查找:', request.xpath);
     let xpath = request.xpath as string;
-    try {
-      let result = document.evaluate(
-        xpath,
-        document,
-        null,
-        XPathResult.FIRST_ORDERED_NODE_TYPE,
-        null
-      );
-      element = result.singleNodeValue;
-    } catch (e) {
-      console.error('xpath解析错误:', e);
-    }
+    let result = document.evaluate(
+      xpath,
+      document,
+      null,
+      XPathResult.FIRST_ORDERED_NODE_TYPE,
+      null
+    );
+    element = result.singleNodeValue;
+    console.log('获取到element元素的xpath', element, { ...request, xpath }, result);
   } else {
-    console.log('simulateEnterEvent通过坐标查找:', request.coordinate);
-    let coordinate = request.coordinate as [number, number];
+    coordinate = request.coordinate as [number, number];
     element = document.elementFromPoint(coordinate[0], coordinate[1]) || document.activeElement;
+    console.log('获取到element元素的coordinate', element, { ...request });
   }
-  // 检查元素是否存在
+  
   if (!element) {
-    console.error('找不到目标元素');
     return false;
   }
-  if (!element.focus) {
-    console.error('元素不支持focus');
-    return false;
+
+  // 获取元素的位置信息
+  const rect = element.getBoundingClientRect();
+  const x = coordinate ? coordinate[0] : rect.left + rect.width / 2;
+  const y = coordinate ? coordinate[1] : rect.top + rect.height / 2;
+  console.log('获取到element元素的位置信息', element, { ...request, x, y });
+  // 先模拟鼠标移动到目标位置
+  const mouseMoveEvent = new MouseEvent('mousemove', {
+    view: window,
+    bubbles: true,
+    cancelable: true,
+    screenX: x,
+    screenY: y,
+    clientX: x,
+    clientY: y,
+  });
+  console.log('模拟鼠标移动到目标位置', mouseMoveEvent);
+  document.body.dispatchEvent(mouseMoveEvent);
+
+  // 模拟鼠标点击事件来确保元素获得焦点
+  console.log('开始模拟鼠标点击事件来确保元素获得焦点', element, { ...request });
+  const clickEvents = ['mousedown', 'mouseup', 'click'];
+  for (let i = 0; i < clickEvents.length; i++) {
+    const event = new MouseEvent(clickEvents[i], {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+      clientX: x,
+      clientY: y,
+      button: 0, // 左键点击
+    });
+    element.dispatchEvent(event);
+    console.log('点击成功模拟鼠标点击事件来确保元素获得焦点', element, { ...request, clickEvents, i });
   }
-  // 确保元素处于焦点状态
-  if (document.activeElement !== element) {
-    console.log('simulateEnterEvent聚焦元素');
-    try {
-      element.focus();
-    } catch (e) {
-      console.error('聚焦元素失败:', e);
-    }
-  }
-  // 分发键盘事件
-  let success = true;
+
+  // 确保元素获得焦点
+  element.focus && element.focus();
+  console.log('确保元素获得焦点', element, { ...request });
+  // 触发键盘事件
   for (let i = 0; i < eventTypes.length; i++) {
-    console.log('simulateEnterEvent事件类型:', eventTypes[i]);
-    try {
-      const event = new KeyboardEvent(eventTypes[i], {
-        key: key,
-        code: key,
-        keyCode: key === 'Enter' ? 13 : key.charCodeAt(0),
-        bubbles: true,
-        cancelable: true,
-      });
-      console.log('simulateEnterEvent创建事件成功');
-      let eventSuccess = element.dispatchEvent(event);
-      console.log('simulateEnterEvent事件分发结果:', eventSuccess);
-      if (!eventSuccess) {
-        console.error('事件被阻止');
-        success = false;
-      }
-    } catch (e) {
-      console.error('事件创建或分发错误:', e);
-      success = false;
-    }
+    const event = new KeyboardEvent(eventTypes[i], {
+      key: key,
+      code: key,
+      keyCode: 13,
+      bubbles: true,
+      cancelable: true,
+    });
+    let result = element.dispatchEvent(event);
+    console.log('触发键盘事件enter', element, { ...request, eventTypes, key, x, y }, result);
   }
-  // 如果是表单元素，尝试提交表单
-  if (element.form) {
-    console.log('元素属于表单，尝试提交表单');
-    try {
-      element.form.submit();
-      console.log('表单提交成功');
-    } catch (e) {
-      console.error('表单提交失败:', e);
-    }
-  }
-  console.log('simulateEnterEvent完成，结果:', success);
-  return success;
+  
+  return true;
 }
 
 function scroll_to(request: any): boolean {
