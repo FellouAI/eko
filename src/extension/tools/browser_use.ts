@@ -183,7 +183,15 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
           if (params.index == null) {
             throw new Error('index parameter is required');
           }
+          console.log('enter_by...');
+          console.log('enter_by params:', JSON.stringify({
+            tabId,
+            selector_xpath,
+            index: params.index
+          }, null, 2));
           result = await browser.enter_by(context.ekoConfig.chromeProxy, tabId, selector_xpath, params.index);
+          console.log('enter_by result:', JSON.stringify(result, null, 2));
+          console.log('enter_by...done');
           await sleep(100);
           break;
         case 'screenshot_extract_element':

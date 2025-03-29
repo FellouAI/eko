@@ -92,6 +92,10 @@ if (typeof chrome !== 'undefined') {
             sendResponse(select_dropdown_option(request));
             break;
           }
+          case 'computer:enter': {
+            sendResponse(simulateEnterEvent(request, ['keydown', 'keypress', 'keyup'], 'Enter'));
+            break;
+          }
         }
       } catch (e) {
         console.log('onMessage error', e);
@@ -240,6 +244,90 @@ function simulateMouseEvent(request: any, eventTypes: Array<string>, button: 0 |
     console.log('simulateMouse', element, { ...request, eventTypes, button }, result);
   }
   return true;
+}
+
+function simulateEnterEvent(request: any, eventTypes: Array<string>, key: string): boolean{
+  let element: any;
+  console.log('simulateEnterEvent开始...');
+  console.log('simulateEnterEvent request:', JSON.stringify(request, null, 2));
+  // 尝试找到元素
+  if(request.highlightIndex != null){
+    console.log('simulateEnterEvent通过highlightIndex查找:', request.highlightIndex);
+    element = window.get_highlight_element(request.highlightIndex);
+  } else if (request.xpath) {
+    console.log('simulateEnterEvent通过xpath查找:', request.xpath);
+    let xpath = request.xpath as string;
+    try {
+      let result = document.evaluate(
+        xpath,
+        document,
+        null,
+        XPathResult.FIRST_ORDERED_NODE_TYPE,
+        null
+      );
+      element = result.singleNodeValue;
+    } catch (e) {
+      console.error('xpath解析错误:', e);
+    }
+  } else {
+    console.log('simulateEnterEvent通过坐标查找:', request.coordinate);
+    let coordinate = request.coordinate as [number, number];
+    element = document.elementFromPoint(coordinate[0], coordinate[1]) || document.activeElement;
+  }
+  // 检查元素是否存在
+  if (!element) {
+    console.error('找不到目标元素');
+    return false;
+  }
+  if (!element.focus) {
+    console.error('元素不支持focus');
+    return false;
+  }
+  // 确保元素处于焦点状态
+  if (document.activeElement !== element) {
+    console.log('simulateEnterEvent聚焦元素');
+    try {
+      element.focus();
+    } catch (e) {
+      console.error('聚焦元素失败:', e);
+    }
+  }
+  // 分发键盘事件
+  let success = true;
+  for (let i = 0; i < eventTypes.length; i++) {
+    console.log('simulateEnterEvent事件类型:', eventTypes[i]);
+    try {
+      const event = new KeyboardEvent(eventTypes[i], {
+        key: key,
+        code: key,
+        keyCode: key === 'Enter' ? 13 : key.charCodeAt(0),
+        bubbles: true,
+        cancelable: true,
+      });
+      console.log('simulateEnterEvent创建事件成功');
+      let eventSuccess = element.dispatchEvent(event);
+      console.log('simulateEnterEvent事件分发结果:', eventSuccess);
+      if (!eventSuccess) {
+        console.error('事件被阻止');
+        success = false;
+      }
+    } catch (e) {
+      console.error('事件创建或分发错误:', e);
+      success = false;
+    }
+  }
+  // 如果是表单元素，尝试提交表单
+  if (element.form) {
+    console.log('元素属于表单，尝试提交表单');
+    try {
+      element.form.submit();
+      console.log('表单提交成功');
+    } catch (e) {
+      console.error('表单提交失败:', e);
+    }
+  }
+  console.log('simulateEnterEvent完成，结果:', success);
+  return success;
 }
 
 function scroll_to(request: any): boolean {

@@ -16,7 +16,7 @@ export {
   ExtractContent,
   OpenUrl,
   GetAllTabs,
-  Screenshot,
+  // Screenshot,
   TabManagement,
   WebSearch,
   RequestLogin,

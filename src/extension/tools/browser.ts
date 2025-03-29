@@ -166,18 +166,37 @@ export async function enter_by(
   highlightIndex?: number
 ): Promise<any> {
   console.log('Sending enter_by message to tab:', tabId, { xpath, highlightIndex });
-  try {
-    const response = await chromeProxy.tabs.sendMessage(tabId, {
-      type: 'computer:enter',
-      xpath,
-      highlightIndex,
-    });
-    console.log('Got response:', response);
-    return response;
-  } catch (e) {
-    console.error('Failed to send enter_by message:', e);
-    throw e;
+  let tries = 3;
+  for (let retry_counter = 0; retry_counter <= tries; retry_counter++) {
+    console.log("retry_counter: " + retry_counter);
+    let response: any;
+    try {
+      await sleep(1000);
+      console.log('sendMessage...', JSON.stringify({
+        tabId,
+        xpath,
+        highlightIndex
+      }, null, 2));
+      response = await chromeProxy.tabs.sendMessage(tabId, {
+        type: 'computer:enter',
+        xpath,
+        highlightIndex,
+      });
+      console.log('Got response:', JSON.stringify(response, null, 2));
+    } catch (e) {
+      console.error('消息发送错误:', e);
+      continue;
+    }
+    if (response === true) {
+      return response;
+    } else {
+      console.warn("无效响应:", response);
+      continue;
+    }
   }
+  let msg = "Failed to send enter_by message, please retry";
+  console.error(msg);
+  throw Error(msg);
 }
 
 export async function right_click(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any> {
