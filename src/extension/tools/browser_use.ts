@@ -52,7 +52,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
             'scroll_to',
             'extract_content',
             'get_dropdown_options',
-            'select_dropdown_option'
+            'select_dropdown_option',
           ],
         },
         index: {
