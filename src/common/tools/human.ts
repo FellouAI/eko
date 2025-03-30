@@ -43,13 +43,13 @@ export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextR
         answer = await onHumanInputText(question);
       } catch (e) {
         console.error(e);
-        return {status: "Error: Cannot get user's answer.", answer: ""};
+        return { status: "Error: Cannot get user's answer.", answer: "" };
       }
       console.log("answer: " + answer);
-      return {status: "OK", answer: answer};
+      return { status: "OK", answer: answer };
     } else {
       console.error("`onHumanInputText` not implemented");
-      return {status: "Error: Cannot get user's answer.", answer: ""};
+      return { status: "Error: Cannot get user's answer.", answer: "" };
     }
   }
 }
@@ -101,13 +101,13 @@ export class HumanInputSingleChoice implements Tool<HumanInputSingleChoiceInput,
         answer = await onHumanInputSingleChoice(question, choices);
       } catch (e) {
         console.error(e);
-        return {status: "Error: Cannot get user's answer.", answer: ""};
+        return { status: "Error: Cannot get user's answer.", answer: "" };
       }
       console.log("answer: " + answer);
-      return {status: "OK", answer: answer};
+      return { status: "OK", answer: answer };
     } else {
       console.error("`onHumanInputSingleChoice` not implemented");
-      return {status: "Error: Cannot get user's answer.", answer: ""};
+      return { status: "Error: Cannot get user's answer.", answer: "" };
     }
   }
 }
@@ -159,13 +159,13 @@ export class HumanInputMultipleChoice implements Tool<HumanInputMultipleChoiceIn
         answer = await onHumanInputMultipleChoice(question, choices)
       } catch (e) {
         console.error(e);
-        return {status: "`onHumanInputMultipleChoice` not implemented", answer: []};
+        return { status: "`onHumanInputMultipleChoice` not implemented", answer: [] };
       }
       console.log("answer: " + answer);
-      return {status: "OK", answer: answer};
+      return { status: "OK", answer: answer };
     } else {
       console.error("Cannot get user's answer.");
-      return {status: "Error: Cannot get user's answer.", answer: []};
+      return { status: "Error: Cannot get user's answer.", answer: [] };
     }
   }
 }
@@ -177,7 +177,13 @@ export class HumanOperate implements Tool<HumanOperateInput, HumanOperateResult>
 
   constructor() {
     this.name = 'human_operate';
-    this.description = 'When you encounter tasks that require login, captcha, file upload, or any other task beyond your capabilities, call this tool to hand over control to the user and clarify the reason behind this action. \n\nBefore performing the last step of any task involving external influences, such as submitting a purchase, deleting an item, editing data, scheduling an appointment, sending a message, managing an account, moving files, etc., please seek explicit confirmation from the user. ';
+    this.description = `Use this tool when you are unable to continue a task that requires user assistance.
+Usage scenarios include:
+1. Authentication (such as logging in, entering a verification code, etc.)
+2. External system operations (such as uploading files, selecting a file save location, scanning documents, taking photos, paying, authorization, etc.)
+When calling this tool to transfer control to the user, please explain in detail:
+1. Why user intervention is required
+2. What operations the user needs to perform`;
     this.input_schema = {
       type: 'object',
       properties: {
@@ -203,13 +209,13 @@ export class HumanOperate implements Tool<HumanOperateInput, HumanOperateResult>
         userOperation = await onHumanOperate(reason);
       } catch (e) {
         console.error(e);
-        return {status: "`onHumanOperate` not implemented", userOperation: ""};
+        return { status: "`onHumanOperate` not implemented", userOperation: "" };
       }
       console.log("userOperation: " + userOperation);
-      return {status: "OK", userOperation: userOperation};
+      return { status: "OK", userOperation: userOperation };
     } else {
       console.error("Cannot get user's operation.");
-      return {status: "Error: Cannot get user's operation.", userOperation: ""};
+      return { status: "Error: Cannot get user's operation.", userOperation: "" };
     }
   }
 }
