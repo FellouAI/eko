@@ -58,7 +58,9 @@ export class WorkflowGenerator {
       toolChoice: { type: 'tool', name: 'generate_workflow' },
     };
 
+    console.time('Workflow Generation Time'); // 开始计时
     const response = await this.llmProvider.generateText(messages, params);
+    console.timeEnd('Workflow Generation Time'); // 结束计时并输出时间差
 
     if (!response.toolCalls.length || !response.toolCalls[0].input.workflow) {
       messages.pop();
@@ -95,20 +97,14 @@ export class WorkflowGenerator {
     console.log("Debug the workflow...")
     console.log({ ...workflowData});
     console.log("Debug the workflow...Done")    
-    
-    // Validate all tools exist
-    for (const node of workflowData.nodes) {
-      if (!this.toolRegistry.hasTools(node.action.tools)) {
-        throw new Error(`Workflow contains undefined tools: ${node.action.tools}`);
-      }
-    }
+
 
     // Generate a new UUID if not provided
     if (!workflowData.id) {
       workflowData.id = uuidv4();
     }
 
-    return this.createWorkflowFromData(workflowData, ekoConfig);
+    return this.createFastWorkflowFromData(workflowData, ekoConfig);
   }
 
   private createWorkflowFromData(data: any, ekoConfig: EkoConfig): Workflow {
@@ -144,6 +140,49 @@ export class WorkflowGenerator {
           nodeData.action.name,
           nodeData.action.description,
           tools,
+          this.llmProvider,
+          { maxTokens: 8192 }
+        );
+
+        const node = {
+          id: nodeData.id,
+          name: nodeData.name || nodeData.id,
+          input: nodeData.input || { type: 'any', schema: {}, value: undefined },
+          output: nodeData.output || { type: 'any', schema: {}, value: undefined },
+          action: action,
+          dependencies: nodeData.dependencies || [],
+        };
+        workflow.addNode(node);
+      });
+    }
+
+    return workflow;
+  }
+
+  private createFastWorkflowFromData(data: any, ekoConfig: EkoConfig): Workflow {
+    const workflow = new WorkflowImpl(
+      data.id,
+      data.name,
+      ekoConfig,
+      data,
+      data.description || '',
+      [],
+      new Map(Object.entries(data.variables || {})),
+      this.llmProvider,
+      {
+        logLevel: 'info',
+        includeTimestamp: true,
+      }
+    );
+
+    // Add nodes to workflow
+    if (Array.isArray(data.nodes)) {
+      data.nodes.forEach((nodeData: any) => {
+
+        const action = ActionImpl.createPromptAction(
+          nodeData.action.name,
+          nodeData.action.description,
+          [this.toolRegistry.getTool('browser_use')],
           this.llmProvider,
           { maxTokens: 8192 }
         );

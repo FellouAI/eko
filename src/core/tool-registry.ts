@@ -45,18 +45,6 @@ export class ToolRegistry {
 
   // Gets workflow schema with current tools
   getWorkflowSchema(): object {
-    const schema = JSON.parse(JSON.stringify(workflowSchema)); // Deep clone
-
-    // Update the tools property in action schema to use current tool enum
-    const actionProperties = schema.properties.nodes.items.properties.action.properties;
-    actionProperties.tools = {
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: this.getToolEnum()
-      },
-    };
-
-    return schema;
+    return JSON.parse(JSON.stringify(workflowSchema));
   }
 }

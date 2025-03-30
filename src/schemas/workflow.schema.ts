@@ -4,7 +4,7 @@ export const workflowSchema = {
   properties: {
     thinking: {
       type: "string",
-      description: 'Your thinking draft. Should start with "OK, now user requires me to ...". Just show your thinking process, DO NOT show the specificed steps. You can use markdown format without code block.',
+      description: 'Your thinking draft. Should start with "OK, now user requires me to ...". Just show your thinking process, DO NOT show the specificed steps,Remember DO NOT output more than 20 words total! You can use markdown format without code block.',
     },
     id: { type: "string" },
     name: { type: "string" },
@@ -42,11 +42,6 @@ export const workflowSchema = {
               },
               name: { type: "string" },
               description: { type: "string" },
-              params: { type: "object" },
-              tools: {
-                type: "array",
-                items: { type: "string" },   // enum values from tool registry will be dynamically populated
-              },
             },
           },
         },

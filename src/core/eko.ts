@@ -24,6 +24,8 @@ export class Eko {
   private toolRegistry = new ToolRegistry();
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
   public prompt: string = "";
+  public tabs: chrome.tabs.Tab[] = [];
+  public workflow?: Workflow = undefined;
 
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
     console.info("using Eko@" + process.env.COMMIT_HASH);
@@ -78,8 +80,9 @@ export class Eko {
     tools.forEach(tool => this.toolRegistry.registerTool(tool));
   }
 
-  public async generate(prompt: string, param?: EkoInvokeParam): Promise<Workflow> {
+  public async generate(prompt: string, tabs: chrome.tabs.Tab[] = [], param?: EkoInvokeParam): Promise<Workflow> {
     this.prompt = prompt;
+    this.tabs = tabs;
     let toolRegistry = this.toolRegistry;
     if (param && param.tools && param.tools.length > 0) {
       toolRegistry = new ToolRegistry();
@@ -97,6 +100,7 @@ export class Eko {
     this.workflowGeneratorMap.set(workflow, generator);
     console.log("the workflow returned by generate");
     console.log(workflow);
+    this.workflow = workflow;
     return workflow;
   }
 
@@ -122,7 +126,6 @@ export class Eko {
               "extract_content",
               "get_all_tabs",
               "open_url",
-              "screenshot",
               "tab_management",
               "web_search",
               "human_input_text",
@@ -145,6 +148,7 @@ export class Eko {
     
     const generator = new WorkflowGenerator(this.llmProvider, this.toolRegistry);  
     workflow = await generator.generateWorkflowFromJson(json, this.ekoConfig);
+    this.workflow = workflow;
 
     // Inject LLM provider at workflow level
     workflow.llmProvider = this.llmProvider;
@@ -170,8 +174,12 @@ export class Eko {
     return result;
   }
 
-  public async cancel(workflow: Workflow): Promise<void> {
-    return await workflow.cancel();
+  public async cancel(): Promise<void> {
+    if (this.workflow) {
+      return await this.workflow.cancel();
+    } else {
+      throw Error("`Eko` instance do not have a `workflow` member");
+    }
   }
 
 

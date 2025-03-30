@@ -298,6 +298,9 @@ export class OpenaiProvider implements LLMProvider {
               handler.onContent?.(choice.delta.content);
             } else if (choice.delta.tool_calls && choice.delta.tool_calls.length > 0) {
               let tool_calls = choice.delta.tool_calls[0];
+              if (tool_calls.index != 0) {
+                continue;
+              }
               if (!currentToolUse) {
                 currentToolUse = {
                   id: tool_calls.id || '',
@@ -318,6 +321,7 @@ export class OpenaiProvider implements LLMProvider {
           if (choice.finish_reason) {
             stop_reason = choice.finish_reason;
             if (currentToolUse) {
+              console.log("currentToolUse.accumulatedJson=", currentToolUse.accumulatedJson);
               const toolCall: ToolCall = {
                 id: currentToolUse.id,
                 name: currentToolUse.name,

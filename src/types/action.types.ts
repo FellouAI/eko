@@ -48,4 +48,5 @@ export interface Action {
   execute: (input: NodeInput, output: NodeOutput, context: ExecutionContext) => Promise<{nodeOutput: unknown, reacts: Message[]}>;
   tools: Array<Tool<any, any>>; // Allow both Tool objects and tool names
   llmProvider?: LLMProvider;
+  tabs: chrome.tabs.Tab[];
 }

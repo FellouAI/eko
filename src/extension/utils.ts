@@ -157,7 +157,7 @@ export async function executeScript(chromeProxy: any, tabId: number, func: any, 
 export async function waitForTabComplete(
   chromeProxy: any,
   tabId: number,
-  timeout: number = 15_000
+  timeout: number = 30_000
 ): Promise<chrome.tabs.Tab> {
   return new Promise(async (resolve, reject) => {
     const time = setTimeout(async () => {
@@ -170,7 +170,8 @@ export async function waitForTabComplete(
         console.warn('Timeout: waitForTabComplete, but tab is already complete.');
         resolve(tab);
       } else {
-        reject('Timeout: waitForTabComplete');
+        console.warn("Timeout: waitForTabComplete, and tab is not complete");
+        resolve(tab);
       }
     }, timeout);
     console.log("setTimeout done");
