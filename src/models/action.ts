@@ -1,6 +1,6 @@
 // src/models/action.ts
 
-import { Action, Tool, ExecutionContext, InputSchema } from '../types/action.types';
+import { Action, Tool, ExecutionContext, InputSchema, Property } from '../types/action.types';
 import { NodeInput, NodeOutput } from '../types/workflow.types';
 import {
   LLMProvider,
@@ -9,6 +9,7 @@ import {
   LLMStreamHandler,
   ToolDefinition,
   LLMResponse,
+  ToolCall,
 } from '../types/llm.types';
 import { ExecutionLogger } from '@/utils/execution-logger';
 import { WriteContextTool } from '@/common/tools/write_context';
@@ -89,6 +90,9 @@ export class ActionImpl implements Action {
     let hasToolUse = false;
     let roundMessages: Message[] = [];
 
+    let params_copy: LLMParameters = JSON.parse(JSON.stringify(params));
+    params_copy.tools = params_copy.tools?.map(this.wrapToolInputSchema);
+
     while (!context.signal?.aborted) {
       this.logger = context.logger;
       roundMessages = [];
@@ -166,8 +170,19 @@ export class ActionImpl implements Action {
                 };
                 return;
               }
+
+              // unwrap the toolCall
+              let unwrapped = this.unwrapToolCall(toolCall);
+              let input = unwrapped.toolCall.input;
+              console.log("unwrapped", unwrapped);
+              if (unwrapped.userSidePrompt) {
+                context.callback?.hooks.onLlmMessageUserSidePrompt?.(unwrapped.userSidePrompt);
+              } else {
+                console.warn("LLM returns without `userSidePrompt`");
+              }
+
               // Execute the tool
-              let result = await tool.execute(context, toolCall.input);
+              let result = await tool.execute(context, input);
               // afterToolUse
               if (context.callback && context.callback.hooks.afterToolUse) {
                 let modified_result = await context.callback.hooks.afterToolUse(
@@ -249,7 +264,7 @@ export class ActionImpl implements Action {
         throw new Error('LLM provider not set');
       }
       try {
-        await this.llmProvider.generateStream(messages, params, handler);
+        await this.llmProvider.generateStream(messages, params_copy, handler);
       } catch (e) {
         console.warn("an error occurs when LLM generate response");
         console.warn(e);
@@ -589,5 +604,49 @@ export class ActionImpl implements Action {
     llmConfig?: LLMParameters
   ): Action {
     return new ActionImpl('prompt', name, description, tools, llmProvider, llmConfig);
+  }
+
+  private wrapToolInputSchema(definition: ToolDefinition): ToolDefinition {
+    (definition.input_schema as InputSchema) = {
+      type: "object",
+      properties: {
+        // comment for backup
+        // observation: {
+        //   "type": "string",
+        //   "description": 'Your observation of the previous steps. Should start with "In the previous step, I\'ve ...".',
+        // },
+        // thinking: {
+        //   "type": "string",
+        //   "description": 'Your thinking draft. Should start with "As observation before, now I should ...".',
+        // },
+        userSidePrompt: {
+          "type": "string",
+          "description": 'The user-side prompt, showing why calling this tool. Should start with "I\'m calling the ...(tool) to ...(target)". Rememeber to keep the same language of the ultimate task.',
+        },
+        toolCall: (definition.input_schema as Property),
+      },
+      required: [
+        // comment for backup
+        // "observation",
+        // "thinking",
+        "userSidePrompt",
+        "toolCall",
+      ],
+    };
+    return definition;
+  }
+
+  private unwrapToolCall(toolCall: ToolCall) {
+    const result = {
+      observation: toolCall.input.observation as string | undefined,
+      thinking: toolCall.input.thinking as string | undefined,
+      userSidePrompt: toolCall.input.userSidePrompt as string | undefined,
+      toolCall: {
+        id: toolCall.id,
+        name: toolCall.name,
+        input: toolCall.input.toolCall,
+      } as ToolCall,
+    }
+    return result;
   }
 }
