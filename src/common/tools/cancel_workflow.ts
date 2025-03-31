@@ -8,7 +8,7 @@ export class CancelWorkflow implements Tool<CancelWorkflowInput, void> {
 
   constructor() {
     this.name = 'cancel_workflow';
-    this.description = 'Cancel the workflow. If any tool consistently encounters exceptions, invoke this tool to cancel the workflow.';
+    this.description = 'Cancel the workflow when encountering critical errors that cannot be resolved through user interaction or retry. This should only be used when the workflow is in an unrecoverable state. ';
     this.input_schema = {
       type: 'object',
       properties: {
