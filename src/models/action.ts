@@ -547,10 +547,20 @@ export class ActionImpl implements Action {
 - As backup method, use 'human_operate' to handle any error that you tried many times
 
 ## TASK COMPLETION:
-- Use the 'return_output' action as the last action as soon as the ultimate task is complete
-- Dont use 'return_output' before you are done with everything the user asked you
-- If you have to do something repeatedly for example the task says for "each", or "for all", or "x times", count in your text response (not tool calling!) how many times you have done it and how many remain. Don't stop until you have completed like the task asked you. Only call done after the last step.
-- Don't hallucinate actions
+- Use the 'return_output' action as the last action ONLY when you are 100% certain the ultimate task is complete
+- Before using 'return_output', you MUST:
+  1. Double-check if you have fulfilled ALL requirements from the user's task description
+  2. Verify that you have collected ALL necessary information
+  3. Ensure you have handled ALL specified cases (e.g., "for each", "for all", "x times")
+  4. Confirm that your output contains ALL requested information
+  5. Check if there are any missing details or incomplete steps
+  6. Verify that all retry attempts have been exhausted if there were any issues
+- If you have to do something repeatedly (e.g., "for each", "for all", "x times"):
+  * Keep a detailed count in your text response of completed items vs total required
+  * Only proceed to 'return_output' after handling ALL items
+  * Double-check your count matches the exact requirement
+  * If any item fails, retry that specific item before moving on
+- Never hallucinate or assume task completion without verification
 - Make sure you include everything you found out for the ultimate task in the done text parameter. Do not just say you are done, but include the requested information of the task. 
 
 ## VISUAL CONTEXT:
