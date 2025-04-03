@@ -1,5 +1,6 @@
 import { CancelWorkflowInput } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
+import { TOOL_PROMPTS } from '@/prompts';
 
 export class CancelWorkflow implements Tool<CancelWorkflowInput, void> {
   name: string;
@@ -8,17 +9,8 @@ export class CancelWorkflow implements Tool<CancelWorkflowInput, void> {
 
   constructor() {
     this.name = 'cancel_workflow';
-    this.description = 'Cancel the workflow when encountering critical errors that cannot be resolved through user interaction or retry. This should only be used when the workflow is in an unrecoverable state. ';
-    this.input_schema = {
-      type: 'object',
-      properties: {
-        reason: {
-          type: 'string',
-          description: 'Why the workflow should be cancelled.',
-        },
-      },
-      required: ['reason'],
-    };
+    this.description = TOOL_PROMPTS.cancel_workflow.description;
+    this.input_schema = TOOL_PROMPTS.cancel_workflow.input_schema;
   }
 
   async execute(context: ExecutionContext, params: CancelWorkflowInput): Promise<void> {
