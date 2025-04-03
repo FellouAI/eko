@@ -543,8 +543,13 @@ export class ActionImpl implements Action {
 - If you want to research something, open a new tab instead of using the current tab
 
 ## HUMAN OPERATE:
-- If login pr captcha pops up, use 'human_operate' to let user handle it
-- As backup method, use 'human_operate' to handle any error that you tried many times
+- When you need to log in or enter a verification code:
+1. First check if the user is logged in
+2. If logged in, continue to perform the task normally
+3. If not logged in or encountering a verification code interface, immediately use the 'human_operate' tool to transfer the operation rights to the user
+4. On the login/verification code interface, do not use any automatic input tools (such as 'input_text') to fill in the password or verification code
+5. Wait for the user to complete the login/verification code operation, and then check the login status again
+- As a backup method, when encountering other errors that cannot be handled automatically, use the 'human_operate' tool to transfer the operation rights to the user
 
 ## TASK COMPLETION:
 - Use the 'return_output' action as the last action ONLY when you are 100% certain the ultimate task is complete
