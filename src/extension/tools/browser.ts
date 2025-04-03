@@ -1,5 +1,5 @@
 import { ScreenshotResult } from '../../types/tools.types';
-import { getPageSize } from '../utils';
+import { getPageSize, getCurrentTabId } from '../utils';
 
 function isFellouBrowser(chromeProxy: any): boolean {
   const result =  typeof chromeProxy.browseruse == 'object';
@@ -333,6 +333,24 @@ export async function screenshot(chromeProxy: any, windowId: number, compress?: 
     console.log('screenshot Got screenshot result:', result);
     return result;
   } catch (e) {
+    if (isFellouBrowser(chromeProxy)) {
+      console.log('Failed to take screenshot, try fellou...');
+      const tabId = await getCurrentTabId(chromeProxy, windowId)
+      const base64 = await chromeProxy.browseruse.screenshot(tabId, {
+        type: 'jpeg',
+        quality: 60,
+        encoding: 'base64',
+      })
+      const result = {
+        image: {
+          type: 'base64',
+          media_type: 'image/jpeg',
+          data: base64,
+        },
+      } as ScreenshotResult;
+      console.log('screenshot Got screenshot result, try fellou:', result);
+      return result;
+    }
     console.error('Failed to take screenshot:', e);
     throw e;
   }
@@ -366,7 +384,7 @@ export async function compress_image(
     });
   } catch (e) {
     console.error('Failed to compress image:', e);
-    throw e;
+    return dataUrl;
   }
 }
 
