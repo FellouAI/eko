@@ -55,7 +55,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/common/**/*', 'src/types/*', 'src/extension/**/*'],
+        include: ['src/prompts/**/*', 'src/common/**/*', 'src/types/*', 'src/extension/**/*'],
         exclude: ['src/extension/script']
       }),
       replace({
@@ -80,7 +80,7 @@ export default [
       typescript({ 
         tsconfig: './tsconfig.json',
         declaration: false,
-        include: ['src/common/**/*', 'src/extension/content/*'],
+        include: ['src/prompts/**/*', 'src/common/**/*', 'src/extension/content/*'],
         declarationDir: 'dist'
       }),
       replace({
@@ -107,7 +107,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/common/**/*', 'src/types/*', 'src/web/**/*']
+        include: ['src/prompts/**/*', 'src/common/**/*', 'src/types/*', 'src/web/**/*']
       }),
       replace({
         'process.env.COMMIT_HASH': JSON.stringify(commitHash),
@@ -130,7 +130,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/common/**/*', 'src/types/*', 'src/nodejs/**/*']
+        include: ['src/prompts/**/*', 'src/common/**/*', 'src/types/*', 'src/nodejs/**/*']
       }),
       replace({
         'process.env.COMMIT_HASH': JSON.stringify(commitHash),
@@ -153,7 +153,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/common/**/*', 'src/types/*', 'src/nodejs/**/*']
+        include: ['src/prompts/**/*', 'src/common/**/*', 'src/types/*', 'src/nodejs/**/*']
       }),
       replace({
         'process.env.COMMIT_HASH': JSON.stringify(commitHash),
@@ -185,7 +185,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
-        include: ['src/common/**/*', 'src/types/*', 'src/fellou/**/*']
+        include: ['src/prompts/**/*', 'src/common/**/*', 'src/types/*', 'src/fellou/**/*']
       }),
       replace({
         'process.env.COMMIT_HASH': JSON.stringify(commitHash),
