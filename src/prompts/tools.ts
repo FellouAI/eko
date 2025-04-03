@@ -48,5 +48,87 @@ export const TOOL_PROMPTS: Record<string, ToolPromptItem> = {
       },
       "required": ["type", "title", "background", "keypoints"],
     },
-  }
+  },
+  human_input_text: {
+    description: 'When you are unsure about the details of your next action or need the user to perform a local action, call me and ask the user for details in the "question" field. The user will provide you with a text as an answer.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        question: {
+          type: 'string',
+          description: 'Ask the user here.',
+        },
+      },
+      required: ['question'],
+    },
+  },
+  human_input_single_choice: {
+    description: 'When you are unsure about the details of your next action, call me and ask the user for details in the "question" field with at least 2 choices. The user will provide you with ONE choice as an answer.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        question: {
+          type: 'string',
+          description: 'Ask the user here.',
+        },
+        choices: {
+          type: 'array',
+          description: 'All of the choices.',
+          items: {
+            type: 'object',
+            properties: {
+              choice: {
+                type: 'string',
+              }
+            }
+          }
+        }
+      },
+      required: ['question', 'choices'],
+    },
+  },
+  human_input_multiple_choice: {
+    description: 'When you are unsure about the details of your next action, call me and ask the user for details in the "question" field with at least 2 choices. The user will provide you with ONE or MORE choice as an answer.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        question: {
+          type: 'string',
+          description: 'Ask the user here.',
+        },
+        choices: {
+          type: 'array',
+          description: 'All of the choices.',
+          items: {
+            type: 'object',
+            properties: {
+              choice: {
+                type: 'string',
+              }
+            }
+          }
+        }
+      },
+      required: ['question', 'choices'],
+    },
+  },
+  human_operate: {
+    description: `Use this tool when you are unable to continue a task that requires user assistance.
+Usage scenarios include:
+1. Authentication (such as logging in, entering a verification code, etc.)
+2. External system operations (such as uploading files, selecting a file save location, scanning documents, taking photos, paying, authorization, etc.)
+When calling this tool to transfer control to the user, please explain in detail:
+1. Why user intervention is required
+2. What operations the user needs to perform`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          description: 'The reason why you need to transfer control.',
+        },
+      },
+      required: ['reason'],
+    },
+  },
 }

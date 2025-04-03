@@ -9,6 +9,7 @@ import {
   HumanOperateResult,
 } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
+import { TOOL_PROMPTS } from '@/prompts';
 
 export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextResult> {
   name: string;
@@ -17,17 +18,8 @@ export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextR
 
   constructor() {
     this.name = 'human_input_text';
-    this.description = 'When you are unsure about the details of your next action or need the user to perform a local action, call me and ask the user for details in the "question" field. The user will provide you with a text as an answer.';
-    this.input_schema = {
-      type: 'object',
-      properties: {
-        question: {
-          type: 'string',
-          description: 'Ask the user here.',
-        },
-      },
-      required: ['question'],
-    };
+    this.description = TOOL_PROMPTS.human_input_text.description;
+    this.input_schema = TOOL_PROMPTS.human_input_text.input_schema;
   }
 
   async execute(context: ExecutionContext, params: HumanInputTextInput): Promise<HumanInputTextResult> {
@@ -61,29 +53,8 @@ export class HumanInputSingleChoice implements Tool<HumanInputSingleChoiceInput,
 
   constructor() {
     this.name = 'human_input_single_choice';
-    this.description = 'When you are unsure about the details of your next action, call me and ask the user for details in the "question" field with at least 2 choices. The user will provide you with ONE choice as an answer.';
-    this.input_schema = {
-      type: 'object',
-      properties: {
-        question: {
-          type: 'string',
-          description: 'Ask the user here.',
-        },
-        choices: {
-          type: 'array',
-          description: 'All of the choices.',
-          items: {
-            type: 'object',
-            properties: {
-              choice: {
-                type: 'string',
-              }
-            }
-          }
-        }
-      },
-      required: ['question', 'choices'],
-    };
+    this.description = TOOL_PROMPTS.human_input_single_choice.description;
+    this.input_schema = TOOL_PROMPTS.human_input_single_choice.input_schema;
   }
 
   async execute(context: ExecutionContext, params: HumanInputSingleChoiceInput): Promise<HumanInputSingleChoiceResult> {
@@ -119,29 +90,8 @@ export class HumanInputMultipleChoice implements Tool<HumanInputMultipleChoiceIn
 
   constructor() {
     this.name = 'human_input_multiple_choice';
-    this.description = 'When you are unsure about the details of your next action, call me and ask the user for details in the "question" field with at least 2 choices. The user will provide you with ONE or MORE choice as an answer.';
-    this.input_schema = {
-      type: 'object',
-      properties: {
-        question: {
-          type: 'string',
-          description: 'Ask the user here.',
-        },
-        choices: {
-          type: 'array',
-          description: 'All of the choices.',
-          items: {
-            type: 'object',
-            properties: {
-              choice: {
-                type: 'string',
-              }
-            }
-          }
-        }
-      },
-      required: ['question', 'choices'],
-    };
+    this.description = TOOL_PROMPTS.human_input_multiple_choice.description;
+    this.input_schema = TOOL_PROMPTS.human_input_multiple_choice.input_schema;
   }
 
   async execute(context: ExecutionContext, params: HumanInputMultipleChoiceInput): Promise<HumanInputMultipleChoiceResult> {
@@ -177,23 +127,8 @@ export class HumanOperate implements Tool<HumanOperateInput, HumanOperateResult>
 
   constructor() {
     this.name = 'human_operate';
-    this.description = `Use this tool when you are unable to continue a task that requires user assistance.
-Usage scenarios include:
-1. Authentication (such as logging in, entering a verification code, etc.)
-2. External system operations (such as uploading files, selecting a file save location, scanning documents, taking photos, paying, authorization, etc.)
-When calling this tool to transfer control to the user, please explain in detail:
-1. Why user intervention is required
-2. What operations the user needs to perform`;
-    this.input_schema = {
-      type: 'object',
-      properties: {
-        reason: {
-          type: 'string',
-          description: 'The reason why you need to transfer control.',
-        },
-      },
-      required: ['reason'],
-    };
+    this.description = TOOL_PROMPTS.human_operate.description;
+    this.input_schema = TOOL_PROMPTS.human_operate.input_schema;
   }
 
   async execute(context: ExecutionContext, params: HumanOperateInput): Promise<HumanOperateResult> {
