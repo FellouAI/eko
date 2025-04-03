@@ -19,5 +19,34 @@ export const TOOL_PROMPTS: Record<string, ToolPromptItem> = {
         },
         required: ['reason'],
     },
-  },  
+  },
+  document_agent: {
+    description: 'A document agent that can help you write document or long text, e.g. research report, email draft, summary.',
+    input_schema: {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "The type of document to be created (e.g., 'report', 'presentation', 'article')."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the document."
+        },
+        "background": {
+          "type": "string",
+          "description": "The background information or target for the document."
+        },
+        "keypoints": {
+          "type": "string",
+          "description": "A summary of the key points or main ideas to be included in the document."
+        },
+        "style": {
+          "type": "string",
+          "description": "The desired style or tone of the document (e.g., 'formal', 'casual', 'academic')."
+        },
+      },
+      "required": ["type", "title", "background", "keypoints"],
+    },
+  }
 }
