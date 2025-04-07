@@ -12,7 +12,7 @@ export class ExtractContent implements Tool<any, ExtractContentResult> {
 
   constructor() {
     this.name = 'extract_content';
-    this.description = 'Extract the text content of the current webpage';
+    this.description = 'Extract the complete text content of the current webpage';
     this.input_schema = {
       type: 'object',
       properties: {},

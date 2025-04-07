@@ -35,6 +35,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
   - Screenshots are used to understand page layouts, with labeled bounding boxes corresponding to element indexes. Each bounding box and its label share the same color, with labels typically positioned in the top-right corner of the box.
   - Screenshots help verify element positions and relationships. Labels may sometimes overlap, so extracted elements are used to verify the correct elements.
   - In addition to screenshots, simplified information about interactive elements is returned, with element indexes corresponding to those in the screenshots.
+  - This tool can ONLY screenshot the VISIBLE content. If a complete content is required, use 'extract_content' instead.
 * \`input_text\`: Enter a string in the interactive element, If you need to press the Enter key, please end with '\\n'. For search tasks, you MUST end with '\\n' to simulate pressing the Enter key.
 * \`click\`: Click to element.
 * \`right_click\`: Right-click on the element.
