@@ -17,6 +17,7 @@ export async function summarizeWorkflow(
 
 - name: ${workflow.name}
 - description: ${workflow.description}
+- is successful?: ${contextVariables.get("__isSuccessful__")}
 - node:
 
 ${JSON.stringify(workflow.getRawWorkflowJson())}
@@ -41,10 +42,6 @@ ${JSON.stringify(nodeOutputs)}
       input_schema: {
         type: 'object',
         properties: {
-          isSuccessful: {
-            type: 'boolean',
-            description: '`true` if the workflow ultimately executes successfully, and `false` when the workflow ultimately fails, regardless of whether there are errors during the workflow.'
-          },
           summary: {
             type: 'string',
             description: 'Your summary in one paragraph with fluent and natural language, including task status and outcome of the task.',
@@ -70,7 +67,7 @@ ${JSON.stringify(nodeOutputs)}
   const response = await llmProvider.generateText(messages, params);
   console.log(response);
   return {
-    isSuccessful: response.toolCalls[0].input.isSuccessful as boolean,
+    isSuccessful: contextVariables.get("__isSuccessful__") as boolean,
     summary: response.toolCalls[0].input.summary as string,
     payload: response.toolCalls[0].input.document as string | undefined,
   };

@@ -29,6 +29,10 @@ function createReturnTool(
     input_schema: {
       type: 'object',
       properties: {
+        isSuccessful: {
+          type: 'boolean',
+          description: '`true` if the workflow ultimately executes successfully, and `false` when the workflow ultimately fails, regardless of whether there are errors during the workflow.'
+        },
         use_tool_result: {
           type: ['boolean'],
           description: `Whether to use the latest tool result as output. When set to true, the 'value' parameter is ignored.`,
@@ -48,6 +52,7 @@ function createReturnTool(
       console.info('debug the output...');
       console.log(params);
       console.info('debug the output...done');
+      context.variables.set("__isSuccessful__", (params as any).isSuccessful as boolean);
       return { success: true };
     },
   };
