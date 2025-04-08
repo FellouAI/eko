@@ -189,7 +189,7 @@ When calling this tool to transfer control to the user, please explain in detail
       properties: {
         reason: {
           type: 'string',
-          description: 'The reason why you need to transfer control.',
+          description: 'The reason why you need to transfer control. Should starts with "Dear user: I need your help to ...".',
         },
       },
       required: ['reason'],
