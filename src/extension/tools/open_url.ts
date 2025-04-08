@@ -66,14 +66,14 @@ export class OpenUrl implements Tool<OpenUrlParam, OpenUrlResult> {
     let tab: chrome.tabs.Tab;
     if (newWindow) {
       console.log('Opening new tab in a new window.');
-      tab = await open_new_tab(context.ekoConfig.chromeProxy, url, true);
+      tab = await open_new_tab(context.ekoConfig.chromeProxy, url);
       context.callback?.hooks?.onTabCreated?.(tab.id as number);
       console.log('New tab created in a new window:', tab);
     } else {
       let windowId = context.ekoConfig.workingWindowId ? context.ekoConfig.workingWindowId : await getWindowId(context);
       console.log('Using existing window with ID:', windowId);
       try {
-        tab = await open_new_tab(context.ekoConfig.chromeProxy, url, false, windowId);
+        tab = await open_new_tab(context.ekoConfig.chromeProxy, url, windowId);
         console.log("Calling hook...")
         context.callback?.hooks?.onTabCreated?.(tab.id as number);
         console.log('New tab created in existing window:', tab);
