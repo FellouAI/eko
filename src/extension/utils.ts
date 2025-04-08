@@ -107,42 +107,24 @@ export function getCurrentTabId(chromeProxy: any, windowId?: number | undefined)
 export async function open_new_tab(
   chromeProxy: any,
   url: string,
-  newWindow: boolean,
   windowId?: number
 ): Promise<chrome.tabs.Tab> {
-  let tabId;
-  if (newWindow) {
-    let window = await chromeProxy.windows.create({
-      type: 'normal',
-      state: 'maximized',
-      url: url,
-    } as any as chrome.windows.CreateData);
-    windowId = window.id as number;
-    let tabs = window.tabs || [
-      await chromeProxy.tabs.create({
-        url: url,
-        windowId: windowId,
-      }),
-    ];
-    tabId = tabs[0].id as number;
-  } else {
-    if (!windowId) {
-      const window = await chromeProxy.windows.getCurrent();
-      windowId = window.id;
-    }
-    console.log("windowId: " + windowId);
-    let tab = await chromeProxy.tabs.create({
-      url: url,
-      windowId: windowId,
-    });
-    console.log("chromeProxy.tabs.create() done");
-    tabId = tab.id as number;
+  if(!windowId){
+    const window = await chromeProxy.windows.getCurrent();
+    windowId = window.id;
   }
-  let tab = await waitForTabComplete(chromeProxy, tabId);
+  console.log("windowId: " + windowId);
+  let tab = await chromeProxy.tabs.create({
+    url: url,
+    windowId: windowId,
+  });
+  console.log("chromeProxy.tabs.create() done");
+  let tabId = tab.id as number;
+  let completedTab = await waitForTabComplete(chromeProxy, tabId);
   console.log("waitForTabComplete() done");
   await sleep(200);
   console.log("sleep() done");
-  return tab;
+  return completedTab;
 }
 
 export async function executeScript(chromeProxy: any, tabId: number, func: any, args: any[]): Promise<any> {

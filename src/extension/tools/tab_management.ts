@@ -118,29 +118,12 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
       result = tabInfo;
     } else if (command.startsWith('new_tab')) {
       let url = command.replace('new_tab', '').replace('[', '').replace(']', '').replace(/"/g, '').trim();
-      // First mandatory opening of a new window
-      let newWindow = !context.variables.get('windowId') && !context.variables.get('tabId');
-      let tab: chrome.tabs.Tab;
-      if (newWindow) {
-        tab = await open_new_tab(context.ekoConfig.chromeProxy, url, true);
-        context.callback?.hooks?.onTabCreated?.(tab.id as number);
-      } else {
-        let windowId = await getWindowId(context);
-        tab = await open_new_tab(context.ekoConfig.chromeProxy, url, false, windowId);
-        context.callback?.hooks?.onTabCreated?.(tab.id as number);
-      }
-      let windowId = tab.windowId as number;
+      let windowId = await getWindowId(context);
+      let tab = await open_new_tab(context.ekoConfig.chromeProxy, url, windowId);
+      context.callback?.hooks?.onTabCreated?.(tab.id as number);
       let tabId = tab.id as number;
       context.variables.set('windowId', windowId);
       context.variables.set('tabId', tabId);
-      if (newWindow) {
-        let windowIds = context.variables.get('windowIds') as Array<number>;
-        if (windowIds) {
-          windowIds.push(windowId);
-        } else {
-          context.variables.set('windowIds', [windowId] as Array<number>);
-        }
-      }
       let tabInfo: TabInfo = {
         tabId: tab.id,
         windowId: tab.windowId,
