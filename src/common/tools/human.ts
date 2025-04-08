@@ -23,7 +23,7 @@ export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextR
       properties: {
         question: {
           type: 'string',
-          description: 'Ask the user here.',
+          description: 'Ask the user here. Should follow the format: "Please input ...".',
         },
       },
       required: ['question'],
@@ -67,7 +67,7 @@ export class HumanInputSingleChoice implements Tool<HumanInputSingleChoiceInput,
       properties: {
         question: {
           type: 'string',
-          description: 'Ask the user here.',
+          description: 'Ask the user here. Should follow the format: "Please select ...".',
         },
         choices: {
           type: 'array',
@@ -125,7 +125,7 @@ export class HumanInputMultipleChoice implements Tool<HumanInputMultipleChoiceIn
       properties: {
         question: {
           type: 'string',
-          description: 'Ask the user here.',
+          description: 'Ask the user here. Should follow the format: "Please select ...".',
         },
         choices: {
           type: 'array',
@@ -189,7 +189,7 @@ When calling this tool to transfer control to the user, please explain in detail
       properties: {
         reason: {
           type: 'string',
-          description: 'The reason why you need to transfer control. Should starts with "Dear user: I need your help to ...".',
+          description: 'The reason why you need to transfer control. Should follow the format: "Please ..., and click the "Completed" button to continue.".',
         },
       },
       required: ['reason'],
