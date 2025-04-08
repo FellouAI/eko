@@ -2,16 +2,18 @@ import { BrowserUseParam, BrowserUseResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { getWindowId, getTabId, sleep, injectScript, executeScript } from '../utils';
 import * as browser from './browser';
+import { ToolReturnsScreenshot } from './tool_returns_screenshot';
 
 /**
  * Browser Use for general
  */
-export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
+export class BrowserUse extends ToolReturnsScreenshot<BrowserUseParam> {
   name: string;
   description: string;
   input_schema: InputSchema;
 
   constructor() {
+    super();
     this.name = 'browser_use';
     this.description = `Use structured commands to interact with the browser, manipulating page elements through screenshots and webpage element extraction.
 * This is a browser GUI interface where you need to analyze webpages by taking screenshots and extracting page element structures, and specify action sequences to complete designated tasks.
@@ -76,7 +78,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
    * @param {*} params { action: 'input_text', index: 1, text: 'string' }
    * @returns > { success: true, image?: { type: 'base64', media_type: 'image/jpeg', data: '/9j...' }, text?: string }
    */
-  async execute(context: ExecutionContext, params: BrowserUseParam): Promise<BrowserUseResult> {
+  async realExecute(context: ExecutionContext, params: BrowserUseParam): Promise<BrowserUseResult> {
     console.log("execute 'browser_use'...");
     try {
       if (params === null || !params.action) {
@@ -209,12 +211,6 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
       }
       console.log("execute 'browser_use'...done, result=");
       console.log(result);
-      if (params.action != "screenshot_extract_element") {
-        console.log("as this action is has not screenshoted, take it now...");
-        let instance = new BrowserUse();
-        result = await instance.execute(context, { action: "screenshot_extract_element" });
-        console.log("as this action is has not screenshoted, take it now...done");
-      }
       return result
     } catch (e: any) {
       console.error('Browser use error:', e);
