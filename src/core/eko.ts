@@ -9,7 +9,7 @@ import {
   Workflow,
   WorkflowCallback,
   ExecutionContext,
-  WorkflowResult
+  WorkflowResult,
 } from '../types';
 import { ToolRegistry } from './tool-registry';
 
@@ -23,13 +23,13 @@ export class Eko {
   private ekoConfig: EkoConfig;
   private toolRegistry = new ToolRegistry();
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
-  public prompt: string = "";
+  public prompt: string = '';
   public tabs: chrome.tabs.Tab[] = [];
   public workflow?: Workflow = undefined;
 
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
-    console.info("using Eko@" + process.env.COMMIT_HASH);
-    console.warn("this version is POC, should not used for production");
+    console.info('using Eko@' + process.env.COMMIT_HASH);
+    console.warn('this version is POC, should not used for production');
     this.llmProvider = LLMProviderFactory.buildLLMProvider(llmConfig);
     this.ekoConfig = this.buildEkoConfig(ekoConfig);
     this.registerTools();
@@ -37,7 +37,7 @@ export class Eko {
 
   private buildEkoConfig(ekoConfig: Partial<EkoConfig> | undefined): EkoConfig {
     if (!ekoConfig) {
-      console.warn("`ekoConfig` is missing when construct `Eko` instance");
+      console.warn('`ekoConfig` is missing when construct `Eko` instance');
     }
     const defaultEkoConfig: EkoConfig = {
       workingWindowId: undefined,
@@ -60,23 +60,22 @@ export class Eko {
 
       // these tools could not work without corresponding hook
       const tool2isHookExists: { [key: string]: boolean } = {
-        "human_input_text": Boolean(hooks.onHumanInputText),
-        "human_input_single_choice": Boolean(hooks.onHumanInputSingleChoice),
-        "human_input_multiple_choice": Boolean(hooks.onHumanInputMultipleChoice),
-        "human_operate": Boolean(hooks.onHumanOperate),
+        'human_input_text': Boolean(hooks.onHumanInputText),
+        'human_input_single_choice': Boolean(hooks.onHumanInputSingleChoice),
+        'human_input_multiple_choice': Boolean(hooks.onHumanInputMultipleChoice),
+        'human_operate': Boolean(hooks.onHumanOperate),
       };
       tools = tools.filter(tool => {
         if (tool.name in tool2isHookExists) {
-          let isHookExists = tool2isHookExists[tool.name]
+          let isHookExists = tool2isHookExists[tool.name];
           return isHookExists;
         } else {
           return true;
         }
       });
     } else {
-      console.warn("`ekoConfig.callback` is missing when construct `Eko` instance.")
+      console.warn('`ekoConfig.callback` is missing when construct `Eko` instance.');
     }
-    
     tools.forEach(tool => this.toolRegistry.registerTool(tool));
   }
 
@@ -98,7 +97,7 @@ export class Eko {
     const generator = new WorkflowGenerator(this.llmProvider, toolRegistry);
     const workflow = await generator.generateWorkflow(prompt, this.ekoConfig);
     this.workflowGeneratorMap.set(workflow, generator);
-    console.log("the workflow returned by generate");
+    console.log('the workflow returned by generate');
     console.log(workflow);
     this.workflow = workflow;
     return workflow;
@@ -106,49 +105,49 @@ export class Eko {
 
   public async execute(workflow: Workflow): Promise<WorkflowResult> {
     let prompt = this.prompt;
-    let description ="";
+    let description = '';
     workflow.nodes.forEach(node => {
-      description += node.name + "\n";
-    })
+      description += node.name + '\n';
+    });
     const json = {
-      "id": "workflow_id",
-      "name": prompt,
-      "description": prompt,
-      "nodes": [
+      'id': 'workflow_id',
+      'name': prompt,
+      'description': prompt,
+      'nodes': [
         {
-          "id": "sub_task_id",
-          "type": "action",
-          "action": {
-            "type": "prompt",
-            "name": prompt,
-            "description": description,
-            "tools": [
-              "browser_use",
-              "document_agent",
-              "export_file",
-              "extract_content",
-              "open_url",
-              "tab_management",
-              "web_search",
-              "human_input_text",
-              "human_input_single_choice",
-              "human_input_multiple_choice",
-              "human_operate",
+          'id': 'sub_task_id',
+          'type': 'action',
+          'action': {
+            'type': 'prompt',
+            'name': prompt,
+            'description': description,
+            'tools': [
+              'browser_use',
+              'document_agent',
+              'export_file',
+              'extract_content',
+              'open_url',
+              'tab_management',
+              'switch_tab',
+              'web_search',
+              'human_input_text',
+              'human_input_single_choice',
+              'human_input_multiple_choice',
+              'human_operate',
             ],
           },
-          "dependencies": []
+          'dependencies': [],
         },
       ],
     };
-    console.log("debug the workflow...");
+    console.log('debug the workflow...');
     console.log(json);
-    console.log("debug the workflow...done");
-    
-    console.log("debug the LLMProvider...");
+    console.log('debug the workflow...done');
+
+    console.log('debug the LLMProvider...');
     console.log(this.llmProvider);
-    console.log("debug the LLMProvider...done");
-    
-    const generator = new WorkflowGenerator(this.llmProvider, this.toolRegistry);  
+    console.log('debug the LLMProvider...done');
+    const generator = new WorkflowGenerator(this.llmProvider, this.toolRegistry);
     workflow = await generator.generateWorkflowFromJson(json, this.ekoConfig);
     this.workflow = workflow;
 
@@ -180,7 +179,7 @@ export class Eko {
     if (this.workflow) {
       return await this.workflow.cancel();
     } else {
-      throw Error("`Eko` instance do not have a `workflow` member");
+      throw Error('`Eko` instance do not have a `workflow` member');
     }
   }
 
@@ -208,13 +207,13 @@ export class Eko {
   public async callTool(
     tool: Tool<any, any>,
     input: object,
-    callback?: WorkflowCallback
+    callback?: WorkflowCallback,
   ): Promise<any>;
 
   public async callTool(
     tool: Tool<any, any> | string,
     input: object,
-    callback?: WorkflowCallback
+    callback?: WorkflowCallback,
   ): Promise<any> {
     if (typeof tool === 'string') {
       tool = this.getTool(tool);

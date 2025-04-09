@@ -7,6 +7,7 @@ import { Screenshot } from './screenshot';
 import { TabManagement } from './tab_management';
 import { WebSearch } from './web_search';
 import { RequestLogin } from './request_login';
+import { SwitchTab } from './switch_tab';
 
 export * from '../../common/tools';
 
@@ -20,4 +21,5 @@ export {
   TabManagement,
   WebSearch,
   RequestLogin,
+  SwitchTab,
 };

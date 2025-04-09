@@ -24,7 +24,9 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
 
   constructor() {
     this.name = 'tab_management';
-    this.description = 'Browser tab management, view and operate tabs';
+    this.description = 'Browser tab management, view and operate tabs.You can use this tool to' +
+      'View all tabs with the tabId and title.Get current tab information (tabId, url, title).' +
+      'Go back to the previous page in the current tab. And Close the current tab.';
     this.input_schema = {
       type: 'object',
       properties: {
@@ -34,9 +36,8 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
 * \`tab_all\`: View all tabs and return the tabId and title.
 * \`current_tab\`: Get current tab information (tabId, url, title).
 * \`go_back\`: Go back to the previous page in the current tab.
-* \`close_tab\`: Close the current tab.
-* \`switch_tab [tabId]\`: Switch to the specified tab using tabId, eg: \`switch_tab 1000\`.
-* \`new_tab [url]\`: Open a new tab window and open the URL, eg: \`new_tab https://www.google.com\``,
+* \`close_tab\`: Close the current tab.`,
+          enum: ['tab_all', 'current_tab', 'go_back', 'close_tab'],
         },
       },
       required: ['command'],
@@ -51,7 +52,7 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
    */
   async execute(
     context: ExecutionContext,
-    params: TabManagementParam
+    params: TabManagementParam,
   ): Promise<TabManagementResult> {
     if (params === null || !params.command) {
       throw new Error('Invalid parameters. Expected an object with a "command" property.');
@@ -109,28 +110,6 @@ export class TabManagement implements Tool<TabManagementParam, TabManagementResu
       context.variables.set('windowId', tab.windowId);
       let closeTabInfo: CloseTabInfo = { closedTabId, newTabId, newTabTitle: tab.title };
       result = closeTabInfo;
-    } else if (command.startsWith('switch_tab')) {
-      let tabId = parseInt(command.replace('switch_tab', '').replace('[', '').replace(']', ''));
-      let tab = await context.ekoConfig.chromeProxy.tabs.update(tabId, { active: true });
-      context.variables.set('tabId', tab.id);
-      context.variables.set('windowId', tab.windowId);
-      let tabInfo: TabInfo = { tabId, windowId: tab.windowId, title: tab.title, url: tab.url };
-      result = tabInfo;
-    } else if (command.startsWith('new_tab')) {
-      let url = command.replace('new_tab', '').replace('[', '').replace(']', '').replace(/"/g, '').trim();
-      let windowId = await getWindowId(context);
-      let tab = await open_new_tab(context.ekoConfig.chromeProxy, url, windowId);
-      context.callback?.hooks?.onTabCreated?.(tab.id as number);
-      let tabId = tab.id as number;
-      context.variables.set('windowId', windowId);
-      context.variables.set('tabId', tabId);
-      let tabInfo: TabInfo = {
-        tabId: tab.id,
-        windowId: tab.windowId,
-        title: tab.title,
-        url: tab.url,
-      };
-      result = tabInfo;
     } else {
       throw Error('Unknown command: ' + command);
     }

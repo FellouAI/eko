@@ -71,6 +71,10 @@ export interface TabManagementParam {
   command: string;
 }
 
+export interface SwitchTabParam {
+  tabId: number;
+}
+
 export type TabManagementResult = TabInfo | CloseTabInfo | TabInfo[];
 
 export interface TabInfo {
