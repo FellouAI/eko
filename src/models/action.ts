@@ -202,7 +202,7 @@ export class ActionImpl implements Action {
               let input = unwrapped.toolCall.input;
               console.log("unwrapped", unwrapped);
               if (unwrapped.userSidePrompt) {
-                context.callback?.hooks.onLlmMessageUserSidePrompt?.(unwrapped.userSidePrompt);
+                context.callback?.hooks.onLlmMessageUserSidePrompt?.(unwrapped.userSidePrompt, toolCall.name);
               } else {
                 console.warn("LLM returns without `userSidePrompt`");
               }
