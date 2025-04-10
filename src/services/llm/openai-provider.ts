@@ -204,6 +204,7 @@ export class OpenaiProvider implements LLMProvider {
     }
     return {
       stream: stream,
+      stream_options: stream ? { include_usage: true } : undefined,
       model: params.model || this.defaultModel,
       max_tokens: params.maxTokens || 4096,
       temperature: params.temperature,
