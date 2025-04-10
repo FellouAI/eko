@@ -1,0 +1,23 @@
+import { ScreenshotResult } from '../../types/tools.types';
+export declare function type(chromeProxy: any, tabId: number, text: string, coordinate?: [number, number]): Promise<any>;
+export declare function type_by(chromeProxy: any, tabId: number, text: string, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function enter_by(chromeProxy: any, tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function clear_input(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any>;
+export declare function clear_input_by(chromeProxy: any, tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function mouse_move(chromeProxy: any, tabId: number, coordinate: [number, number]): Promise<any>;
+export declare function left_click(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any>;
+export declare function left_click_by(chromeProxy: any, tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function right_click(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any>;
+export declare function right_click_by(chromeProxy: any, tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function double_click(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any>;
+export declare function double_click_by(chromeProxy: any, tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function screenshot(chromeProxy: any, windowId: number, compress?: boolean): Promise<ScreenshotResult>;
+export declare function compress_image(dataUrl: string, scale?: number, quality?: number): Promise<string>;
+export declare function scroll_to(chromeProxy: any, tabId: number, coordinate: [number, number]): Promise<any>;
+export declare function scroll_to_by(chromeProxy: any, tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function get_dropdown_options(chromeProxy: any, tabId: number, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function select_dropdown_option(chromeProxy: any, tabId: number, text: string, xpath?: string, highlightIndex?: number): Promise<any>;
+export declare function cursor_position(chromeProxy: any, tabId: number): Promise<{
+    coordinate: [number, number];
+}>;
+export declare function size(chromeProxy: any, tabId?: number): Promise<[number, number]>;
