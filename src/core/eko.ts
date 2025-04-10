@@ -43,6 +43,7 @@ export class Eko {
       workingWindowId: undefined,
       chromeProxy: typeof chrome === 'undefined' ? undefined : chrome,
       callback: undefined,
+      patchServerUrl: "http://127.0.0.1:8000/eko",
     };
     return {
       ...defaultEkoConfig,

@@ -50,3 +50,8 @@ export interface Action {
   llmProvider?: LLMProvider;
   tabs: chrome.tabs.Tab[];
 }
+
+export interface PatchItem {
+  task: string;
+  patch: string;
+}

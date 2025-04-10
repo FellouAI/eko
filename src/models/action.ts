@@ -1,6 +1,6 @@
 // src/models/action.ts
 
-import { Action, Tool, ExecutionContext, InputSchema, Property } from '../types/action.types';
+import { Action, Tool, ExecutionContext, InputSchema, Property, PatchItem } from '../types/action.types';
 import { NodeInput, NodeOutput } from '../types/workflow.types';
 import {
   LLMProvider,
@@ -397,12 +397,18 @@ export class ActionImpl implements Action {
       windowId: currentWindow.id,
     });
 
+    // get patchs for task
+    let patchs: PatchItem[] = [];
+    if (context.ekoConfig.patchServerUrl) {
+      patchs = await this.getPatchs(this.name, context.ekoConfig.patchServerUrl);
+    }
+
     // Prepare initial messages
     const messages: Message[] = [
       { role: 'system', content: this.formatSystemPrompt() },
       {
         role: 'user',
-        content: this.formatUserPrompt(this.name, this.description, this.tabs, existingTabs),
+        content: this.formatUserPrompt(this.name, this.description, this.tabs, existingTabs, patchs),
       },
     ];
 
@@ -627,7 +633,8 @@ Navigation Bar or Menu Changes: After logging in, the navigation bar will includ
     name: string,
     description: string,
     mentionedTabs: chrome.tabs.Tab[],
-    existingTabs: chrome.tabs.Tab[]
+    existingTabs: chrome.tabs.Tab[],
+    patchItems: PatchItem[],
   ): string {
     let prompt = `${name} -- The steps you can follow are ${description}`;
 
@@ -642,7 +649,46 @@ Navigation Bar or Menu Changes: After logging in, the navigation bar will includ
         '\n\nYou should consider the following tabs firstly:\n' +
         mentionedTabs.map((tab) => `- TabID=${tab.id}: ${tab.title} (${tab.url})`).join('\n');
     }
+    if (patchItems.length > 0) {
+      prompt +=
+        '\n\You can refer to the following cases and tips:\n' +
+        patchItems.map((item) => `<task>${item.task}</task><tips>${item.patch}</tips>`).join('\n');
+    }
     return prompt;
+  }
+
+  private async getPatchs(task: string, patchServerUrl: string): Promise<PatchItem[]> {
+    const form = {
+      task,
+      top_k: 3,
+    };
+
+    try {
+      const response = await fetch(`${patchServerUrl}/search`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: {
+        entry: {
+          id: number;
+          task: string;
+          patch: string;
+        };
+        score: number;
+      }[] = await response.json();
+      return data.map((entryWithScore) => entryWithScore.entry);
+    } catch (error) {
+      console.error('Failed to fetch patches:', error);
+      return [];
+    }
   }
 
   // Static factory method
