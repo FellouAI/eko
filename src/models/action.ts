@@ -717,7 +717,7 @@ Navigation Bar or Menu Changes: After logging in, the navigation bar will includ
         // },
         userSidePrompt: {
           "type": "string",
-          "description": 'The user-side prompt, showing why calling this tool. Should start with "I\'m calling the ...(tool) to ...(target)". Rememeber to keep the same language of the ultimate task.',
+          "description": 'The user-side prompt, showing what you are doing. e.g. "Openning x.com." or "Writing the post."',
         },
         toolCall: (definition.input_schema as Property),
       },
