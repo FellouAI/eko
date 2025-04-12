@@ -15,7 +15,6 @@ import {
 import { ToolRegistry } from './tool-registry';
 import { logger } from '../common/log';
 import { ILogObj, Logger } from 'tslog';
-import { Logtail } from "@logtail/browser";
 
 /**
  * Eko core
@@ -35,7 +34,10 @@ export class Eko {
     console.info("using Eko@" + process.env.COMMIT_HASH);
     this.llmProvider = LLMProviderFactory.buildLLMProvider(llmConfig);
     this.ekoConfig = this.buildEkoConfig(ekoConfig);
-    this.registerLogger(logger, ekoConfig?.logtailConfig);
+    this.registerLogger(logger, this.ekoConfig?.logtailConfig);
+    console.log("debug Logtail...");
+    logger.info("Logtail configure test");
+    console.log("debug Logtail...done");
     this.registerTools();
   }
 
@@ -43,19 +45,19 @@ export class Eko {
     if (!logtailConfig) {
       return;
     }
+    const { Node: Logtail } = require("@logtail/js");
     const logtail = new Logtail(logtailConfig?.sourceToken, {
       endpoint: `https://${logtailConfig?.ingestingHost}`,
     });
     const logtailTransport = (logObj: ILogObj) => {
       const message = JSON.stringify({
-        "message": logObj,
-        "context": logObj._meta,
+        "innerMessage": logObj["0"],
+        "innerContext": logObj["_meta"],
       })
       const level = (logObj._meta as any).logLevelName.toLowerCase();
       logtail.log(message, level);
     };
     logger.attachTransport((logObj) => { logtailTransport(logObj) });
-    logger.info("Logtail configure test");
   }
 
   private buildEkoConfig(ekoConfig: Partial<EkoConfig> | undefined): EkoConfig {
