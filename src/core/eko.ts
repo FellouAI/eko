@@ -67,11 +67,6 @@ export class Eko {
       workingWindowId: undefined,
       chromeProxy: typeof chrome === 'undefined' ? undefined : chrome,
       callback: undefined,
-      patchServerUrl: "http://127.0.0.1:8000/eko",
-      logtailConfig: {
-        sourceToken: "v2K4fowTDC95wZgrWPuVqSmV",
-        ingestingHost: "s1271080.eu-nbg-2.betterstackdata.com",
-      }
     };
     return {
       ...defaultEkoConfig,
