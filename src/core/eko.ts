@@ -33,7 +33,6 @@ export class Eko {
 
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
     console.info("using Eko@" + process.env.COMMIT_HASH);
-    console.warn("this version is POC, should not used for production");
     this.llmProvider = LLMProviderFactory.buildLLMProvider(llmConfig);
     this.ekoConfig = this.buildEkoConfig(ekoConfig);
     this.registerLogger(logger, ekoConfig?.logtailConfig);
