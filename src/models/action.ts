@@ -200,7 +200,12 @@ export class ActionImpl implements Action {
               // unwrap the toolCall
               let unwrapped = this.unwrapToolCall(toolCall);
               let input = unwrapped.toolCall.input;
-              console.log("unwrapped", unwrapped);
+              console.debug("unwrapped", unwrapped);
+              if (unwrapped.thinking) {
+                context.callback?.hooks.onLlmMessage?.(unwrapped.thinking);
+              } else {
+                console.warn("LLM returns without `userSidePrompt`");
+              }
               if (unwrapped.userSidePrompt) {
                 context.callback?.hooks.onLlmMessageUserSidePrompt?.(unwrapped.userSidePrompt, toolCall.name);
               } else {
@@ -442,10 +447,6 @@ export class ActionImpl implements Action {
         toolMap,
         context
       );
-
-      if (response?.textContent) {
-        context.callback?.hooks?.onLlmMessage?.(response.textContent);
-      }
 
       lastResponse = response;
 
@@ -711,10 +712,10 @@ Navigation Bar or Menu Changes: After logging in, the navigation bar will includ
         //   "type": "string",
         //   "description": 'Your observation of the previous steps. Should start with "In the previous step, I\'ve ...".',
         // },
-        // thinking: {
-        //   "type": "string",
-        //   "description": 'Your thinking draft. Should start with "As observation before, now I should ...".',
-        // },
+        thinking: {
+          "type": "string",
+          "description": 'Your thinking draft. Should start with "As observation before, now I should ...".',
+        },
         userSidePrompt: {
           "type": "string",
           "description": 'The user-side prompt, showing why calling this tool. Should start with "I\'m calling the ...(tool) to ...(target)". Rememeber to keep the same language of the ultimate task.',
@@ -724,7 +725,7 @@ Navigation Bar or Menu Changes: After logging in, the navigation bar will includ
       required: [
         // comment for backup
         // "observation",
-        // "thinking",
+        "thinking",
         "userSidePrompt",
         "toolCall",
       ],
