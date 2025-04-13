@@ -80,8 +80,8 @@ export class BrowserUse extends ToolReturnsScreenshot<BrowserUseParam> {
    * @returns > { success: true, image?: { type: 'base64', media_type: 'image/jpeg', data: '/9j...' }, text?: string }
    */
   async realExecute(context: ExecutionContext, params: BrowserUseParam): Promise<BrowserUseResult> {
-    logger.debug("trace 'browser_use'...");
-    logger.trace(params);
+    logger.debug("debug 'browser_use'...");
+    logger.debug(params);
     try {
       if (params === null || !params.action) {
         throw new Error('Invalid parameters. Expected an object with a "action" property.');
@@ -89,7 +89,7 @@ export class BrowserUse extends ToolReturnsScreenshot<BrowserUseParam> {
       let tabId: number;
       try {
         tabId = await getTabId(context);
-        logger.trace(tabId);
+        logger.debug(tabId);
         if (!tabId || !Number.isInteger(tabId)) {
           throw new Error('Could not get valid tab ID');
         }
@@ -107,7 +107,7 @@ export class BrowserUse extends ToolReturnsScreenshot<BrowserUseParam> {
         }
       }
       let result;
-      logger.trace("switch cases...");
+      logger.debug("switch cases...");
       switch (params.action) {
         case 'input_text':
           if (params.index == null) {
@@ -183,34 +183,34 @@ export class BrowserUse extends ToolReturnsScreenshot<BrowserUseParam> {
           );
           break;
         case 'screenshot_extract_element':
-          logger.trace("execute 'screenshot_extract_element'...");
+          logger.debug("execute 'screenshot_extract_element'...");
           await sleep(100);
-          logger.trace("injectScript...");
+          logger.debug("injectScript...");
           await injectScript(context.ekoConfig.chromeProxy, tabId, 'build_dom_tree.js');
           await sleep(100);
           try {
-            logger.trace("executeScript...");
+            logger.debug("executeScript...");
             let element_result = await executeScript(context.ekoConfig.chromeProxy, tabId, () => {
               return (window as any).get_clickable_elements(true);
             }, []);
             context.selector_map = element_result.selector_map;
-            logger.trace("browser.screenshot...");
+            logger.debug("browser.screenshot...");
             let screenshot = await browser.screenshot(context.ekoConfig.chromeProxy, windowId, true);
             result = { image: screenshot.image, text: element_result.element_str };
           } finally {
-            logger.trace("executeScript #2...");
+            logger.debug("executeScript #2...");
             await executeScript(context.ekoConfig.chromeProxy, tabId, () => {
               return (window as any).remove_highlight();
             }, []);
           }
-          logger.trace("execute 'screenshot_extract_element'...done");
+          logger.debug("execute 'screenshot_extract_element'...done");
           break;
         default:
           throw Error(
             `Invalid parameters. The "${params.action}" value is not included in the "action" enumeration.`
           );
       }
-      logger.trace(`execute 'browser_use'...done, result=${result}`);
+      logger.debug(`execute 'browser_use'...done, result=${result}`);
       return result
     } catch (e: any) {
       logger.error('Browser use error:', e);

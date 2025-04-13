@@ -46,7 +46,7 @@ export class GetAllTabs implements Tool<any, BrowserTab[]> {
         description: description,
       };
   
-      logger.trace(tabInfo);
+      logger.debug(tabInfo);
       tabsInfo.push(tabInfo);
     }
   

@@ -465,10 +465,7 @@ export class ActionImpl implements Action {
       
       console.debug("debug roundMessages...");
       console.debug(roundMessages);
-      logger.info(
-        `Round ${roundCount} messages: ${JSON.stringify(roundMessages)}`,
-        context
-      );
+      logger.info(`Round ${roundCount} messages:`, JSON.stringify(roundMessages));
 
       // Check termination conditions
       if (!hasToolUse && response) {

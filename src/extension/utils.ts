@@ -39,7 +39,7 @@ export async function getWindowId(context: ExecutionContext): Promise<number> {
 }
 
 export async function getTabId(context: ExecutionContext): Promise<number> {
-  logger.debug("trace the getTabId()...");
+  logger.debug("debug the getTabId()...");
   let tabId = context.variables.get('tabId') as any;
   if (tabId) {
     try {
@@ -51,22 +51,22 @@ export async function getTabId(context: ExecutionContext): Promise<number> {
   }
 
   if (!tabId) {
-    logger.trace("tabId is empty");
+    logger.debug("tabId is empty");
     let windowId = await getWindowId(context);
-    logger.trace(`windowId=${windowId}`);
+    logger.debug(`windowId=${windowId}`);
     if (windowId) {
       try {
         tabId = await getCurrentTabId(context.ekoConfig.chromeProxy, windowId);
-        logger.trace("getCurrentTabId(context.ekoConfig.chromeProxy, windowId) returns " + tabId);
+        logger.debug("getCurrentTabId(context.ekoConfig.chromeProxy, windowId) returns " + tabId);
       } catch (e) {
         tabId = await getCurrentTabId(context.ekoConfig.chromeProxy);
-        logger.trace("getCurrentTabId(context.ekoConfig.chromeProxy, windowId) throws an error");
-        logger.trace("getCurrentTabId(context.ekoConfig.chromeProxy) returns " + tabId);
+        logger.debug("getCurrentTabId(context.ekoConfig.chromeProxy, windowId) throws an error");
+        logger.debug("getCurrentTabId(context.ekoConfig.chromeProxy) returns " + tabId);
         context.variables.delete('windowId');
       }
     } else {
       tabId = await getCurrentTabId(context.ekoConfig.chromeProxy);
-      logger.trace("getCurrentTabId(context.ekoConfig.chromeProxy) #2 returns " + tabId);
+      logger.debug("getCurrentTabId(context.ekoConfig.chromeProxy) #2 returns " + tabId);
     }
 
     if (!tabId) {
@@ -75,20 +75,20 @@ export async function getTabId(context: ExecutionContext): Promise<number> {
     context.variables.set('tabId', tabId);
   }
 
-  logger.debug(`trace the getTabId()...returns ${tabId}`);
+  logger.debug(`debug the getTabId()...returns ${tabId}`);
   return tabId;
 }
 
 export function getCurrentTabId(chromeProxy: any, windowId?: number | undefined): Promise<number | undefined> {
   return new Promise((resolve, reject) => {
-    logger.debug("trace the Promise in getCurrentTabId()...");
-    logger.trace("get the active tabId on: ", { windowId });
+    logger.debug("debug the Promise in getCurrentTabId()...");
+    logger.debug("get the active tabId on: ", { windowId });
     let queryInfo: chrome.tabs.QueryInfo;
     if (windowId !== undefined) {
-      logger.trace(`get the active tab in window (windowId=${windowId})...`);
+      logger.debug(`get the active tab in window (windowId=${windowId})...`);
       queryInfo = { windowId, active: true };
     } else {
-      logger.trace(`get the active tabId on current window`);
+      logger.debug(`get the active tabId on current window`);
       queryInfo = { active: true, currentWindow: true };
     }
     chrome.tabs.query(queryInfo, (tabs: chrome.tabs.Tab[]) => {
@@ -98,10 +98,10 @@ export function getCurrentTabId(chromeProxy: any, windowId?: number | undefined)
         return;
       }
       if (tabs.length > 0) {
-        logger.trace(`found the tab, ID=${tabs[0].id}`);
+        logger.debug(`found the tab, ID=${tabs[0].id}`);
         resolve(tabs[0].id);
       } else {
-        logger.trace(`cannot find the tab, returns undefined`);
+        logger.debug(`cannot find the tab, returns undefined`);
         resolve(undefined);
       }
     });
@@ -146,13 +146,13 @@ export async function waitForTabComplete(
   timeout: number = 30_000
 ): Promise<chrome.tabs.Tab> {
   return new Promise(async (resolve, reject) => {
-    logger.debug("trace waitForTabComplete()...");
+    logger.debug("debug waitForTabComplete()...");
     const time = setTimeout(async () => {
-      logger.trace("listener(#1)=", listener);
+      logger.debug("listener(#1)=", listener);
       chromeProxy.tabs.onUpdated.removeListener(listener);
-      logger.trace("tabId(#1)=", tabId);
+      logger.debug("tabId(#1)=", tabId);
       let tab = await chromeProxy.tabs.get(tabId);
-      logger.trace("tab(#1)=", tab);
+      logger.debug("tab(#1)=", tab);
       if (tab.status === 'complete') {
         logger.warn('Timeout: waitForTabComplete, but tab is already complete.');
         resolve(tab);
@@ -161,27 +161,27 @@ export async function waitForTabComplete(
         resolve(tab);
       }
     }, timeout);
-    logger.trace("setTimeout done");
+    logger.debug("setTimeout done");
     const listener = async (updatedTabId: number, changeInfo: any, tab: chrome.tabs.Tab) => {
-      logger.trace("listener start...");
+      logger.debug("listener start...");
       if (updatedTabId === tabId && changeInfo.status === 'complete') {
-        logger.trace("listener(#2)=", listener);
+        logger.debug("listener(#2)=", listener);
         chromeProxy.tabs.onUpdated.removeListener(listener);
         clearTimeout(time);
         resolve(tab);
       }
     };
-    logger.trace("tabId(#2)=", tabId);
+    logger.debug("tabId(#2)=", tabId);
     let tab = await chromeProxy.tabs.get(tabId);
-    logger.trace("tab(#2)=", tab);
+    logger.debug("tab(#2)=", tab);
     if (tab.status === 'complete') {
       resolve(tab);
       clearTimeout(time);
       return;
     }
-    logger.trace("listener(#3)=", listener);
+    logger.debug("listener(#3)=", listener);
     chromeProxy.tabs.onUpdated.addListener(listener);
-    logger.debug("trace waitForTabComplete()...done");
+    logger.debug("debug waitForTabComplete()...done");
   });
 }
 
