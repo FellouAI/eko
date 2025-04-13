@@ -49,8 +49,13 @@ export class Eko {
     });
     const loggerInstaceUUID = uuidv4();
     const logtailTransport = (logObj: ILogObj) => {
+      const cloneLogObj = JSON.parse(JSON.stringify(logObj));
+      if (cloneLogObj._meta) {
+        delete cloneLogObj._meta;
+      }
       const message = {
-        logObj,
+        logObj: cloneLogObj,
+        logObjMeta: logObj._meta,
         loggerInstaceUUID,
       };
       const level = (logObj._meta as any).logLevelName.toLowerCase();
