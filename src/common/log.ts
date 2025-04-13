@@ -1,16 +1,13 @@
 import { ILogObj, IMeta, ISettings, Logger } from "tslog";
 
 function transportFormatted(logMetaMarkup: string, logArgs: unknown[], logErrors: string[], settings: ISettings<ILogObj>) {
-  const logArgsString = logArgs.length == 1 ? 
-    logArgs[0] : 
-    JSON.stringify(logArgs);
   const logErrorsStr = (logErrors.length > 0 && logArgs.length > 0 ? "\n" : "") + logErrors.join("\n");
   settings.prettyInspectOptions.colors = settings.stylePrettyLogs;
-  let msg = `${logMetaMarkup} | ${logArgsString}`;
-  if (logErrorsStr) {
-    msg += logErrorsStr;
+  if (logArgs.length == 1) {
+    console.log(logMetaMarkup, logArgs[0], logErrorsStr);
+  } else {
+    console.log(logMetaMarkup, logArgs, logErrorsStr);
   }
-  console.log(msg);
 }
 
 function formatMeta(logObjMeta?: IMeta): string {

@@ -48,6 +48,8 @@ export interface LLMStreamHandler {
 }
 
 export interface LLMProvider {
+  client: any;
+  defaultModel: string;
   generateText(messages: Message[], params: LLMParameters): Promise<LLMResponse>;
   generateStream(messages: Message[], params: LLMParameters, handler: LLMStreamHandler): Promise<void>;
 }

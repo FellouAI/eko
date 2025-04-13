@@ -1,6 +1,7 @@
 import { BrowserTab } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { getTabId, executeScript, injectScript, sleep } from '../utils';
+import { logger } from '@/common/log';
 
 export class GetAllTabs implements Tool<any, BrowserTab[]> {
   name: string;
@@ -24,7 +25,7 @@ export class GetAllTabs implements Tool<any, BrowserTab[]> {
   
     for (const tab of tabs) {
       if (tab.id === undefined) {
-        console.warn(`Tab ID is undefined for tab with URL: ${tab.url}`);
+        logger.warn(`Tab ID is undefined for tab with URL: ${tab.url}`);
         continue;
       }
   
@@ -45,9 +46,7 @@ export class GetAllTabs implements Tool<any, BrowserTab[]> {
         description: description,
       };
   
-      console.log("url: " + tab.url);
-      console.log("title: " + tab.title);
-      console.log("description: " + description);
+      logger.trace(tabInfo);
       tabsInfo.push(tabInfo);
     }
   

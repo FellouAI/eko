@@ -1,4 +1,5 @@
 import { LLMParameters, LLMProvider, Message, WorkflowSummary, Workflow, NodeOutput } from "@/types";
+import { logger } from "./log";
 
 export async function summarizeWorkflow(
   llmProvider: LLMProvider,
@@ -32,7 +33,7 @@ ${JSON.stringify(nodeOutputs)}
       `,
     },
   ];
-  console.log(messages);
+  logger.debug(messages);
   const params: LLMParameters = {
     temperature: 0.7,
     maxTokens: 8192,
@@ -63,9 +64,9 @@ ${JSON.stringify(nodeOutputs)}
     }],
     toolChoice: { type: 'tool', name: 'summarize_workflow' },
   };
-  console.log(params);
+  logger.debug(params);
   const response = await llmProvider.generateText(messages, params);
-  console.log(response);
+  logger.debug(response);
   return {
     isSuccessful: contextVariables.get("__isSuccessful__") as boolean,
     summary: response.toolCalls[0].input.summary as string,

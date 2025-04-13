@@ -2,6 +2,7 @@ import { ExecutionLogger, LogOptions } from "@/utils/execution-logger";
 import { Workflow, WorkflowNode, NodeInput, ExecutionContext, LLMProvider, WorkflowCallback, WorkflowSummary, Message } from "../types";
 import { EkoConfig, WorkflowResult } from "../types/eko.types";
 import { summarizeWorkflow } from "@/common/summarize-workflow";
+import { logger } from "@/common/log";
 
 export class WorkflowImpl implements Workflow {
   abort?: boolean;
@@ -111,9 +112,7 @@ export class WorkflowImpl implements Workflow {
       node.output.value = action_executing_result.nodeOutput;
       
       const action_reacts = action_executing_result.reacts;
-      console.log("debug `action_reacts`...");
-      console.log(action_reacts);
-      console.log("debug `action_reacts`...done");
+      logger.debug("debug `action_reacts`...", action_reacts);
       
       executing.delete(nodeId);
       executed.add(nodeId);
@@ -138,14 +137,11 @@ export class WorkflowImpl implements Workflow {
     if (this.llmProvider) {
       workflowSummary = await summarizeWorkflow(this.llmProvider, this, this.variables, node_outputs);
     } else {
-      console.warn("WorkflowImpl.llmProvider is undefined, cannot generate workflow summary");
+      logger.warn("WorkflowImpl.llmProvider is undefined, cannot generate workflow summary");
     }
     
-    // Special context variables
-    console.log("debug special context variables...");
-
     let workflowPayload = this.variables.get("workflow_transcript") as string | undefined;
-    console.log(workflowPayload);
+    logger.debug(workflowPayload);
     if (!workflowPayload) {
       workflowPayload = workflowSummary?.payload;
     }

@@ -22,9 +22,6 @@
  * In this example, `tabs_get` is a mock implementation that logs the `tabId` before calling the original `chrome.tabs.get` method, and the same as `chrome.windows.create` method.
  */
 export function createChromeApiProxy(mockClass: any): any {
-  console.log("debug mockClass:");
-  console.log(mockClass);
-
   // Helper function to recursively create nested proxies
   function createNestedProxy(target: any, path: (string | symbol)[]): any {
     return new Proxy(target, {

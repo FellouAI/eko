@@ -1,5 +1,6 @@
 import { Message } from '../types/llm.types';
 import { ExecutionContext } from '../types/action.types';
+import { logger } from '@/common/log';
 
 interface ImageData {
   type: 'base64';
@@ -47,7 +48,7 @@ export class ExecutionLogger {
     if (this.shouldLog(level)) {
       const timestamp = this.includeTimestamp ? new Date().toISOString() : '';
       const contextSummary = this.summarizeContext(context);
-      console.log(`${timestamp} [${level.toUpperCase()}] ${message}${contextSummary}`);
+      logger.debug(`${timestamp} [${level.toUpperCase()}] ${message}${contextSummary}`);
     }
   }
 
@@ -126,15 +127,15 @@ export class ExecutionLogger {
    * Logs an error that occurred during execution
    */
   logError(error: Error, context?: ExecutionContext) {
-    console.error(error);
+    logger.error(error);
     try {
       this.log('error', `Error occurred: ${error.message}`, context);
       if (error.stack) {
         this.log('debug', `Stack trace: ${error.stack}`);
       }
     } catch (error) {
-      console.error("An error occurs when trying to log another error:");
-      console.error(error);
+      logger.error("An error occurs when trying to log another error:");
+      logger.error(error);
     }
   }
 
@@ -197,7 +198,7 @@ export class ExecutionLogger {
       // Default case - just return placeholder
       return '[image]';
     } catch (error) {
-      console.warn('Failed to save debug image:', error);
+      logger.warn('Failed to save debug image:', error);
       return '[image]';
     }
   }
@@ -247,7 +248,7 @@ export class ExecutionLogger {
       const contextSummary = this.summarizeContext(context);
       const formattedResult = await this.formatToolResult(result);
 
-      console.log(
+      logger.debug(
         `${timestamp} [INFO] Tool executed: ${toolName}\n` +
           `${timestamp} [INFO] Tool result: ${formattedResult}${contextSummary}`
       );

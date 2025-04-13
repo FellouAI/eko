@@ -15,6 +15,7 @@ import {
 import { ToolRegistry } from './tool-registry';
 import { logger } from '../common/log';
 import { ILogObj, Logger } from 'tslog';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Eko core
@@ -31,14 +32,11 @@ export class Eko {
   public workflow?: Workflow = undefined;
 
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
-    console.info("using Eko@" + process.env.COMMIT_HASH);
     this.llmProvider = LLMProviderFactory.buildLLMProvider(llmConfig);
     this.ekoConfig = this.buildEkoConfig(ekoConfig);
     this.registerLogger(logger, this.ekoConfig?.logtailConfig);
-    console.log("debug Logtail...");
-    logger.info("Logtail configure test");
-    console.log("debug Logtail...done");
     this.registerTools();
+    logger.info("using Eko@" + process.env.COMMIT_HASH);
   }
 
   private registerLogger(logger: Logger<ILogObj>, logtailConfig: LogtailConfig | undefined) {
@@ -49,25 +47,32 @@ export class Eko {
     const logtail = new Logtail(logtailConfig?.sourceToken, {
       endpoint: `https://${logtailConfig?.ingestingHost}`,
     });
+    const loggerInstaceUUID = uuidv4();
     const logtailTransport = (logObj: ILogObj) => {
-      const message = JSON.stringify({
-        "innerMessage": logObj["0"],
-        "innerContext": logObj["_meta"],
-      })
+      const message = {
+        logObj,
+        loggerInstaceUUID,
+      };
       const level = (logObj._meta as any).logLevelName.toLowerCase();
       logtail.log(message, level);
     };
     logger.attachTransport((logObj) => { logtailTransport(logObj) });
+    logger.info(`uuid=${loggerInstaceUUID}`);
   }
 
   private buildEkoConfig(ekoConfig: Partial<EkoConfig> | undefined): EkoConfig {
     if (!ekoConfig) {
-      console.warn("`ekoConfig` is missing when construct `Eko` instance");
+      logger.warn("`ekoConfig` is missing when construct `Eko` instance");
     }
     const defaultEkoConfig: EkoConfig = {
       workingWindowId: undefined,
       chromeProxy: typeof chrome === 'undefined' ? undefined : chrome,
       callback: undefined,
+      patchServerUrl: "http://127.0.0.1:8000/eko",
+      logtailConfig: {
+        sourceToken: "v2K4fowTDC95wZgrWPuVqSmV",
+        ingestingHost: "s1271080.eu-nbg-2.betterstackdata.com",
+      }
     };
     return {
       ...defaultEkoConfig,
@@ -99,7 +104,7 @@ export class Eko {
         }
       });
     } else {
-      console.warn("`ekoConfig.callback` is missing when construct `Eko` instance.")
+      logger.warn("`ekoConfig.callback` is missing when construct `Eko` instance.")
     }
     
     tools.forEach(tool => this.toolRegistry.registerTool(tool));
@@ -123,8 +128,6 @@ export class Eko {
     const generator = new WorkflowGenerator(this.llmProvider, toolRegistry);
     const workflow = await generator.generateWorkflow(prompt, this.ekoConfig);
     this.workflowGeneratorMap.set(workflow, generator);
-    console.log("the workflow returned by generate");
-    console.log(workflow);
     this.workflow = workflow;
     return workflow;
   }
@@ -165,13 +168,11 @@ export class Eko {
         },
       ],
     };
-    console.log("debug the workflow...");
-    console.log(json);
-    console.log("debug the workflow...done");
-    
-    console.log("debug the LLMProvider...");
-    console.log(this.llmProvider);
-    console.log("debug the LLMProvider...done");
+    logger.debug("workflow", json);    
+    logger.debug("LLMProvider", {
+      client: (typeof this.llmProvider.client),
+      defaultModel: this.llmProvider.defaultModel,
+    });
     
     const generator = new WorkflowGenerator(this.llmProvider, this.toolRegistry);  
     workflow = await generator.generateWorkflowFromJson(json, this.ekoConfig);
@@ -197,7 +198,7 @@ export class Eko {
     }
 
     const result = await workflow.execute(this.ekoConfig.callback);
-    console.log(result);
+    logger.debug(result);
     return result;
   }
 

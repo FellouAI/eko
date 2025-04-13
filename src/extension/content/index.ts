@@ -1,3 +1,5 @@
+import { logger } from "@/common/log";
+
 declare const eko: any;
 
 if (!(window as any).eko) {
@@ -29,7 +31,7 @@ if (typeof chrome !== 'undefined') {
               try {
                 result = await eko.subListeners[request.event](request.params);
               } catch (e) {
-                console.log(e);
+                logger.error(e);
               }
             }
             sendResponse(result);
@@ -94,7 +96,7 @@ if (typeof chrome !== 'undefined') {
           }
         }
       } catch (e) {
-        console.log('onMessage error', e);
+        logger.error('onMessage error', e);
         sendResponse(false);
       }
     })();
@@ -181,7 +183,7 @@ function type(request: any): boolean {
       input.dispatchEvent(event);
     });
   }
-  console.log('type', input, request, result);
+  logger.debug('type', input, request, result);
   return true;
 }
 
@@ -199,7 +201,7 @@ function mouse_move(request: any): boolean {
     clientY: y,
   });
   let result = document.body.dispatchEvent(event);
-  console.log('mouse_move', document.body, request, result);
+  logger.debug('mouse_move', document.body, request, result);
   return true;
 }
 
@@ -237,7 +239,7 @@ function simulateMouseEvent(request: any, eventTypes: Array<string>, button: 0 |
       button, // 0 left; 2 right
     });
     let result = element.dispatchEvent(event);
-    console.log('simulateMouse', element, { ...request, eventTypes, button }, result);
+    logger.debug('simulateMouse', element, { ...request, eventTypes, button }, result);
   }
   return true;
 }
@@ -275,7 +277,7 @@ function scroll_to(request: any): boolean {
       behavior: 'smooth',
     });
   }
-  console.log('scroll_to', request);
+  logger.debug('scroll_to', request);
   return true;
 }
 

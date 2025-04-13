@@ -2,6 +2,7 @@ import { WebSearchParam, WebSearchResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { MsgEvent, CountDownLatch, sleep, injectScript } from '../utils';
 import { createChromeApiProxy } from '@/common/chrome/proxy';
+import { logger } from '@/common/log';
 
 /**
  * Web Search
@@ -158,7 +159,7 @@ async function deepSearch(
   let detailLinkGroups = await doDetailLinkGroups(context, taskId, searchs, detailsMaxNum, windowId);
   // crawler all details page content and comments
   let searchInfo = await doPageContent(context, taskId, detailLinkGroups, windowId);
-  console.log('searchInfo: ', searchInfo);
+  logger.debug('searchInfo: ', searchInfo);
   // close window
   closeWindow && context.ekoConfig.chromeProxy.windows.remove(windowId);
   return searchInfo;
@@ -209,9 +210,9 @@ async function doDetailLinkGroups(
             type: 'page:getDetailLinks',
             keyword: searchs[i].keyword,
           });
-          console.log('detailLinks: ', detailLinks);
+          logger.debug('detailLinks: ', detailLinks);
           if (!detailLinks || !detailLinks.links) {
-            console.error("detailLinks is empty");
+            logger.error("detailLinks is empty");
             throw new Error("An error occurs when calling `web_search`, please try again.");
           }
           let links = detailLinks.links.slice(0, detailsMaxNum);
@@ -225,7 +226,7 @@ async function doDetailLinkGroups(
         }
       }, eventId);
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       countDownLatch.countDown();
     }
   }
@@ -327,7 +328,7 @@ async function doPageContent(
       try {
         await Promise.race([monitorTabPromise, timeoutPromise]);
       } catch (e) {
-        console.error(`${link.title} failed:`, e);
+        logger.error(`${link.title} failed:`, e);
         searchInfo.running--;
         searchInfo.failed++;
         searchInfo.failedLinks.push(link);

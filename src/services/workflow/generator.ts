@@ -6,6 +6,7 @@ import { ToolRegistry } from '../../core/tool-registry';
 import { createWorkflowPrompts, createWorkflowGenerationTool } from './templates';
 import { v4 as uuidv4 } from 'uuid';
 import { EkoConfig } from '@/types';
+import { logger } from '@/common/log';
 
 export class WorkflowGenerator {
   message_history: Message[] = [];
@@ -94,9 +95,7 @@ export class WorkflowGenerator {
     const workflowData = response.toolCalls[0].input.workflow as any;
 
     // debug
-    console.log("Debug the workflow...")
-    console.log({ ...workflowData});
-    console.log("Debug the workflow...Done")    
+    logger.debug("Debug the workflow...", { ...workflowData});
 
 
     // Generate a new UUID if not provided
@@ -129,7 +128,7 @@ export class WorkflowGenerator {
         const tools = nodeData.action.tools.filter((toolName: string) => {
           let hasTool = this.toolRegistry.hasTools([toolName]);
           if (!hasTool) {
-            console.warn(`The [${toolName}] tool does not exist.`);
+            logger.warn(`The [${toolName}] tool does not exist.`);
           }
           return hasTool;
         }).map((toolName: string) =>

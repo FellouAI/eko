@@ -1,5 +1,6 @@
 import { CancelWorkflowInput } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
+import { logger } from '../log';
 
 export class CancelWorkflow implements Tool<CancelWorkflowInput, void> {
   name: string;
@@ -26,7 +27,7 @@ export class CancelWorkflow implements Tool<CancelWorkflowInput, void> {
       throw new Error('Invalid parameters. Expected an object with a "reason" property.');
     }
     const reason = params.reason;
-    console.log("The workflow has been cancelled because: " + reason);
+    logger.info("The workflow has been cancelled because: " + reason);
     await context.workflow?.cancel();
     return;
   }

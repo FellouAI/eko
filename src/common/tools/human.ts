@@ -9,6 +9,7 @@ import {
   HumanOperateResult,
 } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
+import { logger } from '../log';
 
 export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextResult> {
   name: string;
@@ -35,20 +36,20 @@ export class HumanInputText implements Tool<HumanInputTextInput, HumanInputTextR
       throw new Error('Invalid parameters. Expected an object with a "question" property.');
     }
     const question = params.question;
-    console.log("question: " + question);
+    logger.debug("question: " + question);
     let onHumanInputText = context.callback?.hooks.onHumanInputText;
     if (onHumanInputText) {
       let answer;
       try {
         answer = await onHumanInputText(question);
       } catch (e) {
-        console.error(e);
+        logger.warn(e);
         return { status: "Error: Cannot get user's answer.", answer: "" };
       }
-      console.log("answer: " + answer);
+      logger.debug("answer: " + answer);
       return { status: "OK", answer: answer };
     } else {
-      console.error("`onHumanInputText` not implemented");
+      logger.error("`onHumanInputText` not implemented");
       return { status: "Error: Cannot get user's answer.", answer: "" };
     }
   }
@@ -92,21 +93,21 @@ export class HumanInputSingleChoice implements Tool<HumanInputSingleChoiceInput,
     }
     const question = params.question;
     const choices = params.choices.map((e) => e.choice);
-    console.log("question: " + question);
-    console.log("choices: " + choices);
+    logger.debug("question: " + question);
+    logger.debug("choices: " + choices);
     let onHumanInputSingleChoice = context.callback?.hooks.onHumanInputSingleChoice;
     if (onHumanInputSingleChoice) {
       let answer;
       try {
         answer = await onHumanInputSingleChoice(question, choices);
       } catch (e) {
-        console.error(e);
+        logger.warn(e);
         return { status: "Error: Cannot get user's answer.", answer: "" };
       }
-      console.log("answer: " + answer);
+      logger.debug("answer: " + answer);
       return { status: "OK", answer: answer };
     } else {
-      console.error("`onHumanInputSingleChoice` not implemented");
+      logger.error("`onHumanInputSingleChoice` not implemented");
       return { status: "Error: Cannot get user's answer.", answer: "" };
     }
   }
@@ -150,21 +151,21 @@ export class HumanInputMultipleChoice implements Tool<HumanInputMultipleChoiceIn
     }
     const question = params.question;
     const choices = params.choices.map((e) => e.choice);
-    console.log("question: " + question);
-    console.log("choices: " + choices);
+    logger.debug("question: " + question);
+    logger.debug("choices: " + choices);
     let onHumanInputMultipleChoice = context.callback?.hooks.onHumanInputMultipleChoice;
     if (onHumanInputMultipleChoice) {
       let answer;
       try {
         answer = await onHumanInputMultipleChoice(question, choices)
       } catch (e) {
-        console.error(e);
-        return { status: "`onHumanInputMultipleChoice` not implemented", answer: [] };
+        logger.warn(e);
+        return { status: "Error: Cannot get user's answer.", answer: [] };
       }
-      console.log("answer: " + answer);
+      logger.debug("answer: " + answer);
       return { status: "OK", answer: answer };
     } else {
-      console.error("Cannot get user's answer.");
+      logger.error("`onHumanInputMultipleChoice` not implemented");
       return { status: "Error: Cannot get user's answer.", answer: [] };
     }
   }
@@ -203,24 +204,24 @@ When calling this tool to transfer control to the user, please explain in detail
       throw new Error('Invalid parameters. Expected an object with a "reason" property.');
     }
     const reason = params.reason;
-    console.log("reason: " + reason);
+    logger.debug("reason: " + reason);
     let onHumanOperate = context.callback?.hooks.onHumanOperate;
     if (onHumanOperate) {
       let userOperation;
       try {
         userOperation = await onHumanOperate(reason);
       } catch (e) {
-        console.error(e);
-        return { status: "`onHumanOperate` not implemented", userOperation: "" };
+        logger.warn(e);
+        return { status: "Error: Cannot get user's operation.", userOperation: "" };
       }
-      console.log("userOperation: " + userOperation);
+      logger.debug("userOperation: " + userOperation);
       if (userOperation == "") {
         return { status: "OK", userOperation: "Done. Please take a screenshot to ensure the result." };
       } else {
         return { status: "OK", userOperation: userOperation + "\n\nPlease take a screenshot to ensure the result."};
       }
     } else {
-      console.error("Cannot get user's operation.");
+      logger.error("`onHumanOperate` not implemented");
       return { status: "Error: Cannot get user's operation.", userOperation: "" };
     }
   }

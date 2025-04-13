@@ -1,9 +1,10 @@
+import { logger } from '@/common/log';
 import { ScreenshotResult } from '../../types/tools.types';
 import { getPageSize, getCurrentTabId } from '../utils';
 
 function isFellouBrowser(chromeProxy: any): boolean {
   const result =  typeof chromeProxy.browseruse == 'object';
-  console.log("isFellouBrowser", result);
+  logger.debug("isFellouBrowser", result);
   return result;
 }
 
@@ -14,7 +15,7 @@ export async function type(
   coordinate?: [number, number]
 ): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending type message to tab:', tabId, { text, coordinate }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending type message to tab:', tabId, { text, coordinate }, isFellou ? ' > fellou' : '');
   try {
     if (!coordinate) {
       coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
@@ -38,10 +39,10 @@ export async function type(
         coordinate,
       });
     }
-    console.log('type Got response:', response);
+    logger.trace('type Got response:', response);
     return response;
   } catch (e) {
-    console.error('Failed to send type message:', e);
+    logger.error('Failed to send type message:', e);
     throw e;
   }
 }
@@ -54,7 +55,7 @@ export async function type_by(
   highlightIndex?: number
 ): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending type_by message to tab:', tabId, { text, xpath, highlightIndex }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending type_by message to tab:', tabId, { text, xpath, highlightIndex }, isFellou ? ' > fellou' : '');
   try {
     let response: any;
     if (isFellou) {
@@ -75,10 +76,10 @@ export async function type_by(
         highlightIndex,
       });
     }
-    console.log('type_by Got response:', response);
+    logger.trace('type_by Got response:', response);
     return response;
   } catch (e) {
-    console.error('Failed to send type message:', e);
+    logger.error('Failed to send type message:', e);
     throw e;
   }
 }
@@ -90,7 +91,7 @@ export async function enter_by(
   highlightIndex?: number
 ): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending enter_by message to tab:', tabId, { xpath, highlightIndex }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending enter_by message to tab:', tabId, { xpath, highlightIndex }, isFellou ? ' > fellou' : '');
   try {
     let response: any;
     if (isFellou) {
@@ -103,17 +104,17 @@ export async function enter_by(
         highlightIndex,
       });
     }
-    console.log('enter_by Got response:', response);
+    logger.trace('enter_by Got response:', response);
     return response;
   } catch (e) {
-    console.error('Failed to send enter_by message:', e);
+    logger.error('Failed to send enter_by message:', e);
     throw e;
   }
 }
 
 export async function clear_input(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending clear_input message to tab:', tabId, { coordinate }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending clear_input message to tab:', tabId, { coordinate }, isFellou ? ' > fellou' : '');
   try {
     if (!coordinate) {
       coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
@@ -130,10 +131,10 @@ export async function clear_input(chromeProxy: any, tabId: number, coordinate?: 
         coordinate,
       });
     }
-    console.log('clear_input Got response:', response);
+    logger.trace('clear_input Got response:', response);
     return response;
   } catch (e) {
-    console.error('Failed to send clear_input message:', e);
+    logger.error('Failed to send clear_input message:', e);
     throw e;
   }
 }
@@ -145,7 +146,7 @@ export async function clear_input_by(
   highlightIndex?: number
 ): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending clear_input_by message to tab:', tabId, { xpath, highlightIndex }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending clear_input_by message to tab:', tabId, { xpath, highlightIndex }, isFellou ? ' > fellou' : '');
   try {
     let response: any;
     if (isFellou) {
@@ -159,17 +160,17 @@ export async function clear_input_by(
         highlightIndex,
       });
     }
-    console.log('clear_input_by Got response:', response);
+    logger.trace('clear_input_by Got response:', response);
     return response;
   } catch (e) {
-    console.error('Failed to send clear_input_by message:', e);
+    logger.error('Failed to send clear_input_by message:', e);
     throw e;
   }
 }
 
 export async function mouse_move(chromeProxy: any, tabId: number, coordinate: [number, number]): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending mouse_move message to tab:', tabId, { coordinate }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending mouse_move message to tab:', tabId, { coordinate }, isFellou ? ' > fellou' : '');
   let response: any;
   if (isFellou) {
     response = await chromeProxy.browseruse.mouse.move(tabId, coordinate[0], coordinate[1]);
@@ -179,13 +180,13 @@ export async function mouse_move(chromeProxy: any, tabId: number, coordinate: [n
       coordinate,
     });
   }
-  console.log('mouse_move Got response:', response);
+  logger.trace('mouse_move Got response:', response);
   return response;
 }
 
 export async function left_click(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending left_click message to tab:', tabId, { coordinate }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending left_click message to tab:', tabId, { coordinate }, isFellou ? ' > fellou' : '');
   if (!coordinate) {
     coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
   }
@@ -198,7 +199,7 @@ export async function left_click(chromeProxy: any, tabId: number, coordinate?: [
       coordinate,
     });
   }
-  console.log('left_click Got response:', response);
+  logger.trace('left_click Got response:', response);
   return response;
 }
 
@@ -209,7 +210,7 @@ export async function left_click_by(
   highlightIndex?: number
 ): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending left_click_by message to tab:', tabId, { xpath, highlightIndex }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending left_click_by message to tab:', tabId, { xpath, highlightIndex }, isFellou ? ' > fellou' : '');
   let response: any;
   if (isFellou) {
     response = await chromeProxy.browseruse.handle.click(tabId, build_fellou_handle_js(xpath, highlightIndex));
@@ -220,13 +221,13 @@ export async function left_click_by(
       highlightIndex,
     });
   }
-  console.log('left_click_by Got response:', response);
+  logger.trace('left_click_by Got response:', response);
   return response;
 }
 
 export async function right_click(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending right_click message to tab:', tabId, { coordinate }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending right_click message to tab:', tabId, { coordinate }, isFellou ? ' > fellou' : '');
   if (!coordinate) {
     coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
   }
@@ -239,7 +240,7 @@ export async function right_click(chromeProxy: any, tabId: number, coordinate?: 
       coordinate,
     });
   }
-  console.log('right_click Got response:', response);
+  logger.trace('right_click Got response:', response);
   return response;
 }
 
@@ -250,7 +251,7 @@ export async function right_click_by(
   highlightIndex?: number
 ): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending right_click_by message to tab:', tabId, { xpath, highlightIndex }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending right_click_by message to tab:', tabId, { xpath, highlightIndex }, isFellou ? ' > fellou' : '');
   let response: any;
   if (isFellou) {
     response = await chromeProxy.browseruse.handle.click(tabId, build_fellou_handle_js(xpath, highlightIndex), { button: 'right' });
@@ -261,13 +262,13 @@ export async function right_click_by(
       highlightIndex,
     });
   }
-  console.log('right_click_by Got response:', response);
+  logger.trace('right_click_by Got response:', response);
   return response;
 }
 
 export async function double_click(chromeProxy: any, tabId: number, coordinate?: [number, number]): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending double_click message to tab:', tabId, { coordinate }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending double_click message to tab:', tabId, { coordinate }, isFellou ? ' > fellou' : '');
   if (!coordinate) {
     coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
   }
@@ -280,7 +281,7 @@ export async function double_click(chromeProxy: any, tabId: number, coordinate?:
       coordinate,
     });
   }
-  console.log('double_click Got response:', response);
+  logger.trace('double_click Got response:', response);
   return response;
 }
 
@@ -291,7 +292,7 @@ export async function double_click_by(
   highlightIndex?: number
 ): Promise<any> {
   const isFellou = isFellouBrowser(chromeProxy);
-  console.log('Sending double_click_by message to tab:', tabId, { xpath, highlightIndex }, isFellou ? ' > fellou' : '');
+  logger.trace('Sending double_click_by message to tab:', tabId, { xpath, highlightIndex }, isFellou ? ' > fellou' : '');
   let response: any;
   if (isFellou) {
     response = await chromeProxy.browseruse.mouse.click(tabId, build_fellou_handle_js(xpath, highlightIndex), { count: 2 });
@@ -302,12 +303,12 @@ export async function double_click_by(
       highlightIndex,
     });
   }
-  console.log('double_click_by Got response:', response);
+  logger.trace('double_click_by Got response:', response);
   return response;
 }
 
 export async function screenshot(chromeProxy: any, windowId: number, compress?: boolean): Promise<ScreenshotResult> {
-  console.log('Taking screenshot of window:', windowId, { compress });
+  logger.trace('Taking screenshot of window:', windowId, { compress });
   try {
     let dataUrl;
     if (compress) {
@@ -330,11 +331,11 @@ export async function screenshot(chromeProxy: any, windowId: number, compress?: 
         data: data,
       },
     } as ScreenshotResult;
-    console.log('screenshot Got screenshot result:', result);
+    logger.trace('screenshot Got screenshot result:', result);
     return result;
   } catch (e) {
     if (isFellouBrowser(chromeProxy)) {
-      console.log('Failed to take screenshot, try fellou...');
+      logger.trace('Failed to take screenshot, try fellou...');
       const tabId = await getCurrentTabId(chromeProxy, windowId)
       const base64 = await chromeProxy.browseruse.screenshot(tabId, {
         type: 'jpeg',
@@ -348,10 +349,10 @@ export async function screenshot(chromeProxy: any, windowId: number, compress?: 
           data: base64,
         },
       } as ScreenshotResult;
-      console.log('screenshot Got screenshot result, try fellou:', result);
+      logger.trace('screenshot Got screenshot result, try fellou:', result);
       return result;
     }
-    console.error('Failed to take screenshot:', e);
+    logger.error('Failed to take screenshot:', e);
     throw e;
   }
 }
@@ -361,7 +362,7 @@ export async function compress_image(
   scale: number = 0.8,
   quality: number = 0.8
 ): Promise<string> {
-  console.log('Compressing image', { scale, quality });
+  logger.trace('Compressing image', { scale, quality });
   try {
     const bitmap = await createImageBitmap(await (await fetch(dataUrl)).blob());
     let width = bitmap.width * scale;
@@ -377,26 +378,26 @@ export async function compress_image(
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-        console.log('Got compressed image result:', result);
+        logger.trace('Got compressed image result:', result);
         resolve(result);
       };
       reader.readAsDataURL(blob);
     });
   } catch (e) {
-    console.error('Failed to compress image:', e);
+    logger.error('Failed to compress image:', e);
     return dataUrl;
   }
 }
 
 export async function scroll_to(chromeProxy: any, tabId: number, coordinate: [number, number]): Promise<any> {
-  console.log('Sending scroll_to message to tab:', tabId, { coordinate });
+  logger.trace('Sending scroll_to message to tab:', tabId, { coordinate });
   let from_coordinate = (await cursor_position(chromeProxy, tabId)).coordinate;
   const response = await chromeProxy.tabs.sendMessage(tabId, {
     type: 'computer:scroll_to',
     from_coordinate,
     to_coordinate: coordinate,
   });
-  console.log('scroll_to Got response:', response);
+  logger.trace('scroll_to Got response:', response);
   return response;
 }
 
@@ -406,13 +407,13 @@ export async function scroll_to_by(
   xpath?: string,
   highlightIndex?: number
 ): Promise<any> {
-  console.log('Sending scroll_to_by message to tab:', tabId, { xpath, highlightIndex });
+  logger.trace('Sending scroll_to_by message to tab:', tabId, { xpath, highlightIndex });
   const response = await chromeProxy.tabs.sendMessage(tabId, {
     type: 'computer:scroll_to',
     xpath,
     highlightIndex,
   });
-  console.log('scroll_to_by Got response:', response);
+  logger.trace('scroll_to_by Got response:', response);
   return response;
 }
 
@@ -422,17 +423,17 @@ export async function get_dropdown_options(
   xpath?: string,
   highlightIndex?: number
 ): Promise<any> {
-  console.log('Sending get_dropdown_options message to tab:', tabId, { xpath, highlightIndex });
+  logger.trace('Sending get_dropdown_options message to tab:', tabId, { xpath, highlightIndex });
   try {
     const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:get_dropdown_options',
       xpath,
       highlightIndex,
     });
-    console.log('get_dropdown_options Got response:', response);
+    logger.trace('get_dropdown_options Got response:', response);
     return response;
   } catch (e) {
-    console.error('Failed to send get_dropdown_options message:', e);
+    logger.error('Failed to send get_dropdown_options message:', e);
     throw e;
   }
 }
@@ -444,7 +445,7 @@ export async function select_dropdown_option(
   xpath?: string,
   highlightIndex?: number
 ): Promise<any> {
-  console.log('Sending select_dropdown_option message to tab:', tabId, { text, xpath, highlightIndex });
+  logger.trace('Sending select_dropdown_option message to tab:', tabId, { text, xpath, highlightIndex });
   try {
     const response = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:select_dropdown_option',
@@ -452,10 +453,10 @@ export async function select_dropdown_option(
       xpath,
       highlightIndex,
     });
-    console.log('select_dropdown_option Got response:', response);
+    logger.trace('select_dropdown_option Got response:', response);
     return response;
   } catch (e) {
-    console.error('Failed to send select_dropdown_option message:', e);
+    logger.error('Failed to send select_dropdown_option message:', e);
     throw e;
   }
 }
@@ -463,27 +464,27 @@ export async function select_dropdown_option(
 export async function cursor_position(chromeProxy: any, tabId: number): Promise<{
   coordinate: [number, number];
 }> {
-  console.log('Sending cursor_position message to tab:', tabId);
+  logger.trace('Sending cursor_position message to tab:', tabId);
   try {
     let result: any = await chromeProxy.tabs.sendMessage(tabId, {
       type: 'computer:cursor_position',
     });
-    console.log('Got cursor position:', result.coordinate);
+    logger.trace('Got cursor position:', result.coordinate);
     return { coordinate: result.coordinate as [number, number] };
   } catch (e) {
-    console.error('Failed to send cursor_position message:', e);
+    logger.error('Failed to send cursor_position message:', e);
     throw e;
   }
 }
 
 export async function size(chromeProxy: any, tabId?: number): Promise<[number, number]> {
-  console.log('Getting page size for tab:', tabId);
+  logger.trace('Getting page size for tab:', tabId);
   try {
     const pageSize = await getPageSize(chromeProxy, tabId);
-    console.log('Got page size:', pageSize);
+    logger.trace('Got page size:', pageSize);
     return pageSize;
   } catch (e) {
-    console.error('Failed to get page size:', e);
+    logger.error('Failed to get page size:', e);
     throw e;
   }
 }

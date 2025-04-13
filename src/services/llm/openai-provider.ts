@@ -17,6 +17,7 @@ import {
   ChatCompletionCreateParamsBase,
   ChatCompletionCreateParamsStreaming,
 } from 'openai/resources/chat/completions';
+import { logger } from '@/common/log';
 
 interface PartialToolUse {
   id: string;
@@ -45,7 +46,7 @@ export class OpenaiProvider implements LLMProvider {
       typeof document !== 'undefined' &&
       (typeof param == 'string' || param.apiKey)
     ) {
-      console.warn(`
+      logger.warn(`
         ⚠️ Security Warning:
         DO NOT use API Keys in browser/frontend code!
         This will expose your credentials and may lead to unauthorized usage.
@@ -323,7 +324,7 @@ export class OpenaiProvider implements LLMProvider {
           if (choice.finish_reason) {
             stop_reason = choice.finish_reason;
             if (currentToolUse) {
-              console.log("currentToolUse.accumulatedJson=", currentToolUse.accumulatedJson);
+              logger.debug("currentToolUse.accumulatedJson=", currentToolUse.accumulatedJson);
               const toolCall: ToolCall = {
                 id: currentToolUse.id,
                 name: currentToolUse.name,

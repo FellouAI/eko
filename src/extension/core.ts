@@ -1,5 +1,6 @@
 import * as tools from './tools';
 import { Tool } from '../types';
+import { logger } from '@/common/log';
 
 export async function pub(chromeProxy: any, tabId: number, event: string, params: any): Promise<any> {
   return await chromeProxy.tabs.sendMessage(tabId as number, {
@@ -28,7 +29,7 @@ export function loadTools(): Map<string, Tool<any, any>> {
         let instance = new tool();
         toolsMap.set(instance.name || key, instance);
       } catch (e) {
-        console.error(`Failed to instantiate ${key}:`, e);
+        logger.error(`Failed to instantiate ${key}:`, e);
       }
     }
   }
