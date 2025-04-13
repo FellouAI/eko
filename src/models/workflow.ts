@@ -141,7 +141,7 @@ export class WorkflowImpl implements Workflow {
     }
     
     let workflowPayload = this.variables.get("workflow_transcript") as string | undefined;
-    logger.debug(workflowPayload);
+    logger.debug("workflowPayload", workflowPayload);
     if (!workflowPayload) {
       workflowPayload = workflowSummary?.payload;
     }

@@ -116,6 +116,7 @@ export class Eko {
   }
 
   public async generate(prompt: string, tabs: chrome.tabs.Tab[] = [], param?: EkoInvokeParam): Promise<Workflow> {
+    logger.info("workflow generating...");
     this.prompt = prompt;
     this.tabs = tabs;
     let toolRegistry = this.toolRegistry;
@@ -134,10 +135,12 @@ export class Eko {
     const workflow = await generator.generateWorkflow(prompt, this.ekoConfig);
     this.workflowGeneratorMap.set(workflow, generator);
     this.workflow = workflow;
+    logger.info("workflow generating...done");
     return workflow;
   }
 
   public async execute(workflow: Workflow): Promise<WorkflowResult> {
+    logger.info("workflow executing...");
     let prompt = this.prompt;
     let description ="";
     workflow.nodes.forEach(node => {
@@ -204,6 +207,7 @@ export class Eko {
 
     const result = await workflow.execute(this.ekoConfig.callback);
     logger.debug(result);
+    logger.info("workflow executing...done");
     return result;
   }
 
