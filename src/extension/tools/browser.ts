@@ -378,7 +378,7 @@ export async function compress_image(
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-        logger.debug('Got compressed image result:', result);
+        logger.debug('Got compressed image result (sliced):', result.slice(0, 200));
         resolve(result);
       };
       reader.readAsDataURL(blob);

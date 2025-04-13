@@ -251,10 +251,19 @@ export class ActionImpl implements Action {
                 content: [resultContent],
               };
               toolResultMessage = resultMessage;
-              logger.info("toolCall done", {
+              const truncate = (x: any) => {
+                const s = JSON.stringify(x);
+                const maxLength = 1000;
+                if (s.length < maxLength) {
+                  return x;
+                } else {
+                  return s.slice(0, maxLength) + "...(truncated)";
+                }
+              };
+              logger.info("toolCall done", { // TODO: remove image base64
                 toolCall: {
                   name: tool.name,
-                  result,
+                  result: truncate(result),
                 },
               });
               // Store tool results except for the return_output tool
