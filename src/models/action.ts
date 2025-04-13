@@ -308,8 +308,7 @@ export class ActionImpl implements Action {
       try {
         await this.llmProvider.generateStream(messages, params_copy, handler);
       } catch (e) {
-        logger.warn("an error occurs when LLM generate response, retry...");
-        logger.warn(e);
+        logger.warn("an error occurs when LLM generate response, retry...", e);
         continue;
       }
 
@@ -372,7 +371,7 @@ export class ActionImpl implements Action {
 
     const finalImageCount = this.countImages(messages);
     if (initialImageCount !== finalImageCount) {
-      logger.info(`Removed ${initialImageCount - finalImageCount} images from history`);
+      logger.debug(`Removed ${initialImageCount - finalImageCount} images from history`);
     }
   }
 
@@ -472,10 +471,6 @@ export class ActionImpl implements Action {
       // Add round messages to conversation history
       messages.push(...roundMessages);
       
-      console.debug("debug roundMessages...");
-      console.debug(roundMessages);
-      logger.info(`Round ${roundCount} messages:`, JSON.stringify(roundMessages));
-
       // Check termination conditions
       if (!hasToolUse && response) {
         // LLM sent a message without using tools - request explicit return

@@ -80,8 +80,7 @@ export class OpenUrl extends ToolReturnsScreenshot<OpenUrlParam> {
         context.callback?.hooks?.onTabCreated?.(tab.id as number);
         logger.debug('New tab created in existing window:', tab.id);
       } catch (e) {
-        logger.error("An error occurs when `open_url`");
-        logger.error(e);
+        logger.error("An error occurs when `open_url`", e);
         throw e;
       }
     }
