@@ -714,7 +714,7 @@ Navigation Bar or Menu Changes: After logging in, the navigation bar will includ
         // },
         thinking: {
           "type": "string",
-          "description": 'Your thinking draft. Should start with "As observation before, now I should ...".',
+          "description": 'Your thinking draft.',
         },
         userSidePrompt: {
           "type": "string",
