@@ -45,7 +45,7 @@ function createReturnTool(
             'The output value. Only provide a value if the previous tool result is not suitable for the output description. Otherwise, leave this as null.',
         },
       } as unknown,
-      required: ['use_tool_result', 'value'],
+      required: ['isSuccessful', 'use_tool_result', 'value'],
     } as InputSchema,
 
     async execute(context: ExecutionContext, params: unknown): Promise<unknown> {
@@ -204,6 +204,11 @@ export class ActionImpl implements Action {
               let unwrapped = this.unwrapToolCall(toolCall);
               let input = unwrapped.toolCall.input;
               logger.debug("unwrapped", unwrapped);
+              if (unwrapped.thinking) {
+                context.callback?.hooks.onLlmMessage?.(unwrapped.thinking);
+              } else {
+                logger.warn("LLM returns without `userSidePrompt`");
+              }
               if (unwrapped.userSidePrompt) {
                 context.callback?.hooks.onLlmMessageUserSidePrompt?.(unwrapped.userSidePrompt, toolCall.name);
               } else {
@@ -462,10 +467,6 @@ export class ActionImpl implements Action {
         context
       );
 
-      if (response?.textContent) {
-        context.callback?.hooks?.onLlmMessage?.(response.textContent);
-      }
-
       lastResponse = response;
 
       // Add round messages to conversation history
@@ -722,10 +723,10 @@ Navigation Bar or Menu Changes: After logging in, the navigation bar will includ
         //   "type": "string",
         //   "description": 'Your observation of the previous steps. Should start with "In the previous step, I\'ve ...".',
         // },
-        // thinking: {
-        //   "type": "string",
-        //   "description": 'Your thinking draft. Should start with "As observation before, now I should ...".',
-        // },
+        thinking: {
+          "type": "string",
+          "description": 'Your thinking draft.',
+        },
         userSidePrompt: {
           "type": "string",
           "description": 'The user-side prompt, showing why calling this tool. Should start with "I\'m calling the ...(tool) to ...(target)". Rememeber to keep the same language of the ultimate task.',
@@ -735,7 +736,7 @@ Navigation Bar or Menu Changes: After logging in, the navigation bar will includ
       required: [
         // comment for backup
         // "observation",
-        // "thinking",
+        "thinking",
         "userSidePrompt",
         "toolCall",
       ],
