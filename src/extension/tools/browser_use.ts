@@ -198,6 +198,7 @@ export class BrowserUse extends ToolReturnsScreenshot<BrowserUseParam> {
             let screenshot = await browser.screenshot(context.ekoConfig.chromeProxy, windowId, true);
             result = { image: screenshot.image, text: element_result.element_str };
           } finally {
+            await sleep(500);
             logger.debug("executeScript #2...");
             await executeScript(context.ekoConfig.chromeProxy, tabId, () => {
               return (window as any).remove_highlight();
