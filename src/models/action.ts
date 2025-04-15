@@ -124,13 +124,13 @@ export class ActionImpl implements Action {
           }
         },
         onToolUse: async (toolCall) => {
-          logger.info("toolCall start", {
+          logger.info("toolCall start", JSON.stringify({
             assistant: assistantTextMessage,
             toolCall: {
               name: toolCall.name,
               input: toolCall.input,
             },
-          })
+          }))
           hasToolUse = true;
 
           const tool = toolMap.get(toolCall.name);
@@ -265,12 +265,12 @@ export class ActionImpl implements Action {
                   return s.slice(0, maxLength) + "...(truncated)";
                 }
               };
-              logger.info("toolCall done", { // TODO: remove image base64
+              logger.info("toolCall done", JSON.stringify({
                 toolCall: {
                   name: tool.name,
                   result: truncate(result),
                 },
-              });
+              }));
               // Store tool results except for the return_output tool
               if (tool.name !== 'return_output') {
                 this.toolResults.set(toolCall.id, resultContentText);
@@ -421,6 +421,7 @@ export class ActionImpl implements Action {
     if (context.ekoConfig.patchServerUrl) {
       patchs = await this.getPatchs(this.name, context.ekoConfig.patchServerUrl);
     }
+    logger.debug("patchs:", patchs);
 
     // Prepare initial messages
     const messages: Message[] = [

@@ -33,7 +33,7 @@ ${JSON.stringify(nodeOutputs)}
       `,
     },
   ];
-  logger.debug(messages);
+  logger.debug(JSON.stringify(messages));
   const params: LLMParameters = {
     temperature: 0.7,
     maxTokens: 8192,

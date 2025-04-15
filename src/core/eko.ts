@@ -34,6 +34,7 @@ export class Eko {
     this.ekoConfig = this.buildEkoConfig(ekoConfig);
     this.registerTools();
     logger.info("using Eko@" + process.env.COMMIT_HASH);
+    logger.debug("caller's ekoConfig:", ekoConfig);
   }
 
   public static getLogger(): Logger<ILogObj> {
@@ -87,7 +88,7 @@ export class Eko {
   }
 
   public async generate(prompt: string, tabs: chrome.tabs.Tab[] = [], param?: EkoInvokeParam): Promise<Workflow> {
-    logger.info("workflow generating...");
+    logger.info("workflow generating...", prompt);
     this.prompt = prompt;
     this.tabs = tabs;
     let toolRegistry = this.toolRegistry;
