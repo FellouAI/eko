@@ -70,7 +70,12 @@ export async function getTabId(context: ExecutionContext): Promise<number> {
     }
 
     if (!tabId) {
-      throw new Error('Could not find a valid tab');
+      const fellouTabId = window.__FELLOU_TAB_ID__;
+      if (tabId) {
+        tabId = fellouTabId;
+      } else {
+        throw new Error('Could not find a valid tab');
+      }
     }
     context.variables.set('tabId', tabId);
   }
