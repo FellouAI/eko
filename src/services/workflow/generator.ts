@@ -30,6 +30,8 @@ export class WorkflowGenerator {
 
   private async doGenerateWorkflow(prompt: string, modify: boolean, ekoConfig: EkoConfig): Promise<Workflow> {
     // Create prompts with current set of tools
+    logger.debug("doGenerateWorkflow...");
+    let retry_counter = 3;
     const prompts = createWorkflowPrompts(this.toolRegistry.getToolDefinitions());
 
     let messages: Message[] = [];
@@ -59,51 +61,43 @@ export class WorkflowGenerator {
       toolChoice: { type: 'tool', name: 'generate_workflow' },
     };
 
-    console.time('Workflow Generation Time'); // 开始计时
-    const response = await this.llmProvider.generateText(messages, params);
-    console.timeEnd('Workflow Generation Time'); // 结束计时并输出时间差
+    while(retry_counter > 0) {
+      try {
+        console.time('Workflow Generation Time'); // 开始计时
+        const response = await this.llmProvider.generateText(messages, params);
+        console.timeEnd('Workflow Generation Time'); // 结束计时并输出时间差
+        logger.debug("generateText() done!");
+    
+        if (!response.toolCalls.length || !response.toolCalls[0].input.workflow) {
+          messages.pop();
+          throw new Error('Failed to generate workflow: Invalid response from LLM');
+        }
+    
+        let workflowData = response.toolCalls[0].input.workflow as any;
+    
+        // debug
+        if (typeof workflowData == "string") {
+          logger.warn("workflowData is string, try to transform it into object...");
+          logger.debug("workflowData string:", workflowData);
+          workflowData = JSON.parse(workflowData);
+        }
+        logger.debug("Debug the workflow...", { ...workflowData});
+    
+    
+        // Generate a new UUID if not provided
+        if (!workflowData.id) {
+          workflowData.id = uuidv4();
+        }
 
-    if (!response.toolCalls.length || !response.toolCalls[0].input.workflow) {
-      messages.pop();
-      throw new Error('Failed to generate workflow: Invalid response from LLM');
-    }
-
-    messages.push(
-      {
-        role: 'assistant',
-        content: [
-          {
-            type: 'tool_use',
-            id: response.toolCalls[0].id,
-            name: response.toolCalls[0].name,
-            input: response.toolCalls[0].input,
-          },
-        ],
-      },
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'tool_result',
-            tool_use_id: response.toolCalls[0].id,
-            content: 'ok',
-          },
-        ],
+        return this.createFastWorkflowFromData(workflowData, ekoConfig);
+      } catch(e) {
+        logger.warn("an error occured when generating workflow:", e);
+        logger.info(`retry...${retry_counter}`);
+        retry_counter -= 1;
       }
-    );
-
-    const workflowData = response.toolCalls[0].input.workflow as any;
-
-    // debug
-    logger.debug("Debug the workflow...", { ...workflowData});
-
-
-    // Generate a new UUID if not provided
-    if (!workflowData.id) {
-      workflowData.id = uuidv4();
     }
-
-    return this.createFastWorkflowFromData(workflowData, ekoConfig);
+    logger.error("cannot generate workflow with retry");
+    throw Error("many errors occured when generating workflow");
   }
 
   private createWorkflowFromData(data: any, ekoConfig: EkoConfig): Workflow {
