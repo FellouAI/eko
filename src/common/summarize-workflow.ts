@@ -70,6 +70,6 @@ ${JSON.stringify(nodeOutputs)}
   return {
     isSuccessful: contextVariables.get("__isSuccessful__") as boolean,
     summary: response.toolCalls[0].input.summary as string,
-    payload: response.toolCalls[0].input.document as string | undefined,
+    payload: (response.toolCalls[0].input.isDocumentGenerationTask ? response.toolCalls[0].input.document : undefined) as string | undefined,
   };
 }
