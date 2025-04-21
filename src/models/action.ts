@@ -412,9 +412,11 @@ export class ActionImpl implements Action {
 
     // get already existing tabs as task background
     const currentWindow = await context.ekoConfig.chromeProxy.windows.getCurrent();
-    const existingTabs: chrome.tabs.Tab[] = await context.ekoConfig.chromeProxy.tabs.query({
-      windowId: currentWindow.id,
-    });
+    // const existingTabs: chrome.tabs.Tab[] = await context.ekoConfig.chromeProxy.tabs.query({
+    //   windowId: currentWindow.id,
+    // });
+    // logger.debug("existingTabs", existingTabs);
+    const existingTabs: chrome.tabs.Tab[] = [];
 
     // get patchs for task
     let patchs: PatchItem[] = [];
@@ -574,6 +576,7 @@ export class ActionImpl implements Action {
 - If you encountered a problem (e.g. be required to login), try to bypass it or explore other ways and links
 - Before you return output, reflect on whether the output provided *is what users need* and *whether it is too concise*
 - If you find the what user want, click the URL and show it on the current page.
+- By default, you should perform tasks on web pages unless user specifically requests to use an APP.
 
 ## TIME:
 - The current time is ${formattedTime}.
