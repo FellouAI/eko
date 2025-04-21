@@ -576,6 +576,7 @@ export class ActionImpl implements Action {
 - If you encountered a problem (e.g. be required to login), try to bypass it or explore other ways and links
 - Before you return output, reflect on whether the output provided *is what users need* and *whether it is too concise*
 - If you find the what user want, click the URL and show it on the current page.
+- By default, you should perform tasks on web pages unless user specifically requests to use an APP.
 
 ## TIME:
 - The current time is ${formattedTime}.
