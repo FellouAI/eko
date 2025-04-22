@@ -1,4 +1,4 @@
-import { BrowserUseParam, BrowserUseResult } from '../../types/tools.types';
+import { BrowserActionParam, BrowserActionResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { getWindowId, getTabId, sleep, injectScript, executeScript } from '../utils';
 import * as browser from './browser';
@@ -8,14 +8,14 @@ import { logger } from '@/common/log';
 /**
  * Browser Use for general
  */
-export class BrowserUse extends ToolReturnsScreenshot<BrowserUseParam> {
+export class BrowserAction extends ToolReturnsScreenshot<BrowserActionParam> {
   name: string;
   description: string;
   input_schema: InputSchema;
 
   constructor() {
     super();
-    this.name = 'browser_use';
+    this.name = 'browser_action';
     this.description = `Use structured commands to interact with the browser, manipulating page elements through screenshots and webpage element extraction.
 * This is a browser GUI interface where you need to analyze webpages by taking screenshots and extracting page element structures, and specify action sequences to complete designated tasks.
 * Before any operation, you must first call the \`screenshot_extract_element\` command, which will return the browser page screenshot and structured element information, both specially processed.
@@ -79,8 +79,8 @@ export class BrowserUse extends ToolReturnsScreenshot<BrowserUseParam> {
    * @param {*} params { action: 'input_text', index: 1, text: 'string' }
    * @returns > { success: true, image?: { type: 'base64', media_type: 'image/jpeg', data: '/9j...' }, text?: string }
    */
-  async realExecute(context: ExecutionContext, params: BrowserUseParam): Promise<BrowserUseResult> {
-    logger.debug("debug 'browser_use'...");
+  async realExecute(context: ExecutionContext, params: BrowserActionParam): Promise<BrowserActionResult> {
+    logger.debug("debug 'browser_action'...");
     logger.debug(params);
     try {
       if (params === null || !params.action) {
@@ -211,7 +211,7 @@ export class BrowserUse extends ToolReturnsScreenshot<BrowserUseParam> {
             `Invalid parameters. The "${params.action}" value is not included in the "action" enumeration.`
           );
       }
-      logger.debug(`execute 'browser_use'...done, result=${result}`);
+      logger.debug(`execute 'browser_action'...done, result=${result}`);
       return result
     } catch (e: any) {
       logger.error('Browser use error:', e);

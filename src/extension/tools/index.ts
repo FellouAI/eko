@@ -1,4 +1,4 @@
-import { BrowserUse } from './browser_use';
+import { BrowserAction } from './browser_action';
 import { ExportFile } from './export_file';
 import { ExtractContent } from './extract_content';
 import { GetAllTabs } from './get_all_tabs';
@@ -12,7 +12,7 @@ import { SwitchTab } from './switch_tab';
 export * from '../../common/tools';
 
 export {
-  BrowserUse,
+  BrowserAction,
   ExportFile,
   ExtractContent,
   OpenUrl,

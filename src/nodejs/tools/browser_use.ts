@@ -1,4 +1,4 @@
-import { BrowserUseParam, BrowserUseResult } from '../../types/tools.types';
+import { BrowserActionParam, BrowserActionResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { chromium, Browser, Page, ElementHandle, BrowserContext } from 'playwright';
 import { run_build_dom_tree } from '../script/build_dom_tree';
@@ -6,7 +6,7 @@ import { run_build_dom_tree } from '../script/build_dom_tree';
 /**
  * Browser Use => `npx playwright install`
  */
-export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
+export class BrowserUse implements Tool<BrowserActionParam, BrowserActionResult> {
   name: string;
   description: string;
   input_schema: InputSchema;
@@ -81,7 +81,7 @@ export class BrowserUse implements Tool<BrowserUseParam, BrowserUseResult> {
    * @param {*} params { action: 'input_text', index: 1, text: 'string' }
    * @returns > { success: true, image?: { type: 'base64', media_type: 'image/jpeg', data: '/9j...' }, text?: string }
    */
-  async execute(context: ExecutionContext, params: BrowserUseParam): Promise<BrowserUseResult> {
+  async execute(context: ExecutionContext, params: BrowserActionParam): Promise<BrowserActionResult> {
     try {
       if (params === null || !params.action) {
         throw new Error('Invalid parameters. Expected an object with a "action" property.');

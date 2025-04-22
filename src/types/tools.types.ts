@@ -10,13 +10,13 @@ export interface ComputerUseResult {
   [key: string]: any;
 }
 
-export interface BrowserUseParam {
+export interface BrowserActionParam {
   action: string;
   index?: number;
   text?: string;
 }
 
-export interface BrowserUseResult {
+export interface BrowserActionResult {
   success: boolean;
   image?: ScreenshotImage;
   text?: string;

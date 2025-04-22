@@ -130,7 +130,7 @@ export class Eko {
             'name': prompt,
             'description': description,
             'tools': [
-              'browser_use',
+              'browser_action',
               'document_agent',
               'export_file',
               'extract_content',

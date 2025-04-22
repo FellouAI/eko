@@ -1,4 +1,4 @@
-import { BrowserUseParam, OpenUrlParam, OpenUrlResult } from '../../types/tools.types';
+import { BrowserActionParam, OpenUrlParam, OpenUrlResult } from '../../types/tools.types';
 import { Tool, InputSchema, ExecutionContext } from '../../types/action.types';
 import { getWindowId, open_new_tab } from '../utils';
 import { ToolReturnsScreenshot } from './tool_returns_screenshot';

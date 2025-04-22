@@ -175,7 +175,7 @@ export class WorkflowGenerator {
         const action = ActionImpl.createPromptAction(
           nodeData.action.name,
           nodeData.action.description,
-          [this.toolRegistry.getTool('browser_use')],
+          [this.toolRegistry.getTool('browser_action')],
           this.llmProvider,
           { maxTokens: 8192 }
         );
