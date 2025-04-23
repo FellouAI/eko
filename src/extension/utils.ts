@@ -68,7 +68,7 @@ export async function getTabId(context: ExecutionContext): Promise<number> {
       tabId = await getCurrentTabId(context.ekoConfig.chromeProxy);
       logger.debug("getCurrentTabId(context.ekoConfig.chromeProxy) #2 returns " + tabId);
     }
-
+    logger.debug("tabId:", tabId);
     if (!tabId) {
       const fellouTabId = (window as any).__FELLOU_TAB_ID__;
       if (fellouTabId) {
@@ -96,7 +96,7 @@ export function getCurrentTabId(chromeProxy: any, windowId?: number | undefined)
       logger.debug(`get the active tabId on current window`);
       queryInfo = { active: true, currentWindow: true };
     }
-    chrome.tabs.query(queryInfo, (tabs: chrome.tabs.Tab[]) => {
+    chromeProxy.tabs.query(queryInfo, (tabs: chrome.tabs.Tab[]) => {
       if (chromeProxy.runtime.lastError) {
         logger.error(`failed to get: `, chromeProxy.runtime.lastError);
         reject(chromeProxy.runtime.lastError);
