@@ -97,6 +97,7 @@ export class ActionImpl implements Action {
     let params_copy: LLMParameters = JSON.parse(JSON.stringify(params));
     params_copy.tools = params_copy.tools?.map(this.wrapToolInputSchema);
 
+    let retry_counter = 3;
     while (!context.signal?.aborted) {
       roundMessages = [];
       hasToolUse = false;
@@ -313,8 +314,14 @@ export class ActionImpl implements Action {
       try {
         await this.llmProvider.generateStream(messages, params_copy, handler);
       } catch (e) {
-        logger.warn("an error occurs when LLM generate response, retry...", e);
-        continue;
+        logger.warn(`an error occurs when LLM generate response, retry(n=${retry_counter})...`, e);
+        retry_counter -= 1;
+        if (retry_counter > 0) {
+          continue;
+        } else {
+          logger.error("too many errors when calling LLM API in executing");
+          throw e;
+        }
       }
 
       // Wait for tool execution to complete if it was started
