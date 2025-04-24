@@ -39,49 +39,31 @@ export async function getWindowId(context: ExecutionContext): Promise<number> {
 }
 
 export async function getTabId(context: ExecutionContext): Promise<number> {
-  logger.debug("debug the getTabId()...");
-  let tabId = context.variables.get('tabId') as any;
-  if (tabId) {
-    try {
-      await context.ekoConfig.chromeProxy.tabs.get(tabId);
-    } catch (e) {
-      tabId = null;
-      context.variables.delete('tabId');
-    }
-  }
-
-  if (!tabId) {
-    logger.debug("tabId is empty");
-    let windowId = await getWindowId(context);
-    logger.debug(`windowId=${windowId}`);
-    if (windowId) {
-      try {
-        tabId = await getCurrentTabId(context.ekoConfig.chromeProxy, windowId);
-        logger.debug("getCurrentTabId(context.ekoConfig.chromeProxy, windowId) returns " + tabId);
-      } catch (e) {
-        tabId = await getCurrentTabId(context.ekoConfig.chromeProxy);
-        logger.debug("getCurrentTabId(context.ekoConfig.chromeProxy, windowId) throws an error");
-        logger.debug("getCurrentTabId(context.ekoConfig.chromeProxy) returns " + tabId);
-        context.variables.delete('windowId');
-      }
+  logger.debug("getTabId()...")
+  let tabs: any[] = await context.ekoConfig.chromeProxy.tabs.query({});
+  logger.debug("all tabs:", tabs);
+  const filtered = tabs.filter((tab: chrome.tabs.Tab) => tab.title && tab.url);
+  logger.debug("filtered:", filtered);
+  if (filtered.length > 0) {
+    if (typeof filtered[0].activeTime != "undefined") {
+      const sorted: any[] = (filtered as { activeTime: string }[]).sort((a, b) => parseInt(b.activeTime) - parseInt(a.activeTime));
+      logger.debug("sorted tabs:", sorted);
+      const tabId = sorted[0].id;
+      logger.debug("tabId:", tabId);
+      return tabId;
     } else {
-      tabId = await getCurrentTabId(context.ekoConfig.chromeProxy);
-      logger.debug("getCurrentTabId(context.ekoConfig.chromeProxy) #2 returns " + tabId);
-    }
-    logger.debug("tabId:", tabId);
-    if (!tabId) {
-      const fellouTabId = (window as any).__FELLOU_TAB_ID__;
-      if (fellouTabId) {
-        tabId = fellouTabId;
+      tabs = await context.ekoConfig.chromeProxy.tabs.query({ active: true, currentWindow: true });
+      if (tabs.length > 0) {
+        const tabId = tabs[0].id;
+        logger.debug("tabId:", tabId);
+        return tabId;
       } else {
-        throw new Error('Could not find a valid tab');
+        throw Error("no active tab found");
       }
     }
-    context.variables.set('tabId', tabId);
+  } else {
+    throw Error("no tab found");
   }
-
-  logger.debug(`debug the getTabId()...returns ${tabId}`);
-  return tabId;
 }
 
 export function getCurrentTabId(chromeProxy: any, windowId?: number | undefined): Promise<number | undefined> {
