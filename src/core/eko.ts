@@ -34,7 +34,8 @@ export class Eko {
     this.ekoConfig = this.buildEkoConfig(ekoConfig);
     this.registerTools();
     logger.info("using Eko@" + process.env.COMMIT_HASH);
-    logger.debug("caller's ekoConfig:", ekoConfig);
+    logger.debug("caller's ekoConfig ('chromeProxy' maybe 'null'):", ekoConfig);
+    console.log(ekoConfig);
   }
 
   public static getLogger(): Logger<ILogObj> {
