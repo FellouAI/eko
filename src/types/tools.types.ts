@@ -69,13 +69,14 @@ export interface ScreenshotImage {
 
 export interface TabManagementParam {
   command: string;
+  tabId: number;
 }
 
 export interface SwitchTabParam {
   tabId: number;
 }
 
-export type TabManagementResult = TabInfo | CloseTabInfo | TabInfo[];
+export type TabManagementResult = string;
 
 export interface TabInfo {
   tabId?: number;

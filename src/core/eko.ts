@@ -137,7 +137,6 @@ export class Eko {
               'extract_content',
               'open_url',
               'tab_management',
-              'switch_tab',
               'web_search',
               'human_input_text',
               'human_input_single_choice',
