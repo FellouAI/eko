@@ -46,7 +46,7 @@ export class OpenaiProvider implements LLMProvider {
       typeof document !== 'undefined' &&
       (typeof param == 'string' || param.apiKey)
     ) {
-      logger.warn(`
+      console.warn(`
         ⚠️ Security Warning:
         DO NOT use API Keys in browser/frontend code!
         This will expose your credentials and may lead to unauthorized usage.
