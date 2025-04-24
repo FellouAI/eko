@@ -42,6 +42,14 @@ export class Eko {
     return logger;
   }
 
+  public getLoggerInstaceUUID(): string {
+    if (this.ekoConfig.loggerInstaceUUID) {
+      return this.ekoConfig.loggerInstaceUUID;
+    } else {
+      throw Error("loggerInstaceUUID is not configured");
+    }
+  }
+
   private buildEkoConfig(ekoConfig: Partial<EkoConfig> | undefined): EkoConfig {
     if (!ekoConfig) {
       logger.warn("`ekoConfig` is missing when construct `Eko` instance");
@@ -51,6 +59,7 @@ export class Eko {
       chromeProxy: typeof chrome === 'undefined' ? undefined : chrome,
       callback: undefined,
       patchServerUrl: "http://127.0.0.1:8000/eko",
+      loggerInstaceUUID: undefined,
     };
     return {
       ...defaultEkoConfig,
