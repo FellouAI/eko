@@ -1,11 +1,30 @@
 import { ILogObj, IMeta, ISettings, Logger } from "tslog";
 
 function transportFormatted(logMetaMarkup: string, logArgs: unknown[], logErrors: string[], settings: ISettings<ILogObj>) {
-  const logErrorsStr = (logErrors.length > 0 && logArgs.length > 0 ? "\n" : "") + logErrors.join("\n");
   settings.prettyInspectOptions.colors = settings.stylePrettyLogs;
-  console.log(logMetaMarkup, ...logArgs);
+  const logLevel = logMetaMarkup.trim().split(" ")[2];
+  let logFunc;
+  switch (logLevel) {
+    case "WARN":
+      logFunc = console.warn;
+      break;
+    case "ERROR":
+    case "FATAL":
+      logFunc = console.error;
+      break;
+    case "INFO":
+      logFunc = console.info;
+      break;
+    case "DEBUG":
+    case "TRACE":
+    case "SILLY":
+    default:
+      logFunc = console.debug;
+      break;
+  }
+  logFunc(logMetaMarkup, ...logArgs);
   logErrors.forEach(err => {
-    console.log(logMetaMarkup + err);
+    console.error(logMetaMarkup + err);
   });
 }
 
