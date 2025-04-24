@@ -221,6 +221,8 @@ export class ActionImpl implements Action {
               // Execute the tool
               let result = await tool.execute(context, input);
               // afterToolUse
+              let existingTabs: chrome.tabs.Tab[] = await context.ekoConfig.chromeProxy.tabs.query({});
+              logger.debug("all tabs:", existingTabs);          
               if (context.callback && context.callback.hooks.afterToolUse) {
                 let modified_result = await context.callback.hooks.afterToolUse(
                   tool,
