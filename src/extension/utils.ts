@@ -30,6 +30,9 @@ export async function getWindowId(context: ExecutionContext): Promise<number> {
   if (!windowId) {
     windowId = (window as any).FELLOU_WINDOW_ID;
   }
+  if (!windowId) {
+    windowId = context.ekoConfig.workingWindowId;
+  }
 
   if (!windowId) {
     logger.warn("`getWindowId()` returns " + windowId);
