@@ -14,7 +14,7 @@ import {
 import { ExecutionLogger } from '@/utils/execution-logger';
 import { WriteContextTool } from '@/common/tools/write_context';
 import { logger } from '@/common/log';
-import { ContextComporessor, NoComporess, SimpleQAComporess } from '@/common/context-compressor';
+import { ContextCompressor, NoCompress, SimpleQACompress, SummaryCompress } from '@/common/context-compressor';
 import { sleep } from '@/utils/sleep';
 
 function createReturnTool(
@@ -316,25 +316,26 @@ export class ActionImpl implements Action {
         throw new Error('LLM provider not set');
       }
       try {
-        let compressedMessages;
+        let compressedMessages: Message[];
         try {
-          const comporessor: ContextComporessor = new SimpleQAComporess();
+          //const compressor: ContextCompressor = new SimpleQACompress();
+          const compressor: ContextCompressor = new SummaryCompress(this.llmProvider,params_copy);
           logger.debug("uncompressed messages:", messages);
-          compressedMessages = comporessor.comporess(messages);
+          compressedMessages = await compressor.compress(messages);
         } catch(e) {
-          logger.error("an error occurs when comporess context, use NoComporess");
+          logger.error("an error occurs when compress context, use NoCompress");
           logger.error(e);
-          const comporessor: ContextComporessor = new NoComporess();
-          compressedMessages = comporessor.comporess(messages);
+          const compressor: ContextCompressor = new NoCompress();
+          compressedMessages = await compressor.compress(messages);
         }
         logger.debug("compressed messages:", compressedMessages);
         await sleep(5000);
         try {
           await this.llmProvider.generateStream(compressedMessages, params_copy, handler);
         } catch(e) {
-          logger.warn("LLM API raise an error, try to use NoComporess");
-          const comporessor: ContextComporessor = new NoComporess();
-          compressedMessages = comporessor.comporess(messages);
+          logger.warn("LLM API raise an error, try to use NoCompress");
+          const compressor: ContextCompressor = new NoCompress();
+          compressedMessages = await compressor.compress(messages);
           logger.debug("compressed messages:", compressedMessages);
           await sleep(5000);
           await this.llmProvider.generateStream(compressedMessages, params_copy, handler);
