@@ -73,6 +73,7 @@ export async function double_click(coordinate?: [number, number]): Promise<boole
   return (await runComputeruseCommand('click', ['left', true])).success;
 }
 
+// 定义一个异步函数 `screenshot`，用于捕获当前屏幕的截图，返回截图的 Base64 编码。
 export async function screenshot(windowId?: number): Promise<{
   image: {
     type: 'base64';
@@ -80,6 +81,7 @@ export async function screenshot(windowId?: number): Promise<{
     data: string;
   };
 }> {
+    // 调用 `runComputeruseCommand` 命令，获取全屏截图数据（返回的截图数据可能是 Base64 编码的）
   let screenshot = (await runComputeruseCommand('captureFullScreen')).data;
   let dataUrl = screenshot.startsWith('data:') ? screenshot : 'data:image/png;base64,' + screenshot;
   let data = dataUrl.substring(dataUrl.indexOf('base64,') + 7);
