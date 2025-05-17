@@ -99,15 +99,18 @@ export async function cursor_position(): Promise<{
   return { coordinate: [response.data.x, response.data.y] };
 }
 
+// 定义一个异步函数 `size`，返回屏幕的宽度和高度
 export async function size(): Promise<[number, number]> {
   let response = await runComputeruseCommand('getScreenSize');
   return [response.data.width, response.data.height];
 }
 
+// 定义一个异步函数 `scroll`，接受坐标数组 [x, y] 来控制滚动
 export async function scroll(coordinate: [number, number]): Promise<boolean> {
   return (await runComputeruseCommand('scrollTo', coordinate)).success;
 }
 
+// 定义一个异步函数 `runComputeruseCommand`，用于发送命令并返回结果
 async function runComputeruseCommand(
   func: string,
   args?: Array<any>
