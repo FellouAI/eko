@@ -3,7 +3,8 @@ import Context from "./context";
 import { Agent } from "../agent";
 import { Planner } from "./plan";
 import Chain, { AgentChain } from "./chain";
-import { mergeAgents, uuidv4 } from "../common/utils";
+import { mergeAgents, uuidv4, replaceTemplateVariables } from "../common/utils";
+import { extractTemplateVariables, validateTemplateVariables } from "../common/xml";
 import Log from "../common/log";
 
 export class Eko {
@@ -36,6 +37,41 @@ export class Eko {
       }
       let planner = new Planner(context, taskId);
       context.workflow = await planner.plan(taskPrompt);
+
+      // If workflow has template variables and contextParams provided, replace them
+      if (context.workflow.template && contextParams) {
+        // Validate required variables
+        const missingVars = validateTemplateVariables(
+          context.workflow.template.variables,
+          contextParams
+        );
+        if (missingVars.length > 0) {
+          throw new Error(
+            `Missing required template variables: ${missingVars.join(", ")}`
+          );
+        }
+
+        // Replace template variables in the workflow XML
+        context.workflow.xml = replaceTemplateVariables(
+          context.workflow.xml,
+          contextParams
+        );
+
+        // Also update each agent's XML
+        for (const agent of context.workflow.agents) {
+          agent.xml = replaceTemplateVariables(agent.xml, contextParams);
+          // Update task text if it contains variables
+          agent.task = replaceTemplateVariables(agent.task, contextParams);
+
+          // Update node text if it contains variables
+          for (const node of agent.nodes) {
+            if (node.type === "normal" && node.text) {
+              node.text = replaceTemplateVariables(node.text, contextParams);
+            }
+          }
+        }
+      }
+
       return context.workflow;
     } catch (e) {
       this.deleteTask(taskId);
@@ -112,6 +148,38 @@ export class Eko {
         context.variables.set(key, contextParams[key])
       );
     }
+
+    // If workflow has template variables and contextParams provided, replace them
+    if (workflow.template && contextParams) {
+      // Validate required variables
+      const missingVars = validateTemplateVariables(
+        workflow.template.variables,
+        contextParams
+      );
+      if (missingVars.length > 0) {
+        throw new Error(
+          `Missing required template variables: ${missingVars.join(", ")}`
+        );
+      }
+
+      // Replace template variables in the workflow XML
+      workflow.xml = replaceTemplateVariables(workflow.xml, contextParams);
+
+      // Also update each agent's XML
+      for (const agent of workflow.agents) {
+        agent.xml = replaceTemplateVariables(agent.xml, contextParams);
+        // Update task text if it contains variables
+        agent.task = replaceTemplateVariables(agent.task, contextParams);
+
+        // Update node text if it contains variables
+        for (const node of agent.nodes) {
+          if (node.type === "normal" && node.text) {
+            node.text = replaceTemplateVariables(node.text, contextParams);
+          }
+        }
+      }
+    }
+
     context.workflow = workflow;
     this.taskMap.set(workflow.taskId, context);
     return context;

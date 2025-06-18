@@ -50,7 +50,12 @@ export {
   type Workflow,
   type WorkflowAgent,
   type WorkflowNode,
+  type WorkflowTextNode,
   type StreamCallbackMessage,
+  type TemplateVariable,
+  type WorkflowTemplate,
+  type BrowserAction,
+  type ActionSelector,
 } from "./types";
 
 export {
@@ -59,6 +64,12 @@ export {
   convertToolSchema,
   uuidv4,
   call_timeout,
+  replaceTemplateVariables,
 } from "./common/utils";
+
+export {
+  extractTemplateVariables,
+  validateTemplateVariables,
+} from "./common/xml";
 
 export { extract_page_content } from "./agent/browser/utils";

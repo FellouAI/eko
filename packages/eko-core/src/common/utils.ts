@@ -160,6 +160,33 @@ export function sub(
   return str;
 }
 
+/**
+ * Replace template variables in a string with actual values
+ * Template variables are in the format {variable_name}
+ * @param template - The template string containing {variable} placeholders
+ * @param variables - Object containing variable names and their values
+ * @returns The string with all template variables replaced
+ */
+export function replaceTemplateVariables(
+  template: string,
+  variables: Record<string, any>
+): string {
+  if (!template || !variables) {
+    return template;
+  }
+
+  // Replace all occurrences of {variable_name} with the corresponding value
+  return template.replace(/\{([^}]+)\}/g, (match, variableName) => {
+    const value = variables[variableName.trim()];
+    // If variable is undefined, keep the original placeholder
+    if (value === undefined) {
+      return match;
+    }
+    // Convert value to string
+    return String(value);
+  });
+}
+
 export function fixXmlTag(code: string) {
   if (code.indexOf('&') > -1) {
     code = code.replace(/&(?![a-zA-Z0-9#]+;)/g, '&amp;');

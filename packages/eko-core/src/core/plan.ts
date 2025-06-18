@@ -1,7 +1,7 @@
 import Log from "../common/log";
 import Context from "./context";
 import { RetryLanguageModel } from "../llm";
-import { parseWorkflow } from "../common/xml";
+import { parseWorkflow, extractTemplateVariables, validateTemplateVariables } from "../common/xml";
 import { Workflow } from "../types/core.types";
 import { LLMRequest } from "../types/llm.types";
 import { getPlanSystemPrompt, getPlanUserPrompt } from "../prompt/plan";
@@ -95,6 +95,7 @@ export class Planner {
           streamText += chunk.textDelta || "";
         }
         if (config.callback) {
+          // Don't pass template variables during streaming - just parse structure
           let workflow = parseWorkflow(this.taskId, streamText, false);
           if (workflow) {
             await config.callback.onMessage({
@@ -113,6 +114,7 @@ export class Planner {
     }
     chain.planRequest = request;
     chain.planResult = streamText;
+    // Parse workflow without template variables - they'll be applied later
     let workflow = parseWorkflow(this.taskId, streamText, true) as Workflow;
     if (config.callback) {
       await config.callback.onMessage({

@@ -1,6 +1,7 @@
 {
   "name": "@eko-ai/eko",
   "version": "2.1.6-alpha.3",
+  "private": true,
   "description": "Empowering language to transform human words into action.",
   "workspaces": [
     "packages/eko-core",
@@ -30,5 +31,6 @@
   },
   "devDependencies": {
     "typescript": "^5.8.3"
-  }
+  },
+  "packageManager": "pnpm@8.15.0"
 }

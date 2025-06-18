@@ -81,11 +81,33 @@ export interface StreamCallback {
   onMessage: (message: StreamCallbackMessage, agentContext?: AgentContext) => Promise<void>;
 }
 
+export type ActionSelector = {
+  css?: string;
+  xpath?: string;
+};
+
+export type BrowserAction = {
+  type: string; // e.g., "browser.click", "browser.input", etc.
+  selector?: ActionSelector;
+  value?: string;
+  screenshot?: string;
+  url?: string;
+  command?: string;
+  key?: string;
+  duration?: number;
+  fields?: Array<{
+    name: string;
+    selector: string;
+  }>;
+};
+
 export type WorkflowTextNode = {
   type: "normal",
   text: string;
   input?: string | null;
   output?: string | null;
+  executionMode?: "deterministic" | "agent";
+  action?: BrowserAction;
 };
 
 export type WorkflowForEachNode = {
@@ -115,6 +137,18 @@ export type WorkflowAgent = {
   xml: string; // <agent name="xxx">...</agent>
 };
 
+export type TemplateVariable = {
+  name: string;
+  type: string;
+  required: boolean;
+  description?: string;
+};
+
+export type WorkflowTemplate = {
+  version: string;
+  variables: TemplateVariable[];
+};
+
 export type Workflow = {
   taskId: string;
   name: string;
@@ -122,6 +156,7 @@ export type Workflow = {
   agents: WorkflowAgent[];
   xml: string;
   taskPrompt?: string;
+  template?: WorkflowTemplate;
 };
 
 export interface HumanCallback {

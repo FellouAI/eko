@@ -72,6 +72,23 @@ const WATCH_PROMPT = `
 monitor changes in webpage DOM elements, when executing to the watch node, require the use of the \`${watch_trigger}\` tool.
 `;
 
+const ACTION_NODE = `
+    <!-- node with deterministic action block -->
+    <node>
+      task step description
+      <action type="browser.click">
+        <selector css=".button" xpath="//button[@class='button']" />
+      </action>
+    </node>`;
+
+const ACTION_PROMPT = `
+* Action blocks
+Some nodes contain structured action blocks with predefined selectors and parameters.
+- Use the \`execute_action_block\` tool to execute nodes that have <action> elements
+- If the tool reports failure, complete the step using your standard browser tools
+- Nodes without action blocks should be executed using your normal approach
+`;
+
 export function getAgentSystemPrompt(
   agent: Agent,
   agentNode: WorkflowAgent,
@@ -85,12 +102,17 @@ export function getAgentSystemPrompt(
   let agentNodeXml = agentNode.xml;
   let hasWatchNode = agentNodeXml.indexOf("</watch>") > -1;
   let hasForEachNode = agentNodeXml.indexOf("</forEach>") > -1;
+  let hasActionNode = agentNodeXml.indexOf("</action>") > -1;
   let hasHumanTool =
     tools.filter((tool) => tool.name == human_interact).length > 0;
   let hasVariable =
     agentNodeXml.indexOf("input=") > -1 ||
     agentNodeXml.indexOf("output=") > -1 ||
     tools.filter((tool) => tool.name == variable_storage).length > 0;
+  let hasSelectorTools = tools.some(tool =>
+    ["clickSelector", "inputSelector", "keypressSelector", "extractSelector"].includes(tool.name)
+  );
+
   if (hasHumanTool) {
     prompt += HUMAN_PROMPT;
   }
@@ -108,6 +130,10 @@ export function getAgentSystemPrompt(
       prompt += WATCH_PROMPT;
     }
     nodePrompt += WATCH_NODE;
+  }
+  if (hasActionNode && hasSelectorTools) {
+    prompt += ACTION_PROMPT;
+    nodePrompt += ACTION_NODE;
   }
   if (extSysPrompt && extSysPrompt.trim()) {
     prompt += "\n" + extSysPrompt.trim() + "\n";
@@ -143,6 +169,13 @@ export function getAgentUserPrompt(
   let hasTaskNodeStatusTool =
     (tools || agent.Tools).filter((tool) => tool.name == task_node_status)
       .length > 0;
+
+  // Convert context variables to plain object for template replacement
+  const templateVariables: Record<string, any> = {};
+  context.variables.forEach((value, key) => {
+    templateVariables[key] = value;
+  });
+
   return buildAgentRootXml(
     agentNode.xml,
     context.chain.taskPrompt,
@@ -150,6 +183,7 @@ export function getAgentUserPrompt(
       if (hasTaskNodeStatusTool) {
         node.setAttribute("status", "todo");
       }
-    }
+    },
+    templateVariables
   );
 }

@@ -254,6 +254,12 @@ export class Agent {
     if (hasWatch) {
       tools.push(new WatchTriggerTool());
     }
+    let hasActionBlock = agentNodeXml.indexOf("</action>") > -1;
+    if (hasActionBlock && this.name === "Browser") {
+      // Only add for browser agents
+      const ActionBlockTool = require("../tools/action_block").default;
+      tools.push(new ActionBlockTool());
+    }
     let toolNames = this.tools.map((tool) => tool.name);
     return tools.filter((tool) => toolNames.indexOf(tool.name) == -1);
   }

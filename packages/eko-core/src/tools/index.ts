@@ -6,6 +6,7 @@ import HumanInteractTool from "./human_interact";
 import TaskNodeStatusTool from "./task_node_status";
 import VariableStorageTool from "./variable_storage";
 import WatchTriggerTool from "./watch_trigger";
+import ActionBlockTool from "./action_block";
 import { Tool, ToolResult } from "../types/tools.types";
 import { LanguageModelV1ToolCallPart } from "@ai-sdk/provider";
 
@@ -37,4 +38,5 @@ export {
   TaskNodeStatusTool,
   VariableStorageTool,
   WatchTriggerTool,
+  ActionBlockTool,
 }

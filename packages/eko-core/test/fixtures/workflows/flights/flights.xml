@@ -1,0 +1,59 @@
+<root>
+  <name>Flight Search Workflow</name>
+  <thought>This workflow automates the process of searching for flights using Google Flights. It involves navigating to the Google Flights page, entering departure and destination locations, selecting travel dates, and choosing flights from the search results. The workflow is designed to be reusable by parameterizing the departure and destination locations, as well as the travel dates.</thought>
+  <template version="1.0">
+    <variables>
+      <variable name="departure_location" type="string" required="true" description="The departure city or airport"/>
+      <variable name="destination_location" type="string" required="true" description="The destination city or airport"/>
+      <variable name="departure_date" type="date" required="true" description="The departure date"/>
+      <variable name="return_date" type="date" required="true" description="The return date"/>
+    </variables>
+  </template>
+  <agents>
+    <agent name="Browser">
+      <task>Automate flight search on Google Flights</task>
+      <nodes>
+        <node>
+          Navigate to Google Flights
+          <action type="browser.navigate">
+            <url>https://www.google.com/travel/flights</url>
+          </action>
+        </node>
+        <node>
+          Enter departure location
+          <action type="browser.input">
+            <selector css="input[placeholder*='Where from?']" xpath="id(&quot;i23&quot;)/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/input[1]"/>
+            <value>{departure_location}</value>
+          </action>
+        </node>
+        <node>Select the departure location from suggestions</node>
+        <node>
+          Enter destination location
+          <action type="browser.input">
+            <selector css="input[placeholder*='Where to?']" xpath="id(&quot;i23&quot;)/div[4]/div[1]/div[1]/div[1]/div[1]/div[1]/input[1]"/>
+            <value>{destination_location}</value>
+          </action>
+        </node>
+        <node>Select the destination location from suggestions</node>
+        <node>
+          Click on the departure date input
+          <action type="browser.click">
+            <selector css="input[placeholder='Departure']" xpath="id(&quot;yDmH0d&quot;)/c-wiz[2]/div[1]/div[2]/c-wiz[1]/div[1]/c-wiz[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/input[1]"/>
+            <screenshot>screenshots/step_006.jpg</screenshot>
+          </action>
+        </node>
+        <node>Select the departure date {departure_date} from the calendar</node>
+        <node>Select the return date {return_date} from the calendar</node>
+        <node>
+          Click the search button
+          <action type="browser.click">
+            <selector css="div.VfPpkd-Jh9lGc" xpath="id(&quot;yDmH0d&quot;)/c-wiz[2]/div[1]/div[2]/c-wiz[1]/div[1]/c-wiz[1]/div[2]/div[1]/div[1]/div[2]/div[1]/button[1]/div[1]"/>
+            <screenshot>screenshots/step_012.jpg</screenshot>
+          </action>
+        </node>
+        <node>Select the best departing flight from search results</node>
+        <node>Select the best returning flight from search results</node>
+      </nodes>
+    </agent>
+  </agents>
+</root>
