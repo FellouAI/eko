@@ -176,14 +176,58 @@ export function getAgentUserPrompt(
     templateVariables[key] = value;
   });
 
-  return buildAgentRootXml(
-    agentNode.xml,
-    context.chain.taskPrompt,
-    (nodeId, node) => {
-      if (hasTaskNodeStatusTool) {
-        node.setAttribute("status", "todo");
+  // In sequential mode, we need to provide focused context
+  if (agentNode.sequentialMode) {
+    const completedNodeIds = context.variables.get('completedNodeIds') || new Set<number>();
+    
+    // Find the current node ID
+    let currentNodeId = -1;
+    for (let i = 0; i < agentNode.nodes.length; i++) {
+      if (!completedNodeIds.has(i)) {
+        currentNodeId = i;
+        break;
       }
-    },
-    templateVariables
-  );
+    }
+    
+    if (currentNodeId === -1) {
+      // All nodes completed
+      return buildAgentRootXml(
+        agentNode.xml,
+        context.chain.taskPrompt,
+        (nodeId, node) => {
+          node.setAttribute("status", "done");
+        },
+        templateVariables
+      );
+    }
+    
+    // Build XML with focus on current node
+    return buildAgentRootXml(
+      agentNode.xml,
+      context.chain.taskPrompt,
+      (nodeId, node) => {
+        if (nodeId < currentNodeId) {
+          node.setAttribute("status", "done");
+        } else if (nodeId === currentNodeId) {
+          node.setAttribute("status", "current");
+          node.setAttribute("instruction", "Please complete this task step");
+        } else {
+          node.setAttribute("status", "pending");
+        }
+      },
+      templateVariables
+    );
+  } else {
+    // Non-sequential mode: original behavior
+    return buildAgentRootXml(
+      agentNode.xml,
+      context.chain.taskPrompt,
+      (nodeId, node) => {
+        if (hasTaskNodeStatusTool) {
+          node.setAttribute("status", "todo");
+        }
+      },
+      templateVariables
+    );
+  }
 }

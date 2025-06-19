@@ -135,6 +135,7 @@ export type WorkflowAgent = {
   task: string;
   nodes: WorkflowNode[];
   xml: string; // <agent name="xxx">...</agent>
+  sequentialMode?: boolean; // Execute nodes sequentially without LLM orchestration
 };
 
 export type TemplateVariable = {

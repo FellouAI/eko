@@ -76,11 +76,24 @@ export function parseWorkflow(
         task: agentNode.getElementsByTagName("task")[0]?.textContent || "",
         nodes: nodes,
         xml: agentNode.toString(),
+        sequentialMode: undefined, // Will be set after parsing nodes
       };
       let xmlNodes = agentNode.getElementsByTagName("nodes");
       if (xmlNodes.length > 0) {
         parseWorkflowNodes(nodes, xmlNodes[0].childNodes);
       }
+      
+      // Check if sequentialMode is explicitly set in XML
+      const explicitSequentialMode = agentNode.getAttribute("sequentialMode");
+      if (explicitSequentialMode !== null && explicitSequentialMode !== '') {
+        agent.sequentialMode = explicitSequentialMode === "true";
+      } else {
+        // Default: enable sequential mode if any nodes have action blocks
+        agent.sequentialMode = nodes.some(node => 
+          node.type === 'normal' && node.action !== undefined
+        );
+      }
+      
       agents.push(agent);
     }
     return workflow;
