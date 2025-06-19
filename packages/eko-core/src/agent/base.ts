@@ -272,6 +272,18 @@ export class Agent {
       user_messages.forEach((message) => messages.push(message));
       return null;
     } else {
+      // In sequential mode, check if all nodes are completed before returning text
+      if (text && agentContext.agentChain.agent.sequentialMode) {
+        const completedNodeIds = agentContext.variables.get('completedNodeIds') || new Set<number>();
+        const totalNodes = agentContext.agentChain.agent.nodes.length;
+        
+        if (completedNodeIds.size < totalNodes) {
+          // Not all nodes completed yet, don't terminate
+          Log.info(`Sequential mode: LLM returned text but only ${completedNodeIds.size}/${totalNodes} nodes completed, continuing...`);
+          // The text has already been added to messages via the assistant role above
+          return null; // Continue execution
+        }
+      }
       return text;
     }
   }

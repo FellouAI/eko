@@ -89,6 +89,17 @@ Some nodes contain structured action blocks with predefined selectors and parame
 - Nodes without action blocks should be executed using your normal approach
 `;
 
+const SEQUENTIAL_MODE_PROMPT = `
+* IMPORTANT: Sequential Execution Mode
+You are operating in sequential execution mode. This means:
+- You MUST complete ALL nodes in order, one by one
+- Each node shows its status: "done", "current", or "pending"
+- The instruction shows your progress (e.g., "3/11 - 8 steps remaining")
+- DO NOT consider the task complete until ALL nodes are marked as "done"
+- Even if you think the main goal is achieved, continue executing remaining nodes
+- Only stop when there are no more pending nodes
+`;
+
 export function getAgentSystemPrompt(
   agent: Agent,
   agentNode: WorkflowAgent,
@@ -134,6 +145,9 @@ export function getAgentSystemPrompt(
   if (hasActionNode && hasSelectorTools) {
     prompt += ACTION_PROMPT;
     nodePrompt += ACTION_NODE;
+  }
+  if (agentNode.sequentialMode) {
+    prompt += SEQUENTIAL_MODE_PROMPT;
   }
   if (extSysPrompt && extSysPrompt.trim()) {
     prompt += "\n" + extSysPrompt.trim() + "\n";
@@ -210,7 +224,8 @@ export function getAgentUserPrompt(
           node.setAttribute("status", "done");
         } else if (nodeId === currentNodeId) {
           node.setAttribute("status", "current");
-          node.setAttribute("instruction", "Please complete this task step");
+          const remaining = agentNode.nodes.length - completedNodeIds.size;
+          node.setAttribute("instruction", `Please complete this task step. (${completedNodeIds.size + 1}/${agentNode.nodes.length} - ${remaining} steps remaining)`);
         } else {
           node.setAttribute("status", "pending");
         }
