@@ -20,6 +20,9 @@ export {
   RetryLanguageModel,
 };
 
+// Export XML parsing functions
+export { parseWorkflow } from "./common/xml";
+
 export {
   Agent,
   type AgentParams,
@@ -57,6 +60,16 @@ export {
   type BrowserAction,
   type ActionSelector,
 } from "./types";
+
+export {
+  type WorkflowRecording,
+  type BrowserEvent,
+  type ConversionOptions,
+  type ConversionResult,
+  EventType,
+} from "./types/recording.types";
+
+export { RecordingToWorkflowService } from "./core/recording-converter";
 
 export {
   mergeTools,

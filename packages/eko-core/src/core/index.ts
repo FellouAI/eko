@@ -6,6 +6,9 @@ import Chain, { AgentChain } from "./chain";
 import { mergeAgents, uuidv4, replaceTemplateVariables } from "../common/utils";
 import { extractTemplateVariables, validateTemplateVariables } from "../common/xml";
 import Log from "../common/log";
+import { RecordingToWorkflowService } from "./recording-converter";
+import { WorkflowRecording, ConversionOptions } from "../types/recording.types";
+import { RetryLanguageModel } from "../llm";
 
 export class Eko {
   private config: EkoConfig;
@@ -130,13 +133,120 @@ export class Eko {
     return await this.execute(taskId);
   }
 
+  /**
+   * Generate a workflow from a recorded browser event tape
+   */
+  public async generateFromRecording(
+    recording: WorkflowRecording,
+    options: ConversionOptions = {},
+    workflowDirectory?: string,
+    taskId: string = uuidv4(),
+    contextParams?: Record<string, any>
+  ): Promise<Workflow> {
+    if (!this.config.llms || !this.config.llms.default) {
+      throw new Error("Default LLM model is required for recording conversion. Please configure LLMs in EkoConfig.");
+    }
+
+    // Get the actual LanguageModelV1 instance 
+    const retryLLM = new RetryLanguageModel(this.config.llms);
+    const llmInstance = await (retryLLM as any).getLLM("default");
+    if (!llmInstance) {
+      throw new Error("Failed to initialize LLM for recording conversion.");
+    }
+
+    const converter = new RecordingToWorkflowService(llmInstance);
+    
+    try {
+      // Convert recording to workflow
+      const workflow = await converter.convertToEkoWorkflow(
+        recording,
+        options,
+        workflowDirectory
+      );
+
+      // Set up context similar to generate method
+      const agents = [...(this.config.agents || [])];
+      let chain: Chain = new Chain(workflow.taskPrompt || workflow.name);
+      let context = new Context(taskId, this.config, agents, chain);
+      context.workflowDirectory = workflowDirectory;
+      
+      if (contextParams) {
+        Object.keys(contextParams).forEach((key) =>
+          context.variables.set(key, contextParams[key])
+        );
+      }
+      
+      this.taskMap.set(taskId, context);
+      
+      if (this.config.a2aClient) {
+        let a2aList = await this.config.a2aClient.listAgents(
+          workflow.taskPrompt || workflow.name
+        );
+        context.agents = mergeAgents(context.agents, a2aList);
+      }
+
+      // Handle template variables if provided
+      if (workflow.template && contextParams) {
+        const missingVars = validateTemplateVariables(
+          workflow.template.variables,
+          contextParams
+        );
+        if (missingVars.length > 0) {
+          throw new Error(
+            `Missing required template variables: ${missingVars.join(", ")}`
+          );
+        }
+
+        // Replace template variables in the workflow XML
+        workflow.xml = replaceTemplateVariables(
+          workflow.xml,
+          contextParams
+        );
+
+        // Also update each agent's XML
+        for (const agent of workflow.agents) {
+          agent.xml = replaceTemplateVariables(agent.xml, contextParams);
+          agent.task = replaceTemplateVariables(agent.task, contextParams);
+
+          // Update node text if it contains variables
+          for (const node of agent.nodes) {
+            if (node.type === "normal" && node.text) {
+              node.text = replaceTemplateVariables(node.text, contextParams);
+            }
+          }
+        }
+      }
+
+      context.workflow = workflow;
+      return workflow;
+      
+    } catch (e) {
+      this.deleteTask(taskId);
+      throw e;
+    }
+  }
+
+  /**
+   * Run a workflow with a directory containing resources like screenshots
+   */
+  public async runWorkflow(
+    workflow: Workflow,
+    contextParams?: Record<string, any>,
+    workflowDirectory?: string
+  ): Promise<EkoResult> {
+    const context = await this.initContext(workflow, contextParams, workflowDirectory);
+    return await this.doRunWorkflow(context);
+  }
+
   public async initContext(
     workflow: Workflow,
-    contextParams?: Record<string, any>
+    contextParams?: Record<string, any>,
+    workflowDirectory?: string
   ): Promise<Context> {
     const agents = this.config.agents || [];
     let chain: Chain = new Chain(workflow.taskPrompt || workflow.name);
     let context = new Context(workflow.taskId, this.config, agents, chain);
+    context.workflowDirectory = workflowDirectory;
     if (this.config.a2aClient) {
       let a2aList = await this.config.a2aClient.listAgents(
         workflow.taskPrompt || workflow.name

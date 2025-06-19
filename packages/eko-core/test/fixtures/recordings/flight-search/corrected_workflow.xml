@@ -1,0 +1,62 @@
+<root>
+  <name>Flight Search Workflow</name>
+  <thought>This workflow automates the process of searching for flights from Shanghai to Beijing using Google Flights. It involves navigating to the Google Flights page, entering the departure and destination cities, selecting travel dates, and choosing a flight from the search results. The workflow is parameterized to allow for different cities and dates, making it reusable for various flight searches.</thought>
+  <template version="1.0">
+    <variables>
+      <variable name="departure_city" type="string" required="true" description="The city from which the flight departs" />
+      <variable name="destination_city" type="string" required="true" description="The city to which the flight is destined" />
+      <variable name="departure_date" type="date" required="true" description="The date of departure" />
+      <variable name="return_date" type="date" required="true" description="The date of return" />
+    </variables>
+  </template>
+  <agents>
+    <agent name="Browser">
+      <task>Automate flight search from Shanghai to Beijing</task>
+      <nodes>
+        <node>
+          Navigate to Google Flights
+          <action type="browser.navigate">
+            <url>https://www.google.com/travel/flights</url>
+          </action>
+        </node>
+        <node>
+          Enter departure city
+          <action type="browser.input">
+            <selector css="input.II2One.j0Ppje.zmMKJ.LbIaRd[type='text'][autocomplete='off'][role='combobox'][placeholder*='Where from?'][aria-label*='Where from? ']" xpath="id('i23')/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/input[1]" />
+            <value>{departure_city}</value>
+          </action>
+        </node>
+        <node>Select the city named {departure_city} from suggestions</node>
+        <node>
+          Enter destination city
+          <action type="browser.input">
+            <selector css="input.II2One.j0Ppje.zmMKJ.LbIaRd[type='text'][autocomplete='off'][role='combobox'][placeholder*='Where to?'][aria-label*='Where to? ']" xpath="id('i23')/div[4]/div[1]/div[1]/div[1]/div[1]/div[1]/input[1]" />
+            <value>{destination_city}</value>
+          </action>
+        </node>
+        <node>Select the city named {destination_city} from suggestions</node>
+        <node>
+          Open departure date picker
+          <action type="browser.click">
+            <selector css="input.TP4Lpb.eoY5cb.j0Ppje[type='text'][placeholder='Departure'][aria-label='Departure'][aria-describedby='i30']" xpath="id('yDmH0d')/c-wiz[2]/div[1]/div[2]/c-wiz[1]/div[1]/c-wiz[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/input[1]" />
+          </action>
+        </node>
+        <node>Pick a departure date from the calendar</node>
+        <node>
+          Open return date picker
+          <action type="browser.click">
+            <selector css="div.eoY5cb.CylAxb.sLG56c.yCya5[aria-label*='Monday, June 30, 2025']" xpath="id('ow16')/div[2]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/div[5]/div[2]/div[2]/div[1]" />
+          </action>
+        </node>
+        <node>Pick a return date from the calendar</node>
+        <node>
+          Click search button
+          <action type="browser.click">
+            <selector css="div.VfPpkd-RLmnJb" xpath="id('ow16')/div[2]/div[1]/div[3]/div[3]/div[1]/button[1]/div[3]" />
+          </action>
+        </node>
+        <node>Select a flight from search results</node>
+      </nodes>
+    </agent>
+  </agents>
+</root>
