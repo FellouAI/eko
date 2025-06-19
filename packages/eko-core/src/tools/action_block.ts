@@ -88,20 +88,64 @@ export default class ActionBlockTool implements Tool {
       // Try to execute the action
       await this.actionExecutor.execute(action, agentContext);
 
+      // Build detailed success message
+      let successDetails = `Successfully executed action '${action.type}' for node ${nodeId}.\n`;
+      
+      switch (action.type) {
+        case "browser.click":
+          successDetails += `Clicked element with selectors: CSS="${action.selector?.css || 'none'}", XPath="${action.selector?.xpath || 'none'}". `;
+          successDetails += `Page changes were detected after click.`;
+          break;
+        case "browser.input":
+          successDetails += `Set input value to: "${action.value}". `;
+          successDetails += `Value was verified to be correctly set.`;
+          break;
+        case "browser.navigate":
+          if (action.url) {
+            successDetails += `Navigated to: ${action.url}. `;
+            successDetails += `Navigation was verified successful.`;
+          } else {
+            successDetails += `Executed browser back command successfully.`;
+          }
+          break;
+        default:
+          successDetails += `Action completed successfully.`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Successfully executed action '${action.type}' for node ${nodeId}`
+          text: successDetails
         }]
       };
     } catch (error: any) {
       // Action failed, provide context for LLM fallback
       const errorDetails = error.message || error.toString();
+      
+      // Analyze the error to provide better guidance
+      let guidance = "";
+      let severity = "failed";
+      
+      if (errorDetails.includes("autocomplete_triggered") || errorDetails.includes("suggestions:")) {
+        severity = "partial_success";
+        guidance = "The input action triggered autocomplete/suggestions. Check if the expected options appeared and click on the appropriate suggestion to complete the action.";
+      } else if (errorDetails.includes("dropdown detected")) {
+        severity = "partial_success"; 
+        guidance = "A dropdown was detected after the input. Look for and click on the relevant option from the dropdown.";
+      } else if (errorDetails.includes("minimal page changes")) {
+        severity = "uncertain";
+        guidance = "The click may have worked but produced subtle changes. Check if the intended effect occurred (e.g., form state changes, focus changes, etc.).";
+      } else if (errorDetails.includes("Input action may not have achieved intended effect")) {
+        severity = "partial_success";
+        guidance = "The input was typed but verification failed. Check if autocomplete suggestions appeared or if the form state changed as expected.";
+      } else {
+        guidance = "Please complete this step using alternative methods.";
+      }
 
       return {
         content: [{
           type: "text",
-          text: `Action execution failed for node ${nodeId}. Error: ${errorDetails}\n\nPlease complete this step using alternative methods. The intended action was '${action.type}' with selectors: ${JSON.stringify(action.selector)}`
+          text: `Action execution ${severity} for node ${nodeId}. Error: ${errorDetails}\n\n${guidance} The intended action was '${action.type}' with selectors: ${JSON.stringify(action.selector)}`
         }],
         isError: true
       };
