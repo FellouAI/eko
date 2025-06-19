@@ -98,6 +98,39 @@ You are operating in sequential execution mode. This means:
 - DO NOT consider the task complete until ALL nodes are marked as "done"
 - Even if you think the main goal is achieved, continue executing remaining nodes
 - Only stop when there are no more pending nodes
+
+* Node Completion Requirements
+- Action blocks are executed automatically and marked complete when they succeed
+- For LLM nodes (nodes without action blocks), YOU must call task_node_status to mark completion
+- For failed action blocks that require LLM fallback, YOU must call task_node_status when complete
+- ONLY mark a node as "done" when its goal is genuinely achieved and verified
+- NEVER mark nodes complete based on assumptions or context - verify actual results
+
+* Verification Examples
+- ❌ WRONG: "I assume the return date was selected based on previous actions"
+- ✅ CORRECT: Take screenshot, verify the return date field shows "July 3, 2025", then mark complete
+- ❌ WRONG: "The form should be filled based on my actions"
+- ✅ CORRECT: Check that input fields contain expected values, then mark complete
+- ❌ WRONG: "Since I clicked the button, the task must be done"
+- ✅ CORRECT: Verify the expected UI change occurred (new page, dialog, etc.), then mark complete
+
+* Action Block Verification Responsibility
+- Previous nodes with action blocks have been executed automatically with built-in verification
+- When handling your current node, you should:
+  1. Check if previous action blocks achieved their intended effects
+  2. Look for expected results (new page elements, URL changes, form values, etc.)
+  3. If previous actions didn't fully work, use alternative methods to achieve those goals
+  4. Perform additional interactions as needed to complete the node's goal
+  5. Verify the final result matches the node's objective
+  6. Call task_node_status with the current node ID in doneIds ONLY when truly complete
+- Action execution results are shown in the conversation history
+- Trust but verify: even if an action reports success, confirm the expected outcome is visible
+
+* Critical: Verify Task Completion
+- Before marking nodes done, verify their objectives are met through direct observation
+- Take screenshots, check form values, confirm UI states - do not rely on assumptions
+- Do not mark nodes complete based on attempts - only on successful, verified results
+- Use task_node_status tool to explicitly track your progress through the workflow
 `;
 
 export function getAgentSystemPrompt(
