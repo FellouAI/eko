@@ -55,6 +55,7 @@ Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that
 > Please refer to the link: https://eko.fellou.ai/docs/getting-started/configuration#web-environment
 
 ```typescript
+
 const llms: LLMs = {
   default: {
     provider: "anthropic",
@@ -71,10 +72,13 @@ const llms: LLMs = {
 let agents: Agent[] = [new BrowserAgent(), new FileAgent()];
 let eko = new Eko({ llms, agents });
 let result = await eko.run("Search for the latest news about Musk, summarize and save to the desktop as Musk.md");
+
 ```
 
 ```bash
+
 $ pnpm install @eko-ai/eko
+
 ```
 
 ## Use Cases
