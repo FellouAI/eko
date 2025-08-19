@@ -3,7 +3,7 @@
   "version": "3.0.0",
   "description": "eko browser extension",
   "scripts": {
-    "build": "webpack --config webpack.js"
+    "build": "webpack --config webpack.config.js"
   },
   "author": "FellouAI",
   "license": "MIT",
