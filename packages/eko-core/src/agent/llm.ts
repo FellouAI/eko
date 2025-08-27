@@ -143,7 +143,7 @@ export function convertToolResult(
             mediaType: content.mimeType || "image/png",
           });
         } else {
-          // Only the claude model supports returning images from tool results, while openai only supports text,
+          // Only the claude model supports returning images from tool results, while openai only supports text
           // Compatible with other AI models that do not support tool results as images.
           user_messages.push({
             role: "user",

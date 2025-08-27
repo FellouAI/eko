@@ -24,7 +24,7 @@ Eko (pronounced like 'echo') is a production-ready JavaScript framework that ena
 | **Intervenability**                  | ✅    | ✅          | ❌            | ❌        | ❌      |
 | **Task Parallel** | ✅    | ❌          | ❌            | ❌        | ❌      |
 | **Development Efficiency**           | **High**  | Low      | Middle        | Middle    | Low    |
-| **Task Complexity**           | **High**  | High      | Low        | Middle    | Middle    | Middle       |
+| **Task Complexity**           | **High**  | High      | Low        | Middle    | Middle    |
 | **Open-source**                      | ✅    | ✅          | ✅            | ✅        | ❌      |
 | **Access to private web resources** | ✅ | ❌          | ❌            | ❌        | ❌      |
 
@@ -43,7 +43,7 @@ Eko (pronounced like 'echo') is a production-ready JavaScript framework that ena
 
 ## Quickstart
 
-> **Note**: Please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/) guide for full instructions on how to run it.
+> **Note**: Please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/) for full instructions on how to run it.
 
 > **Security Warning**
 > 

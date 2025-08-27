@@ -3,7 +3,7 @@ export function run_build_dom_tree() {
   /**
    * Get clickable elements on the page
    *
-   * @param {*} doHighlightElements Is highlighted
+   * @param {*} doHighlightElements Whether elements should be highlighted
    * @param {*} includeAttributes [attr_names...]
    * @returns { element_str, selector_map }
    */
