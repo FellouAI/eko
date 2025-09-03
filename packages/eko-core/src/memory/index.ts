@@ -74,7 +74,7 @@ export async function compressAgentMessages(
     return;
   }
   try {
-    doCompressAgentMessages(agentContext, rlm, messages, tools);
+    await doCompressAgentMessages(agentContext, rlm, messages, tools);
   } catch (e) {
     Log.error("Error compressing agent messages:", e);
   }
@@ -87,9 +87,9 @@ async function doCompressAgentMessages(
   tools: LanguageModelV2FunctionTool[]
 ) {
   // extract used tool
-  let usedTools = extractUsedTool(messages, tools);
-  let snapshotTool = new TaskSnapshotTool();
-  let newTools = mergeTools(usedTools, [
+  const usedTools = extractUsedTool(messages, tools);
+  const snapshotTool = new TaskSnapshotTool();
+  const newTools = mergeTools(usedTools, [
     {
       type: "function",
       name: snapshotTool.name,
@@ -117,7 +117,7 @@ async function doCompressAgentMessages(
     ],
   });
   // compress snapshot
-  let result = await callAgentLLM(
+  const result = await callAgentLLM(
     agentContext,
     rlm,
     newMessages,
@@ -128,13 +128,13 @@ async function doCompressAgentMessages(
       toolName: snapshotTool.name,
     }
   );
-  let toolCall = result.filter((s) => s.type == "tool-call")[0];
-  let args =
+  const toolCall = result.filter((s) => s.type == "tool-call")[0];
+  const args =
     typeof toolCall.input == "string"
       ? JSON.parse(toolCall.input || "{}")
       : toolCall.input || {};
-  let toolResult = await snapshotTool.execute(args, agentContext);
-  let callback = agentContext.context.config.callback;
+  const toolResult = await snapshotTool.execute(args, agentContext);
+  const callback = agentContext.context.config.callback;
   if (callback) {
     await callback.onMessage(
       {

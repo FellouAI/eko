@@ -205,6 +205,13 @@ export class Eko {
         results.push(agent_results.join("\n\n"));
       }
       context.conversation.splice(0, context.conversation.length);
+      if (workflow.modified) {
+        workflow.modified = false;
+        agentTree = buildAgentTree(
+          workflow.agents.filter((agent) => agent.status == "init")
+        );
+        continue;
+      }
       if (!agentTree.nextAgent) {
         break;
       }

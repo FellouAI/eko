@@ -30,8 +30,16 @@ import {
   LanguageModelV2ToolCallPart,
   LanguageModelV2ToolResultPart,
 } from "@ai-sdk/provider";
+import {
+  callAgentLLM,
+  convertTools,
+  getTool,
+  convertToolResult,
+  defaultMessageProviderOptions,
+} from "./llm";
+import { doTaskResultCheck } from "../tools/task_result_check";
 import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
-import { callAgentLLM, convertTools, getTool, convertToolResult, defaultMessageProviderOptions } from "./llm";
+import { doTodoListManager } from "../tools/todo_list_manager";
 
 export type AgentParams = {
   name: string;
@@ -85,21 +93,24 @@ export class Agent {
     historyMessages: LanguageModelV2Prompt = []
   ): Promise<string> {
     let loopNum = 0;
+    let checkNum = 0;
     this.agentContext = agentContext;
     const context = agentContext.context;
     const agentNode = agentContext.agentChain.agent;
     const tools = [...this.tools, ...this.system_auto_tools(agentNode)];
+    const systemPrompt = await this.buildSystemPrompt(agentContext, tools);
+    const userPrompt = await this.buildUserPrompt(agentContext, tools);
     const messages: LanguageModelV2Prompt = [
       {
         role: "system",
-        content: await this.buildSystemPrompt(agentContext, tools),
-        providerOptions: defaultMessageProviderOptions()
+        content: systemPrompt,
+        providerOptions: defaultMessageProviderOptions(),
       },
       ...historyMessages,
       {
         role: "user",
-        content: await this.buildUserPrompt(agentContext, tools),
-        providerOptions: defaultMessageProviderOptions()
+        content: userPrompt,
+        providerOptions: defaultMessageProviderOptions(),
       },
     ];
     agentContext.messages = messages;
@@ -126,27 +137,48 @@ export class Agent {
         }
       }
       await this.handleMessages(agentContext, messages, tools);
+      const llm_tools = convertTools(agentTools);
       const results = await callAgentLLM(
         agentContext,
         rlm,
         messages,
-        convertTools(agentTools),
+        llm_tools,
         false,
         undefined,
         0,
         this.callback,
         this.requestHandler
       );
+      const forceStop = agentContext.variables.get("forceStop");
+      if (forceStop) {
+        return forceStop;
+      }
       const finalResult = await this.handleCallResult(
         agentContext,
         messages,
         agentTools,
         results
       );
-      if (finalResult) {
-        return finalResult;
-      }
       loopNum++;
+      if (!finalResult) {
+        if (config.expertMode && loopNum % config.expertModeTodoLoopNum == 0) {
+          await doTodoListManager(agentContext, rlm, messages, llm_tools);
+        }
+        continue;
+      }
+      if (config.expertMode && checkNum == 0) {
+        checkNum++;
+        const { completionStatus } = await doTaskResultCheck(
+          agentContext,
+          rlm,
+          messages,
+          llm_tools
+        );
+        if (completionStatus == "incomplete") {
+          continue;
+        }
+      }
+      return finalResult;
     }
     return "Unfinished";
   }
@@ -157,10 +189,6 @@ export class Agent {
     agentTools: Tool[],
     results: Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>
   ): Promise<string | null> {
-    const forceStop = agentContext.variables.get("forceStop");
-    if (forceStop) {
-      return forceStop;
-    }
     let text: string | null = null;
     let context = agentContext.context;
     let user_messages: LanguageModelV2Prompt = [];

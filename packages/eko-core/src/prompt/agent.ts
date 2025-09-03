@@ -140,7 +140,7 @@ export function getAgentUserPrompt(
   context: Context,
   tools?: Tool[]
 ): string {
-  let hasTaskNodeStatusTool =
+  const hasTaskNodeStatusTool =
     (tools || agent.Tools).filter((tool) => tool.name == task_node_status)
       .length > 0;
   return buildAgentRootXml(

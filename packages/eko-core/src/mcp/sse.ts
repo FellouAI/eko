@@ -113,11 +113,39 @@ export class SimpleSseMcpClient implements IMcpClient {
         version: "1.0.0",
       },
     });
-    this.request("notifications/initialized", {});
+    // this.request("notifications/initialized", {});
   }
 
   private ping() {
     this.request("ping", {});
+  }
+
+  async listTools(
+    param: McpListToolParam,
+    signal?: AbortSignal
+  ): Promise<McpListToolResult> {
+    const message = await this.request(
+      "tools/list",
+      {
+        ...param,
+      },
+      signal
+    );
+    return message.result.tools || [];
+  }
+
+  async callTool(
+    param: McpCallToolParam,
+    signal?: AbortSignal
+  ): Promise<ToolResult> {
+    const message = await this.request(
+      "tools/call",
+      {
+        ...param,
+      },
+      signal
+    );
+    return message.result;
   }
 
   private async request(
@@ -156,49 +184,37 @@ export class SimpleSseMcpClient implements IMcpClient {
       });
       const body = await response.text();
       if (body == "Accepted") {
-        return await callback;
+        const message = await callback;
+        if (message.error) {
+          Log.error(`MCP ${method} error: ` + message.error);
+          throw new Error(
+            `MCP ${method} error: ` +
+              (typeof message.error === "string"
+                ? message.error
+                : message.error.message)
+          );
+        }
+        if (message.result?.isError == true) {
+          if (message.result.content) {
+            throw new Error(
+              `MCP ${method} error: ` +
+                (typeof message.result.content === "string"
+                  ? message.result.content
+                  : message.result.content[0].text)
+            );
+          } else {
+            throw new Error(
+              `MCP ${method} error: ` + JSON.stringify(message.result)
+            );
+          }
+        }
+        return message;
       } else {
-        throw new Error("SseClient Response Exception: " + body);
+        throw new Error(`MCP ${method} error:` + body);
       }
     } finally {
       this.requestMap.delete(id);
     }
-  }
-
-  async listTools(
-    param: McpListToolParam,
-    signal?: AbortSignal
-  ): Promise<McpListToolResult> {
-    const message = await this.request(
-      "tools/list",
-      {
-        ...param,
-      },
-      signal
-    );
-    if (message.error) {
-      Log.error("McpClient listTools error: ", param, message);
-      throw new Error("listTools Exception");
-    }
-    return message.result.tools || [];
-  }
-
-  async callTool(
-    param: McpCallToolParam,
-    signal?: AbortSignal
-  ): Promise<ToolResult> {
-    const message = await this.request(
-      "tools/call",
-      {
-        ...param,
-      },
-      signal
-    );
-    if (message.error) {
-      Log.error("McpClient callTool error: ", param, message);
-      throw new Error("callTool Exception");
-    }
-    return message.result;
   }
 
   isConnected(): boolean {

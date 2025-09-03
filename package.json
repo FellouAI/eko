@@ -1,6 +1,6 @@
 {
   "name": "@eko-ai/eko",
-  "version": "3.0.0-alpha.7",
+  "version": "3.0.1-alpha.2",
   "description": "Empowering language to transform human words into action.",
   "workspaces": [
     "packages/eko-core",

@@ -21,8 +21,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   - If the webpage content hasn't loaded, please use the \`wait\` tool to allow time for the content to load.
 * ELEMENT INTERACTION:
    - Only use indexes that exist in the provided element list
-   - Each element has a unique index number (e.g., "[33]:<button>")
-   - Elements marked with "[]:" are non-interactive (for context only)
+   - Each element has a unique index number (e.g., "[33]:<button>Submit</button>")
+   - Elements marked with "[]:" are non-interactive (for context only, e.g., "[]: Google")
    - Use the latest element index, do not rely on historical outdated element indexes
 * ERROR HANDLING:
    - If no suitable elements exist, use other functions to complete the task
@@ -31,6 +31,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - When encountering scenarios that require user assistance such as login, verification codes, QR code scanning, Payment, etc, you can request user help.
 * BROWSER OPERATION:
    - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content
+   - Please follow user instructions and don't be lazy until the task is completed. For example, if a user asks you to find 30 people, don't just find 10 - keep searching until you find all 30
 * During execution, please output user-friendly step information. Do not output HTML-related element and index information to users, as this would cause user confusion.
 `;
     const _tools_ = [] as Tool[];
@@ -178,7 +179,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       await sleep(100);
       let screenshot = await this.screenshot(agentContext);
       // agentContext.variables.set("selector_map", element_result.selector_map);
-      let pseudoHtml = element_result.element_str;
+      let pseudoHtml = element_result?.element_str || "";
       return {
         imageBase64: screenshot.imageBase64,
         imageType: screenshot.imageType,

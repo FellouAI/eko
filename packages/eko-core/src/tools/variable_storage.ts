@@ -10,7 +10,7 @@ export default class VariableStorageTool implements Tool {
   readonly parameters: JSONSchema7;
 
   constructor() {
-    this.description = `Used for storing, reading, and retrieving variable data, and maintaining input/output variables in task nodes.`;
+    this.description = `Used for storing, reading, and retrieving variable data, and maintaining input/output variables in task nodes. When the same variable is stored repeatedly, it will overwrite the previous value.`;
     this.parameters = {
       type: "object",
       properties: {

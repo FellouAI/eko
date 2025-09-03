@@ -36,41 +36,51 @@ export class SimpleHttpMcpClient implements IMcpClient {
   async connect(signal?: AbortSignal): Promise<void> {
     Log.info("MCP Client, connecting...", this.httpUrl);
     this.mcpSessionId = null;
-    await this.request("initialize", {
-      protocolVersion: this.protocolVersion,
-      capabilities: {
-        tools: {
-          listChanged: true,
+    await this.request(
+      "initialize",
+      {
+        protocolVersion: this.protocolVersion,
+        capabilities: {
+          tools: {
+            listChanged: true,
+          },
+          sampling: {},
         },
-        sampling: {},
+        clientInfo: {
+          name: this.clientName,
+          version: "1.0.0",
+        },
       },
-      clientInfo: {
-        name: this.clientName,
-        version: "1.0.0",
-      },
-    }, signal);
+      signal
+    );
     this.connected = true;
   }
 
-  async listTools(param: McpListToolParam, signal?: AbortSignal): Promise<McpListToolResult> {
-    const message = await this.request("tools/list", {
-      ...param,
-    }, signal);
-    if (message.error) {
-      Log.error("McpClient listTools error: ", param, message);
-      throw new Error("listTools Exception");
-    }
+  async listTools(
+    param: McpListToolParam,
+    signal?: AbortSignal
+  ): Promise<McpListToolResult> {
+    const message = await this.request(
+      "tools/list",
+      {
+        ...param,
+      },
+      signal
+    );
     return message.result.tools || [];
   }
 
-  async callTool(param: McpCallToolParam, signal?: AbortSignal): Promise<ToolResult> {
-    const message = await this.request("tools/call", {
-      ...param,
-    }, signal);
-    if (message.error) {
-      Log.error("McpClient callTool error: ", param, message);
-      throw new Error("callTool Exception");
-    }
+  async callTool(
+    param: McpCallToolParam,
+    signal?: AbortSignal
+  ): Promise<ToolResult> {
+    const message = await this.request(
+      "tools/call",
+      {
+        ...param,
+      },
+      signal
+    );
     return message.result;
   }
 
@@ -89,19 +99,23 @@ export class SimpleHttpMcpClient implements IMcpClient {
     }
   }
 
-  async request(method: string, params: Record<string, any>, signal?: AbortSignal): Promise<any> {
+  async request(
+    method: string,
+    params: Record<string, any>,
+    signal?: AbortSignal
+  ): Promise<any> {
     try {
       const id = uuidv4();
       const extHeaders: Record<string, string> = {};
       if (this.mcpSessionId && method !== "initialize") {
-        extHeaders["Mcp-Session-Id"] = this.mcpSessionId
+        extHeaders["Mcp-Session-Id"] = this.mcpSessionId;
       }
       const response = await fetch(this.httpUrl, {
         method: "POST",
         headers: {
           "Cache-Control": "no-cache",
           "Content-Type": "application/json",
-          "Accept": "application/json, text/event-stream",
+          Accept: "application/json, text/event-stream",
           "MCP-Protocol-Version": this.protocolVersion,
           ...extHeaders,
           ...this.headers,
@@ -155,10 +169,12 @@ export class SimpleHttpMcpClient implements IMcpClient {
             str = chunks[chunks.length - 1];
           }
         }
+        this.handleError(method, message);
         return message;
       } else {
         // JSON
         const message = await response.json();
+        this.handleError(method, message);
         return message;
       }
     } catch (e: any) {
@@ -166,6 +182,33 @@ export class SimpleHttpMcpClient implements IMcpClient {
         Log.error("MCP Client, connectSse error:", e);
       }
       throw e;
+    }
+  }
+
+  private handleError(method: string, message: any) {
+    if (!message) {
+      throw new Error(`MCP ${method} error: no response`);
+    }
+    if (message?.error) {
+      Log.error(`MCP ${method} error: ` + message.error);
+      throw new Error(
+        `MCP ${method} error: ` +
+          (typeof message.error === "string"
+            ? message.error
+            : message.error.message)
+      );
+    }
+    if (message.result?.isError == true) {
+      if (message.result.content) {
+        throw new Error(
+          `MCP ${method} error: ` +
+            (typeof message.result.content === "string"
+              ? message.result.content
+              : message.result.content[0].text)
+        );
+      } else {
+        throw new Error(`MCP ${method} error: ` + JSON.stringify(message.result));
+      }
     }
   }
 

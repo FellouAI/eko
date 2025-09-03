@@ -138,6 +138,7 @@ export type Workflow = {
   thought: string;
   agents: WorkflowAgent[];
   xml: string;
+  modified?: boolean;
   taskPrompt?: string;
 };
 

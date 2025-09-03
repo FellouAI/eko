@@ -252,6 +252,9 @@ export async function getPlanSystemPrompt(context: Context): Promise<string> {
   for (let i = 0; i < agents.length; i++) {
     let agent = agents[i];
     let tools = await agent.loadTools(context);
+    if ((agent as any).ignorePlan) {
+      continue;
+    }
     agents_prompt +=
       `<agent name="${agent.Name}">\n` +
       `Description: ${agent.PlanDescription || agent.Description}\n` +

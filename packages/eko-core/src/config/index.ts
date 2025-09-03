@@ -1,5 +1,5 @@
 type GlobalConfig = {
-  name: string;
+  name: string; // product name
   platform: "windows" | "mac" | "linux";
   maxReactNum: number;
   maxTokens: number;
@@ -10,6 +10,8 @@ type GlobalConfig = {
   fileTextMaxLength: number;
   maxDialogueImgFileNum: number;
   toolResultMultimodal: boolean;
+  expertMode: boolean;
+  expertModeTodoLoopNum: number;
 }
 
 const config: GlobalConfig = {
@@ -24,6 +26,8 @@ const config: GlobalConfig = {
   fileTextMaxLength: 20000,
   maxDialogueImgFileNum: 1,
   toolResultMultimodal: true,
+  expertMode: false,
+  expertModeTodoLoopNum: 10,
 };
 
 export default config;
