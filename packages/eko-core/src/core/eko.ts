@@ -75,10 +75,10 @@ export class Eko {
     if (context.pause) {
       context.setPause(false);
     }
-    context.conversation = [];
     if (context.controller.signal.aborted) {
-      context.controller = new AbortController();
+      context.reset();
     }
+    context.conversation = [];
     try {
       return await this.doRunWorkflow(context);
     } catch (e: any) {

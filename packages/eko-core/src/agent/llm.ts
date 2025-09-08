@@ -31,28 +31,28 @@ export function defaultLLMProviderOptions(): SharedV2ProviderOptions {
     openai: {
       stream_options: {
         include_usage: true,
-      }
+      },
     },
     openrouter: {
       reasoning: {
         max_tokens: 10,
       },
     },
-  }
+  };
 }
 
 export function defaultMessageProviderOptions(): SharedV2ProviderOptions {
   return {
     anthropic: {
-      cacheControl: { "type": "ephemeral" }
+      cacheControl: { type: "ephemeral" },
     },
     bedrock: {
-      cachePoint: { type: 'default' }
+      cachePoint: { type: "default" },
     },
     openrouter: {
-      cacheControl: { type: 'ephemeral' },
+      cacheControl: { type: "ephemeral" },
     },
-  }
+  };
 }
 
 export function convertTools(
@@ -85,7 +85,12 @@ export function convertToolResult(
   user_messages: LanguageModelV2Prompt
 ): LanguageModelV2ToolResultPart {
   let result: LanguageModelV2ToolResultOutput;
-  if (toolResult.content.length == 1 && toolResult.content[0].type == "text") {
+  if (!toolResult || !toolResult.content) {
+    result = {
+      type: "error-text",
+      value: "Error",
+    };
+  } else if (toolResult.content.length == 1 && toolResult.content[0].type == "text") {
     let text = toolResult.content[0].text;
     result = {
       type: "text",
@@ -190,10 +195,10 @@ export async function callAgentLLM(
     // Append user dialogue
     appendUserConversation(agentContext, messages);
   }
-  let context = agentContext.context;
-  let agentChain = agentContext.agentChain;
-  let agentNode = agentChain.agent;
-  let streamCallback = callback ||
+  const context = agentContext.context;
+  const agentChain = agentContext.agentChain;
+  const agentNode = agentChain.agent;
+  const streamCallback = callback ||
     context.config.callback || {
       onMessage: async () => {},
     };
@@ -202,43 +207,13 @@ export async function callAgentLLM(
     context.controller.signal,
     stepController.signal,
   ]);
-  let request: LLMRequest = {
+  const request: LLMRequest = {
     tools: tools,
     toolChoice,
     messages: messages,
     abortSignal: signal,
   };
   requestHandler && requestHandler(request);
-  agentChain.agentRequest = request;
-  let result: StreamResult;
-  try {
-    context.currentStepControllers.add(stepController);
-    result = await rlm.callStream(request);
-  } catch (e: any) {
-    context.currentStepControllers.delete(stepController);
-    await context.checkAborted();
-    if (
-      !noCompress &&
-      messages.length >= 5 &&
-      ((e + "").indexOf("tokens") > -1 || (e + "").indexOf("too long") > -1)
-    ) {
-      await memory.compressAgentMessages(agentContext, rlm, messages, tools);
-    }
-    if (retryNum < config.maxRetryNum) {
-      await sleep(200 * (retryNum + 1) * (retryNum + 1));
-      return callAgentLLM(
-        agentContext,
-        rlm,
-        messages,
-        tools,
-        noCompress,
-        toolChoice,
-        ++retryNum,
-        streamCallback
-      );
-    }
-    throw e;
-  }
   let streamText = "";
   let thinkText = "";
   let toolArgsText = "";
@@ -246,8 +221,13 @@ export async function callAgentLLM(
   let thinkStreamId = uuidv4();
   let textStreamDone = false;
   const toolParts: LanguageModelV2ToolCallPart[] = [];
-  const reader = result.stream.getReader();
+  let reader: ReadableStreamDefaultReader<LanguageModelV2StreamPart> | null =
+    null;
   try {
+    agentChain.agentRequest = request;
+    context.currentStepControllers.add(stepController);
+    const result: StreamResult = await rlm.callStream(request);
+    reader = result.stream.getReader();
     let toolPart: LanguageModelV2ToolCallPart | null = null;
     while (true) {
       await context.checkAborted();
@@ -528,7 +508,7 @@ export async function callAgentLLM(
   } catch (e: any) {
     await context.checkAborted();
     if (retryNum < config.maxRetryNum) {
-      await sleep(200 * (retryNum + 1) * (retryNum + 1));
+      await sleep(300 * (retryNum + 1) * (retryNum + 1));
       return callAgentLLM(
         agentContext,
         rlm,
@@ -542,7 +522,7 @@ export async function callAgentLLM(
     }
     throw e;
   } finally {
-    reader.releaseLock();
+    reader && reader.releaseLock();
     context.currentStepControllers.delete(stepController);
   }
   agentChain.agentResult = streamText;

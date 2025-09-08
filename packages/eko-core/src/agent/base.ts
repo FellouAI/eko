@@ -38,8 +38,8 @@ import {
   defaultMessageProviderOptions,
 } from "./llm";
 import { doTaskResultCheck } from "../tools/task_result_check";
-import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
 import { doTodoListManager } from "../tools/todo_list_manager";
+import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
 
 export type AgentParams = {
   name: string;
@@ -80,7 +80,7 @@ export class Agent {
       mcpClient &&
         !mcpClient.isConnected() &&
         (await mcpClient.connect(context.controller.signal));
-      return this.runWithContext(agentContext, mcpClient, config.maxReactNum);
+      return await this.runWithContext(agentContext, mcpClient, config.maxReactNum);
     } finally {
       mcpClient && (await mcpClient.close());
     }

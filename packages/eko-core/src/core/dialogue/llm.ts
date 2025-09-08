@@ -4,17 +4,17 @@ import {
   LanguageModelV2ToolResultPart,
 } from "@ai-sdk/provider";
 import {
-  ChatStreamCallbackMessage,
+  LLMRequest,
   DialogueCallback,
-  EkoMessageAssistantPart,
   EkoMessageToolPart,
   EkoMessageUserPart,
-  LanguageModelV2FunctionTool,
   LanguageModelV2Prompt,
+  EkoMessageAssistantPart,
   LanguageModelV2TextPart,
-  LanguageModelV2ToolCallPart,
   LanguageModelV2ToolChoice,
-  LLMRequest,
+  ChatStreamCallbackMessage,
+  LanguageModelV2ToolCallPart,
+  LanguageModelV2FunctionTool,
 } from "../../types";
 import config from "../../config";
 import Log from "../../common/log";
@@ -40,7 +40,6 @@ export async function callChatLLM(
     messages: messages,
     abortSignal: signal,
   };
-  const result = await rlm.callStream(request);
   let streamText = "";
   let thinkText = "";
   let toolArgsText = "";
@@ -48,8 +47,11 @@ export async function callChatLLM(
   let thinkStreamId = uuidv4();
   let textStreamDone = false;
   const toolParts: LanguageModelV2ToolCallPart[] = [];
-  const reader = result.stream.getReader();
+  let reader: ReadableStreamDefaultReader<LanguageModelV2StreamPart> | null =
+    null;
   try {
+    const result = await rlm.callStream(request);
+    reader = result.stream.getReader();
     let toolPart: LanguageModelV2ToolCallPart | null = null;
     while (true) {
       const { done, value } = await reader.read();
@@ -236,7 +238,7 @@ export async function callChatLLM(
     }
     throw e;
   } finally {
-    reader.releaseLock();
+    reader && reader.releaseLock();
   }
   return streamText
     ? [

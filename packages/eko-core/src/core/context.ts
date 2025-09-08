@@ -84,6 +84,18 @@ export default class Context {
       this.currentStepControllers.clear();
     }
   }
+
+  reset() {
+    this.pauseStatus = 0;
+    if (!this.controller.signal.aborted) {
+      this.controller.abort();
+    }
+    this.currentStepControllers.forEach((c) => {
+      c.abort("reset");
+    });
+    this.currentStepControllers.clear();
+    this.controller = new AbortController();
+  }
 }
 
 export class AgentContext {

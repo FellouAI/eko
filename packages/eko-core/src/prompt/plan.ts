@@ -1,4 +1,5 @@
 import config from "../config";
+import { sub } from "../common/utils";
 import Context from "../core/context";
 
 const PLAN_SYSTEM_TEMPLATE = `
@@ -178,7 +179,7 @@ Output result:
     </agent>
   </agents>
 </root>`,
-`User: Search for information about "fellou," compile the results into a summary profile, then share it across social media platforms including Twitter, Facebook, and Reddit. Finally, export the platform sharing operation results to an Excel file.
+  `User: Search for information about "fellou," compile the results into a summary profile, then share it across social media platforms including Twitter, Facebook, and Reddit. Finally, export the platform sharing operation results to an Excel file.
 Output result:
 <root>
 <name>Fellou Research and Social Media Campaign</name>
@@ -257,23 +258,28 @@ export async function getPlanSystemPrompt(context: Context): Promise<string> {
     }
     agents_prompt +=
       `<agent name="${agent.Name}">\n` +
-      `Description: ${agent.PlanDescription || agent.Description}\n` +
+      `Description: ${sub(
+        agent.PlanDescription || agent.Description,
+        4000,
+        true
+      )}\n` +
       "Tools:\n" +
       tools
         .filter((tool) => !tool.noPlan)
         .map(
           (tool) =>
-            `  - ${tool.name}: ${
-              tool.planDescription || tool.description || ""
-            }`
+            `  - ${tool.name}: ${sub(
+              tool.planDescription || tool.description || "",
+              500,
+              true
+            )}`
         )
         .join("\n") +
       "\n</agent>\n\n";
   }
   let plan_example_list =
     context.variables.get("plan_example_list") || PLAN_EXAMPLE_LIST;
-  let hasChatAgent =
-    context.agents.filter((a) => a.Name == "Chat").length > 0;
+  let hasChatAgent = context.agents.filter((a) => a.Name == "Chat").length > 0;
   let example_prompt = "";
   const example_list = hasChatAgent
     ? [PLAN_CHAT_EXAMPLE, ...plan_example_list]
