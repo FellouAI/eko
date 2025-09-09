@@ -1,5 +1,28 @@
 // @ts-nocheck
 export function run_build_dom_tree() {
+  const computedStyleCache = new WeakMap<Element, CSSStyleDeclaration>();
+
+  /**
+   * Gets the cached computed style for an element.
+   */
+  function getCachedComputedStyle(element: Element): CSSStyleDeclaration | null {
+    if (!element) return null;
+
+    if (computedStyleCache.has(element)) {
+      return computedStyleCache.get(element)!;
+    }
+
+    try {
+      const style = window.getComputedStyle(element as HTMLElement);
+      if (style) {
+        computedStyleCache.set(element, style);
+      }
+      return style;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /**
    * Get clickable elements on the page
    *
@@ -323,12 +346,16 @@ export function run_build_dom_tree() {
 
     // Helper function to check if element is accepted
     function isElementAccepted(element) {
-      const leafElementDenyList = new Set(['svg', 'script', 'style', 'link', 'meta']);
+      const leafElementDenyList = new Set(['svg', 'script', 'style', 'link', 'meta', 'noscript',
+        'template']);
       return !leafElementDenyList.has(element.tagName.toLowerCase());
     }
 
     // Helper function to check if element is interactive
     function isInteractiveElement(element) {
+      if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+        return false;
+      }
       // Base interactive elements and roles
       const interactiveElements = new Set([
         'a',
@@ -343,11 +370,16 @@ export function run_build_dom_tree() {
         'select',
         'textarea',
         'summary',
+        "option",
+        "optgroup",
+        "fieldset",
+        "legend",
       ]);
 
       const interactiveRoles = new Set([
         'button',
         'menu',
+        'menubar',
         'menuitem',
         'link',
         'checkbox',
@@ -399,7 +431,7 @@ export function run_build_dom_tree() {
       if (hasInteractiveRole) return true;
 
       // Get computed style
-      const style = window.getComputedStyle(element);
+      const style = getCachedComputedStyle(element);
 
       // Check if element has click-like styling
       const hasClickStyling = style.cursor === 'pointer' || element.style.cursor === 'pointer';
@@ -468,7 +500,7 @@ export function run_build_dom_tree() {
       const isFormRelated =
         element.form !== undefined ||
         element.hasAttribute('contenteditable') ||
-        style.userSelect !== 'none';
+        (style && style.userSelect !== 'none');
 
       // Check if element is draggable
       const isDraggable = element.draggable || element.getAttribute('draggable') === 'true';
@@ -485,12 +517,15 @@ export function run_build_dom_tree() {
 
     // Helper function to check if element is visible
     function isElementVisible(element) {
-      const style = window.getComputedStyle(element);
+      // Quick check first - avoid expensive style computation if element has no size
+      if (element.offsetWidth === 0 && element.offsetHeight === 0) {
+        return false;
+      }
+
+      const style = getCachedComputedStyle(element);
       return (
-        element.offsetWidth > 0 &&
-        element.offsetHeight > 0 &&
-        style.visibility !== 'hidden' &&
-        style.display !== 'none'
+        style?.visibility !== 'hidden' &&
+        style?.display !== 'none'
       );
     }
 
@@ -504,18 +539,22 @@ export function run_build_dom_tree() {
         return true;
       }
 
+      const rects = element.getClientRects();
+
+      if (!rects || rects.length === 0) {
+        return false; // No geometry, cannot be top
+      }
+
       // For shadow DOM, we need to check within its own root context
       const shadowRoot = element.getRootNode();
       if (shadowRoot instanceof ShadowRoot) {
-        const rect = element.getBoundingClientRect();
-        const point = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        const centerX = rects[Math.floor(rects.length / 2)].left + rects[Math.floor(rects.length / 2)].width / 2;
+        const centerY = rects[Math.floor(rects.length / 2)].top + rects[Math.floor(rects.length / 2)].height / 2;
 
         try {
-          // Use shadow root's elementFromPoint to check within shadow DOM context
-          const topEl = shadowRoot.elementFromPoint(point.x, point.y);
+          const topEl = shadowRoot.elementFromPoint(centerX, centerY);
           if (!topEl) return false;
 
-          // Check if the element or any of its parents match our target element
           let current = topEl;
           while (current && current !== shadowRoot) {
             if (current === element) return true;
@@ -523,27 +562,39 @@ export function run_build_dom_tree() {
           }
           return false;
         } catch (e) {
-          return true; // If we can't determine, consider it visible
+          return true;
         }
       }
 
-      // Regular DOM elements
-      const rect = element.getBoundingClientRect();
-      const point = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      const margin = 5;
+      const rect = rects[Math.floor(rects.length / 2)];
 
-      try {
-        const topEl = document.elementFromPoint(point.x, point.y);
-        if (!topEl) return false;
+      // For elements in viewport, check if they're topmost. Do the check in the
+      // center of the element and at the corners to ensure we catch more cases.
+      const checkPoints = [
+        // Initially only this was used, but it was not enough
+        { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+        { x: rect.left + margin, y: rect.top + margin },        // top left
+        // { x: rect.right - margin, y: rect.top + margin },    // top right
+        // { x: rect.left + margin, y: rect.bottom - margin },  // bottom left
+        { x: rect.right - margin, y: rect.bottom - margin },    // bottom right
+      ];
 
-        let current = topEl;
-        while (current && current !== document.documentElement) {
-          if (current === element) return true;
-          current = current.parentElement;
+      return checkPoints.some(({ x, y }) => {
+        try {
+          const topEl = document.elementFromPoint(x, y);
+          if (!topEl) return false;
+
+          let current = topEl;
+          while (current && current !== document.documentElement) {
+            if (current === element) return true;
+            current = current.parentElement;
+          }
+          return false;
+        } catch (e) {
+          return true;
         }
-        return false;
-      } catch (e) {
-        return true;
-      }
+      });
     }
 
     // Helper function to check if text node is visible
@@ -665,7 +716,11 @@ export function run_build_dom_tree() {
 
       return nodeData;
     }
-    return buildDomTree(document.body);
+
+    const result = buildDomTree(document.body);
+    computedStyleCache.clear?.();
+
+    return result;
   }
 
   window.get_clickable_elements = get_clickable_elements;
