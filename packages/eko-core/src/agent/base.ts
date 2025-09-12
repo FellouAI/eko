@@ -229,9 +229,7 @@ export class Agent {
       mcpClient &&
         !mcpClient.isConnected() &&
         (await mcpClient.connect(context.controller.signal));
-
-      // 执行代理核心逻辑
-      return this.runWithContext(agentContext, mcpClient, config.maxReactNum);
+      return await this.runWithContext(agentContext, mcpClient, config.maxReactNum);
     } finally {
       // 确保MCP连接被关闭，防止资源泄漏
       mcpClient && (await mcpClient.close());

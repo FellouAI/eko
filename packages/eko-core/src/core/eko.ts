@@ -200,15 +200,10 @@ export class Eko {
     if (context.pause) {
       context.setPause(false);
     }
-
-    // 清空对话历史，为新的执行做准备
-    context.conversation = [];
-
-    // 如果中断控制器已被中止，创建新的控制器
     if (context.controller.signal.aborted) {
-      context.controller = new AbortController();
+      context.reset();
     }
-
+    context.conversation = [];
     try {
       // 执行实际的工作流
       return await this.doRunWorkflow(context);

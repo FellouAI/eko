@@ -402,9 +402,7 @@ export function run_build_dom_tree() {
       const style = window.getComputedStyle(element);
 
       // Check if element has click-like styling
-      // const hasClickStyling = style.cursor === 'pointer' ||
-      //     element.style.cursor === 'pointer' ||
-      //     style.pointerEvents !== 'none';
+      const hasClickStyling = style.cursor === 'pointer' || element.style.cursor === 'pointer';
 
       // Check for event listeners
       const hasClickHandler =
@@ -416,40 +414,37 @@ export function run_build_dom_tree() {
 
       // Helper function to safely get event listeners
       function getEventListeners(el) {
-        try {
-          // Try to get listeners using Chrome DevTools API
-          return window.getEventListeners?.(el) || {};
-        } catch (e) {
-          // Fallback: check for common event properties
-          const listeners = {};
+        // if (window.getEventListeners) {
+        //   return window.getEventListeners?.(el) || {};
+        // }
 
-          // List of common event types to check
-          const eventTypes = [
-            'click',
-            'mousedown',
-            'mouseup',
-            'touchstart',
-            'touchend',
-            'keydown',
-            'keyup',
-            'focus',
-            'blur',
-          ];
+        // List of common event types to check
+        const listeners = {};
+        const eventTypes = [
+          'click',
+          'mousedown',
+          'mouseup',
+          'touchstart',
+          'touchend',
+          'keydown',
+          'keyup',
+          'focus',
+          'blur',
+        ];
 
-          for (const type of eventTypes) {
-            const handler = el[`on${type}`];
-            if (handler) {
-              listeners[type] = [
-                {
-                  listener: handler,
-                  useCapture: false,
-                },
-              ];
-            }
+        for (const type of eventTypes) {
+          const handler = el[`on${type}`];
+          if (handler) {
+            listeners[type] = [
+              {
+                listener: handler,
+                useCapture: false,
+              },
+            ];
           }
-
-          return listeners;
         }
+
+        return listeners;
       }
 
       // Check for click-related events on the element itself
@@ -480,7 +475,7 @@ export function run_build_dom_tree() {
 
       return (
         hasAriaProps ||
-        // hasClickStyling ||
+        hasClickStyling ||
         hasClickHandler ||
         hasClickListeners ||
         // isFormRelated ||
