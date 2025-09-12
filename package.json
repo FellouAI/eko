@@ -30,5 +30,8 @@
   },
   "devDependencies": {
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@eko-ai/eko": "link:"
   }
 }
