@@ -45,6 +45,7 @@ export async function callChatLLM(
   let toolArgsText = "";
   let textStreamId = uuidv4();
   let thinkStreamId = uuidv4();
+  let llmResponseStreamId = uuidv4();
   let textStreamDone = false;
   const toolParts: LanguageModelV2ToolCallPart[] = [];
   let reader: ReadableStreamDefaultReader<LanguageModelV2StreamPart> | null =
@@ -53,6 +54,8 @@ export async function callChatLLM(
     const result = await rlm.callStream(request);
     reader = result.stream.getReader();
     let toolPart: LanguageModelV2ToolCallPart | null = null;
+    // 新版：通知响应开始
+    await streamCallback.onMessage({ type: "llm_response_start", streamId: llmResponseStreamId });
     while (true) {
       const { done, value } = await reader.read();
       if (done) {
@@ -69,6 +72,12 @@ export async function callChatLLM(
             continue;
           }
           streamText += chunk.delta || "";
+          await streamCallback.onMessage({
+            type: "llm_response_process",
+            streamId: llmResponseStreamId,
+            deltaType: "text",
+            delta: chunk.delta || "",
+          });
           await streamCallback.onMessage({
             type: "text",
             streamId: textStreamId,
@@ -104,6 +113,12 @@ export async function callChatLLM(
         }
         case "reasoning-delta": {
           thinkText += chunk.delta || "";
+          await streamCallback.onMessage({
+            type: "llm_response_process",
+            streamId: llmResponseStreamId,
+            deltaType: "thinking",
+            delta: chunk.delta || "",
+          });
           await streamCallback.onMessage({
             type: "thinking",
             streamId: thinkStreamId,
@@ -148,6 +163,12 @@ export async function callChatLLM(
             });
           }
           toolArgsText += chunk.delta || "";
+          await streamCallback.onMessage({
+            type: "llm_response_process",
+            streamId: llmResponseStreamId,
+            deltaType: "tool_call",
+            delta: chunk.delta || "",
+          });
           await streamCallback.onMessage({
             type: "tool_streaming",
             toolId: chunk.id,
@@ -206,6 +227,21 @@ export async function callChatLLM(
             });
             toolPart = null;
           }
+          await streamCallback.onMessage({
+            type: "llm_response_finished",
+            streamId: llmResponseStreamId,
+            response: [
+              ...(streamText ? [{ type: "text", text: streamText } as any] : []),
+              ...toolParts,
+            ],
+            usage: {
+              promptTokens: chunk.usage.inputTokens || 0,
+              completionTokens: chunk.usage.outputTokens || 0,
+              totalTokens:
+                chunk.usage.totalTokens ||
+                (chunk.usage.inputTokens || 0) + (chunk.usage.outputTokens || 0),
+            },
+          });
           await streamCallback.onMessage({
             type: "finish",
             finishReason: chunk.finishReason,

@@ -21,3 +21,6 @@ export class InMemoryStorage implements MonitorStorage {
   }
 }
 
+// 导出增强存储
+export * from './enhanced-storage.js';
+

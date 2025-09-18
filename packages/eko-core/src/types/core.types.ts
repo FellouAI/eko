@@ -1,6 +1,6 @@
 import { LanguageModelV2FinishReason } from "@ai-sdk/provider";
 import { Agent } from "../agent";
-import { LLMs } from "./llm.types";
+import { LLMs, LLMRequest } from "./llm.types";
 import { IA2aClient } from "../agent/a2a";
 import { IMcpClient } from "./mcp.types";
 import { ToolResult } from "./tools.types";
@@ -19,15 +19,146 @@ export type StreamCallbackMessage = {
   taskId: string;
   agentName: string;
   nodeId?: string | null; // agent nodeId
+  timestamp?: number; // 事件时间戳
 } & (
+  // ========== 任务级别事件 ==========
+  | {
+      type: "debug_task_start";
+      taskPrompt: string;
+      contextParams?: Record<string, any>;
+    }
+  | {
+      type: "debug_task_finished";
+      success: boolean;
+      result?: string;
+      error?: any;
+      stopReason?: string;
+    }
+  // ========== 规划阶段事件 ==========
+  | {
+      type: "debug_plan_start";
+      taskPrompt: string;
+      plannerPrompt: {
+        systemPrompt: string;
+        userPrompt: string;
+      };
+      availableAgents: Array<{
+        name: string;
+        description: string;
+        planDescription?: string;
+      }>;
+    }
+  | {
+      type: "debug_plan_process";
+      streamDone: boolean;
+      partialWorkflow?: Workflow;
+      thinkingText?: string;
+    }
+  | {
+      type: "debug_plan_finished";
+      workflow: Workflow;
+      planRequest: LLMRequest;
+      planResult: string;
+    }
+  // ========== 工作流执行事件 ==========
+  | {
+      type: "debug_workflow_start";
+      workflow: Workflow;
+      agentTree: any; // 构建后的执行树
+    }
+  | {
+      type: "debug_workflow_finished";
+      results: string[];
+      finalResult: string;
+    }
+  // ========== 代理级别事件 ==========
+  | {
+      type: "debug_agent_start";
+      agentNode: WorkflowAgent;
+      agentInfo: {
+        name: string;
+        description: string;
+        tools: string[];
+        llms?: string[];
+      };
+      requirements: string; // 传递给Agent的需求
+    }
+  | {
+      type: "debug_agent_process";
+      loopNum: number;
+      maxReactNum: number;
+      currentMessages: any; // 当前的消息历史长度统计
+    }
+  | {
+      type: "debug_agent_finished";
+      agentNode: WorkflowAgent;
+      result: string;
+      error?: any;
+      executionStats: {
+        loopCount: number;
+        toolCallCount: number;
+        duration: number;
+      };
+    }
+  // ========== LLM交互事件 ==========
+  | {
+      type: "debug_llm_request_start";
+      request: LLMRequest;
+      modelName?: string;
+      context: {
+        messageCount: number;
+        toolCount: number;
+        hasSystemPrompt: boolean;
+      };
+    }
+  | {
+      type: "debug_llm_response_start";
+      streamId: string;
+    }
+  | {
+      type: "debug_llm_response_process";
+      streamId: string;
+      deltaType: "text" | "thinking" | "tool_call";
+      delta: string;
+    }
+  | {
+      type: "debug_llm_response_finished";
+      streamId: string;
+      response: Array<any>;
+      usage?: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+      };
+    }
+  // ========== 工具调用事件 ==========
+  | {
+      type: "debug_tool_call_start";
+      toolName: string;
+      toolId: string;
+      params: Record<string, any>;
+    }
+  | {
+      type: "debug_tool_call_process";
+      toolName: string;
+      toolId: string;
+      streamId: string;
+      text: string;
+      streamDone: boolean;
+    }
+  | {
+      type: "debug_tool_call_finished";
+      toolName: string;
+      toolId: string;
+      params: Record<string, any>;
+      toolResult: ToolResult;
+      duration: number;
+    }
+  // ========== 兼容性保留的旧事件类型 ==========
   | {
       type: "workflow";
       streamDone: boolean;
       workflow: Workflow;
-    }
-  | {
-      type: "agent_start";
-      agentNode: WorkflowAgent;
     }
   | {
       type: "text" | "thinking";

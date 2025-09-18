@@ -43,7 +43,9 @@ export default [
         browser: true,
         preferBuiltins: true,
       }),
-      typescript(),
+      typescript({
+        tsconfig: './tsconfig.json',
+      }),
       copy({
         targets: [
           { src: '../../README.md', dest: './' }

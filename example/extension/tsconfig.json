@@ -5,11 +5,11 @@
     "moduleResolution": "bundler",
     "module": "ES6",
     "esModuleInterop": true,
-    "sourceMap": false,
+    "sourceMap": true,
     "rootDir": "src",
     "outDir": "dist/js",
     "noEmitOnError": true,
     "jsx": "react",
-    "typeRoots": ["node_modules/@types"]
+    "typeRoots": ["node_modules/@types"],
   }
 }

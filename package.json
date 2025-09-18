@@ -6,7 +6,8 @@
     "packages/eko-core",
     "packages/eko-extension",
     "packages/eko-nodejs",
-    "packages/eko-web"
+    "packages/eko-web",
+    "packages/eko-debugger"
   ],
   "scripts": {
     "build": "pnpm -r --sequential build",
@@ -29,6 +30,7 @@
     "url": "git+https://github.com/FellouAI/eko.git"
   },
   "devDependencies": {
+    "inspector": "^0.5.0",
     "typescript": "^5.8.3"
   },
   "dependencies": {

@@ -4,6 +4,7 @@ import * as memory from "../memory";
 import { RetryLanguageModel } from "../llm";
 import { AgentContext } from "../core/context";
 import { uuidv4, sleep, toFile, getMimeType } from "../common/utils";
+import { createCallbackHelper } from "../common/callback-helper";
 import {
   LLMRequest,
   StreamCallbackMessage,
@@ -240,6 +241,29 @@ export function convertToolResult(
  * - 文件和多媒体内容支持
  * - 完成状态和使用统计
  *
+ * ReAct 循环说明（本函数所在的一次 Assistant Step）：
+ * - 本函数实现的是一次“助理回复阶段”的流式生成与解析。它会产出纯文本与若干工具调用（ToolCall），
+ *   但并不在本函数内执行工具。工具的实际执行、结果回填、以及再次调用本函数，发生在本函数的上层调度逻辑中，
+ *   由此构成完整的 ReAct 外层循环（思考 -> 行动 -> 观察 -> 再思考）。
+ *
+ * - 映射到流事件的 ReAct 阶段：
+ *   1) Observe（观察）：
+ *      - 在调用前，通过 `appendUserConversation` 将用户干预并入 `messages`；
+ *      - 上一轮工具执行结果（若有）也在上层被并入 `messages`，因此本函数开局收到的 `messages` 已包含“观察”。
+ *   2) Reason/Think（思考）：
+ *      - 由模型以推理通道输出，体现在事件 `reasoning-start` / `reasoning-delta` / `reasoning-end`；
+ *      - 本函数将其汇聚到 `thinkText`，并通过回调对外暴露。
+ *   3) Act（行动，调用工具）：
+ *      - 由事件 `tool-input-start` / `tool-input-delta` 增量传输工具参数文本；
+ *      - 由事件 `tool-call` 给出完整的调用（含工具名与最终 JSON 参数），本函数收敛为 `toolParts` 返回给上层；
+ *   4) Finalize（收尾）：
+ *      - 由 `text-*` 事件传出自然语言回复；
+ *      - `finish` 事件收束本次 Assistant Step，携带用量与终止原因；
+ *      - 若终止原因为长度限制且满足条件，则触发压缩与重试，仍属于一次 Step 的自恢复策略。
+ *
+ * - 小结：本函数“只生成，不执行”。上层据 `toolParts` 执行工具，得到结果（可能是文本/图片/JSON），再把结果
+ *   作为新的消息加入 `messages`，随后再次调用本函数，形成多轮 ReAct 迭代，直到没有新的工具调用且文本输出完成。
+ *
  * @param agentContext 代理执行上下文
  * @param rlm 重试语言模型管理器
  * @param messages 对话消息历史
@@ -271,6 +295,14 @@ export async function callAgentLLM(
     appendUserConversation(agentContext, messages);
   }
   const context = agentContext.context;
+
+  // 创建回调助手
+  const agentllmCbHelper = createCallbackHelper(
+    callback,
+    context.taskId,
+    agentContext.agent.Name,
+    agentContext.agentChain.agent.id
+  );
   const agentChain = agentContext.agentChain;
   const agentNode = agentChain.agent;
   const streamCallback = callback ||
@@ -278,10 +310,43 @@ export async function callAgentLLM(
       onMessage: async () => {},
     };
   const stepController = new AbortController();
-  const signal = AbortSignal.any([
-    context.controller.signal,
-    stepController.signal,
-  ]);
+  // 兼容性：部分运行时/TS lib 未提供 AbortSignal.any，这里做降级处理
+  let cleanupAbortListeners: (() => void) | null = null;
+  const signal: AbortSignal = (AbortSignal as any).any
+    ? (AbortSignal as any).any([
+        context.controller.signal,
+        stepController.signal,
+      ])
+    : (() => {
+        const combined = new AbortController();
+        const abortFromContext = () => {
+          try {
+            combined.abort((context.controller.signal as any).reason);
+          } catch (_) {
+            combined.abort();
+          }
+        };
+        const abortFromStep = () => {
+          try {
+            combined.abort((stepController.signal as any).reason);
+          } catch (_) {
+            combined.abort();
+          }
+        };
+        context.controller.signal.addEventListener("abort", abortFromContext);
+        stepController.signal.addEventListener("abort", abortFromStep);
+        // 若任一已提前中止，立即同步中止
+        if (context.controller.signal.aborted) abortFromContext();
+        if (stepController.signal.aborted) abortFromStep();
+        cleanupAbortListeners = () => {
+          context.controller.signal.removeEventListener(
+            "abort",
+            abortFromContext
+          );
+          stepController.signal.removeEventListener("abort", abortFromStep);
+        };
+        return combined.signal;
+      })();
   const request: LLMRequest = {
     tools: tools,
     toolChoice,
@@ -289,12 +354,26 @@ export async function callAgentLLM(
     abortSignal: signal,
   };
   requestHandler && requestHandler(request);
+
+  // CALLBACK: 发送LLM请求开始事件
+  await agentllmCbHelper.llmRequestStart(
+    request,
+    undefined, // model name not available
+    {
+      messageCount: messages.length,
+      toolCount: tools.length,
+      hasSystemPrompt: messages.some(m => m.role === 'system'),
+    }
+  );
+
   let streamText = "";
   let thinkText = "";
   let toolArgsText = "";
   let textStreamId = uuidv4();
   let thinkStreamId = uuidv4();
+  let llmResponseStreamId = uuidv4();
   let textStreamDone = false;
+  // toolParts：本次 Assistant Step 内收集到的“行动（工具调用）”结果（仅为调用意图，不含执行结果）
   const toolParts: LanguageModelV2ToolCallPart[] = [];
   let reader: ReadableStreamDefaultReader<LanguageModelV2StreamPart> | null =
     null;
@@ -302,8 +381,11 @@ export async function callAgentLLM(
     agentChain.agentRequest = request;
     context.currentStepControllers.add(stepController);
     const result: StreamResult = await rlm.callStream(request);
+    // 新版：LLM 响应开始
+    await agentllmCbHelper.llmResponseStart(llmResponseStreamId);
     reader = result.stream.getReader();
     let toolPart: LanguageModelV2ToolCallPart | null = null;
+    // 读取与解析流式事件：将提供商的细粒度事件映射为 ReAct 的“思考/行动/输出”要素
     while (true) {
       await context.checkAborted();
       const { done, value } = await reader.read();
@@ -321,6 +403,14 @@ export async function callAgentLLM(
             continue;
           }
           streamText += chunk.delta || "";
+          // 新版：LLM 响应流过程 - 文本
+          await agentllmCbHelper.llmResponseProcess(
+            llmResponseStreamId,
+            "text_start",
+            chunk.delta || "",
+            false
+          );
+          // OLD VERSION CALLBACK
           await streamCallback.onMessage(
             {
               taskId: context.taskId,
@@ -334,6 +424,13 @@ export async function callAgentLLM(
             agentContext
           );
           if (toolPart) {
+            await agentllmCbHelper.llmResponseProcess(
+              llmResponseStreamId,
+              "tool_call_start",
+              chunk.delta || "",
+              false
+            );
+            // OLD VERSION CALLBACK
             await streamCallback.onMessage(
               {
                 taskId: context.taskId,
@@ -353,6 +450,13 @@ export async function callAgentLLM(
         case "text-end": {
           textStreamDone = true;
           if (streamText) {
+            await agentllmCbHelper.llmResponseProcess(
+              llmResponseStreamId,
+              "text_end",
+              streamText,
+              true
+            );
+            // OLD VERSION CALLBACK
             await streamCallback.onMessage(
               {
                 taskId: context.taskId,
@@ -370,10 +474,24 @@ export async function callAgentLLM(
         }
         case "reasoning-start": {
           thinkStreamId = uuidv4();
+          await agentllmCbHelper.llmResponseProcess(
+            llmResponseStreamId,
+            "thinking_start",
+            "",
+            false
+          );
           break;
         }
         case "reasoning-delta": {
           thinkText += chunk.delta || "";
+          // 新版：LLM 响应流过程 - 思维
+          await agentllmCbHelper.llmResponseProcess(
+            llmResponseStreamId,
+            "thinking_delta",
+            chunk.delta || "",
+            false
+          );
+          // OLD VERSION CALLBACK
           await streamCallback.onMessage(
             {
               taskId: context.taskId,
@@ -390,6 +508,13 @@ export async function callAgentLLM(
         }
         case "reasoning-end": {
           if (thinkText) {
+            await agentllmCbHelper.llmResponseProcess(
+              llmResponseStreamId,
+              "thinking_end",
+              thinkText,
+              true
+            );
+            // OLD VERSION CALLBACK
             await streamCallback.onMessage(
               {
                 taskId: context.taskId,
@@ -436,6 +561,14 @@ export async function callAgentLLM(
             );
           }
           toolArgsText += chunk.delta || "";
+          // 新版：LLM 响应流过程 - 工具参数
+          await agentllmCbHelper.llmResponseProcess(
+            llmResponseStreamId,
+            "tool_call_delta",
+            chunk.delta || "",
+            false
+          );
+          // OLD VERSION CALLBACK
           await streamCallback.onMessage(
             {
               taskId: context.taskId,
@@ -453,6 +586,15 @@ export async function callAgentLLM(
         case "tool-call": {
           toolArgsText = "";
           const args = chunk.input ? JSON.parse(chunk.input) : {};
+
+
+          await agentllmCbHelper.llmResponseProcess(
+            llmResponseStreamId,
+            "tool_call_start",
+            chunk.input || "{}",
+            false
+          );
+
           const message: StreamCallbackMessage = {
             taskId: context.taskId,
             agentName: agentNode.name,
@@ -462,6 +604,7 @@ export async function callAgentLLM(
             toolName: chunk.toolName,
             params: args,
           };
+          // OLD VERSION CALLBACK
           await streamCallback.onMessage(message, agentContext);
           if (toolPart == null) {
             toolParts.push({
@@ -535,6 +678,22 @@ export async function callAgentLLM(
             );
             toolPart = null;
           }
+          // 新版：LLM 响应完成
+          await agentllmCbHelper.llmResponseFinished(
+            llmResponseStreamId,
+            [
+              ...(streamText ? [{ type: "text", text: streamText } as any] : []),
+              ...toolParts,
+            ],
+            {
+              promptTokens: chunk.usage.inputTokens || 0,
+              completionTokens: chunk.usage.outputTokens || 0,
+              totalTokens:
+                chunk.usage.totalTokens ||
+                (chunk.usage.inputTokens || 0) + (chunk.usage.outputTokens || 0),
+            }
+          );
+          // OLD VERSION CALLBACK
           await streamCallback.onMessage(
             {
               taskId: context.taskId,

@@ -97,6 +97,26 @@ export type ChatStreamCallbackMessage =
       text: string;
     }
   | {
+      type: "llm_response_start";
+      streamId: string;
+    }
+  | {
+      type: "llm_response_process";
+      streamId: string;
+      deltaType: "text" | "thinking" | "tool_call";
+      delta: string;
+    }
+  | {
+      type: "llm_response_finished";
+      streamId: string;
+      response: Array<any>;
+      usage?: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+      };
+    }
+  | {
       type: "tool_streaming";
       toolName: string;
       toolId: string;

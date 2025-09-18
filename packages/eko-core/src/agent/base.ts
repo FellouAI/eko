@@ -34,6 +34,7 @@ import { RetryLanguageModel } from "../llm";
 import { ToolWrapper } from "../tools/wrapper";
 import { AgentChain, ToolChain } from "../core/chain";
 import Context, { AgentContext } from "../core/context";
+import { createCallbackHelper } from "../common/callback-helper";
 import {
   ForeachTaskTool,
   McpTool,
@@ -284,6 +285,14 @@ export class Agent {
     const context = agentContext.context;
     const agentNode = agentContext.agentChain.agent;
 
+    // 创建回调助手
+    const agentRunCbHelper = createCallbackHelper(
+      this.callback || context.config.callback,
+      context.taskId,
+      this.name,
+      agentNode.id
+    );
+
     // 构建完整的工具集合（代理工具 + 系统自动工具）
     const tools = [...this.tools, ...this.system_auto_tools(agentNode)];
 
@@ -314,10 +323,24 @@ export class Agent {
 
     // 初始化代理工具集合
     let agentTools = tools;
+
+    await agentRunCbHelper.agentStart(
+      this, 
+      agentContext
+    )
+
     // 主推理循环
     while (loopNum < maxReactNum) {
       // 检查是否被中断
       await context.checkAborted();
+
+      // 发送代理处理过程事件
+      await agentRunCbHelper.agentProcess(
+        loopNum,
+        maxReactNum,
+        agentContext,
+        agentContext.context as any
+      );
 
       // MCP工具动态加载
       if (mcpClient) {
@@ -357,7 +380,7 @@ export class Agent {
         false,
         undefined,
         0,
-        this.callback,
+        this.callback || context.config.callback,
         this.requestHandler
       );
 
@@ -401,9 +424,26 @@ export class Agent {
         }
       }
 
+      await agentRunCbHelper.agentFinished(
+        this,
+        agentContext,
+        finalResult,
+        undefined,
+        agentContext.context as any
+      );
+
       // 返回最终结果
       return finalResult;
     }
+
+    await agentRunCbHelper.agentFinished(
+      this,
+      agentContext,
+      "Unfinished",
+      undefined,
+      agentContext.context as any
+    );
+
     return "Unfinished";
   }
 
@@ -452,6 +492,14 @@ export class Agent {
     let user_messages: LanguageModelV2Prompt = [];
     let toolResults: LanguageModelV2ToolResultPart[] = [];
 
+    // 创建回调助手
+    const toolcallCbHelper = createCallbackHelper(
+      this.callback || context.config.callback,
+      context.taskId,
+      this.name,
+      agentContext.agentChain.agent.id
+    );
+
     // 移除重复的工具调用
     results = memory.removeDuplicateToolUse(results);
 
@@ -490,14 +538,36 @@ export class Agent {
         // 更新工具链参数
         toolChain.params = args;
 
+        // 发送工具调用开始事件
+        await toolcallCbHelper.toolCallStart(
+          result.toolName,
+          result.toolCallId,
+          args
+        );
+
         // 查找对应的工具
         let tool = getTool(agentTools, result.toolName);
         if (!tool) {
           throw new Error(result.toolName + " tool does not exist");
         }
 
+        // 记录开始时间
+        const startTime = Date.now();
+
         // 执行工具调用
         toolResult = await tool.execute(args, agentContext, result);
+
+        // 计算执行时间
+        const duration = Date.now() - startTime;
+
+        // 发送工具调用完成事件
+        await toolcallCbHelper.toolCallFinished(
+          result.toolName,
+          result.toolCallId,
+          args,
+          toolResult,
+          duration
+        );
 
         // 更新工具链结果
         toolChain.updateToolResult(toolResult);

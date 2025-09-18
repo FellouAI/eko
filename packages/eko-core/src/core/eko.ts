@@ -26,11 +26,13 @@ import Log from "../common/log";
 import Chain, { AgentChain } from "./chain";
 import { buildAgentTree } from "../common/tree";
 import { mergeAgents, uuidv4 } from "../common/utils";
+import { createCallbackHelper } from "../common/callback-helper";
 import {
   EkoConfig,
   EkoResult,
   Workflow,
   NormalAgentNode,
+  WorkflowAgent,
 } from "../types/core.types";
 
 /**
@@ -112,13 +114,37 @@ export class Eko {
 
       // 使用规划器根据任务提示生成详细的工作流
       const planner = new Planner(context);
+
+      // CALLBACK：发送 Task 开始的消息
+      const taskStartCbHelper = createCallbackHelper(
+        this.config.callback,
+        taskId,
+        "Task"
+      );
+      await taskStartCbHelper.taskStart(taskPrompt, contextParams, context as any);
+
       context.workflow = await planner.plan(taskPrompt);
 
       // 返回生成的工作流
       return context.workflow;
     } catch (e) {
+      const taskErrorCbHelper = createCallbackHelper(
+        this.config.callback,
+        taskId,
+        "Task"
+      );
       // 如果生成过程中出现异常，清理任务并重新抛出异常
       this.deleteTask(taskId);
+      // CALLBACK：发送 Task 错误的消息
+      await taskErrorCbHelper.taskFinished(
+        false,
+        `Task Failed at generate state\nError: ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+        e,
+        "error",
+        context as any
+      );
       throw e;
     }
   }
@@ -196,6 +222,8 @@ export class Eko {
       throw new Error("The task does not exist");
     }
 
+    // CALLBACK:创建回调助手
+
     // 如果任务处于暂停状态，恢复执行
     if (context.pause) {
       context.setPause(false);
@@ -204,12 +232,44 @@ export class Eko {
       context.reset();
     }
     context.conversation = [];
+
     try {
       // 执行实际的工作流
-      return await this.doRunWorkflow(context);
+      const result = await this.doRunWorkflow(context);
+
+      const taskEndCbHelper = createCallbackHelper(
+        this.config.callback,
+        taskId,
+        "Task"
+      );
+
+      // 发送任务完成事件
+      await taskEndCbHelper.taskFinished(
+        result.success,
+        result.result,
+        result.error,
+        result.stopReason,
+        context as any
+      );
+
+      return result;
     } catch (e: any) {
       // 记录执行错误
       Log.error("execute error", e);
+
+      const taskErrorCbHelper = createCallbackHelper(
+        this.config.callback,
+        taskId,
+        "Task"
+      );
+      // 发送任务失败事件
+      await taskErrorCbHelper.taskFinished(
+        false,
+        e ? e.name + ": " + e.message : "Error",
+        e,
+        e?.name == "AbortError" ? "abort" : "error",
+        context as any
+      );
 
       // 返回错误结果
       return {
@@ -246,6 +306,7 @@ export class Eko {
     taskId: string = uuidv4(),
     contextParams?: Record<string, any>
   ): Promise<EkoResult> {
+
     // 先生成工作流
     await this.generate(taskPrompt, taskId, contextParams);
 
@@ -343,6 +404,13 @@ export class Eko {
       throw new Error("Workflow error");
     }
 
+    // 创建回调助手
+    const workflowExecutorCbHelper = createCallbackHelper(
+      this.config.callback,
+      context.taskId,
+      "WorkflowExecutor"
+    );
+
     // 构建代理名称到代理对象的映射表，便于快速查找
     const agentNameMap = agents.reduce((map, item) => {
       map[item.Name] = item;
@@ -351,6 +419,9 @@ export class Eko {
 
     // 构建代理执行树，处理代理间的依赖关系
     let agentTree = buildAgentTree(workflow.agents);
+
+    // CALLBACK:发送工作流开始事件
+    await workflowExecutorCbHelper.workflowStart(workflow, agentTree);
 
     // 存储所有代理的执行结果
     const results: string[] = [];
@@ -490,12 +561,16 @@ export class Eko {
       agentTree = agentTree.nextAgent;
     }
 
+    // 发送工作流完成事件
+    const finalResult = results[results.length - 1] || "";
+    await workflowExecutorCbHelper.workflowFinished(results, finalResult, context as any);
+
     // 返回执行成功的结果
     return {
       success: true,
       stopReason: "done",
       taskId: context.taskId,
-      result: results[results.length - 1] || "",
+      result: finalResult,
     };
   }
 
@@ -535,11 +610,28 @@ export class Eko {
     agentNode: NormalAgentNode,
     agentChain: AgentChain
   ): Promise<string> {
+    const startTime = Date.now();
+    let toolCallCount = 0;
+
+    // 创建代理专用的回调助手
+    const runAgentNodeCbHelper = createCallbackHelper(
+      this.config.callback,
+      context.taskId,
+      agentNode.agent.name,
+      agentNode.agent.id
+    );
+
     try {
       // 设置代理状态为运行中
       agentNode.agent.status = "running";
 
-      // 发送代理开始执行的回调通知
+      // 发送新的代理开始事件
+      await runAgentNodeCbHelper.agentNodeStart(
+        agentNode,
+        (agentNode.agent as WorkflowAgent).task || "",
+        context as any
+      );
+      // OLD VERSION CALLBACK
       this.config.callback &&
         (await this.config.callback.onMessage({
           taskId: context.taskId,
@@ -547,7 +639,8 @@ export class Eko {
           nodeId: agentNode.agent.id,
           type: "agent_start",
           agentNode: agentNode.agent,
-        }));
+          requirements: (agentNode.agent as any).requirement || "",
+        } as any));
 
       // 执行代理并获取结果
       agentNode.result = await agent.run(context, agentChain);
@@ -555,7 +648,20 @@ export class Eko {
       // 设置代理状态为完成
       agentNode.agent.status = "done";
 
-      // 发送代理执行结果的回调通知
+      // 计算执行统计信息
+      const duration = Date.now() - startTime;
+      // 从agentChain中获取工具调用次数
+      toolCallCount = agentChain.tools.length;
+
+      // 发送新的代理完成事件
+      await runAgentNodeCbHelper.agentNodeFinished(
+        agentNode, 
+        agentNode.result, {
+          loopCount: 0, // 这个需要从agent中获取，暂时设为0
+          toolCallCount,
+          duration,
+      }, undefined, context as any);
+      // OLD VERSION CALLBACK
       this.config.callback &&
         (await this.config.callback.onMessage(
           {
@@ -575,7 +681,26 @@ export class Eko {
       // 设置代理状态为错误
       agentNode.agent.status = "error";
 
-      // 发送代理执行错误的回调通知
+      // 计算执行统计信息
+      const duration = Date.now() - startTime;
+      toolCallCount = agentChain.tools.length;
+
+      const runAgentErrorCbHelper = runAgentNodeCbHelper.createChildHelper(agentNode.agent.name);
+
+      // 发送新的代理失败事件
+      await runAgentErrorCbHelper.agentNodeFinished(
+        agentNode,
+        "",
+        {
+          loopCount: 0,
+          toolCallCount,
+          duration,
+        },
+        `runAgent error: ${e instanceof Error ? e.message : String(e)}`,
+        context as any
+      );
+
+      // OLD VERSION CALLBACK
       this.config.callback &&
         (await this.config.callback.onMessage(
           {

@@ -1,5 +1,5 @@
 {
-  "name": "@eko-ai/eko-nodejs-example",
+  "name": "@eko-ai/eko-nodejs-debug-example",
   "version": "3.0.0",
   "type": "module",
   "main": "dist/index.cjs",
@@ -8,6 +8,8 @@
     "start": "node dist/index.cjs",
     "dev": "npm run build && npm run start",
     "debug": "node --inspect dist/index.cjs",
+    "realtime": "npx tsx src/realtime-example.ts",
+    "observability": "npm run dev",
     "playwright": "npx playwright install"
   },
   "author": "FellouAI",
@@ -19,6 +21,7 @@
   "dependencies": {
     "@eko-ai/eko": "file:../../packages/eko-core",
     "@eko-ai/eko-nodejs": "file:../../packages/eko-nodejs",
+    "@eko-ai/eko-debugger": "file:../../packages/eko-debugger",
     "playwright": "^1.52.0"
   },
   "devDependencies": {
