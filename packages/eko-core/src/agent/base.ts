@@ -133,13 +133,13 @@ export type AgentParams = {
  */
 export class Agent {
   /** 代理的唯一名称标识符 */
-  protected name: string;
+  public name: string;
 
   /** 代理的功能描述，说明代理的能力范围 */
-  protected description: string;
+  public description: string;
 
   /** 代理内置的工具集合，定义了代理的核心能力 */
-  protected tools: Tool[] = [];
+  public tools: Tool[] = [];
 
   /** 可选的LLM模型列表，指定代理可使用的语言模型 */
   protected llms?: string[];
