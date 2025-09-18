@@ -78,7 +78,7 @@ export function convertTools(
   tools: Tool[] | DialogueTool[]
 ): LanguageModelV2FunctionTool[] {
   return tools.map((tool) => ({
-    type: "function",
+    type: "function" as const,
     name: tool.name,
     description: tool.description,
     inputSchema: tool.parameters,
