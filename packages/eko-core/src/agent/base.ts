@@ -488,22 +488,26 @@ export class Agent {
   ): Promise<string | null> {
     const user_messages: LanguageModelV2Prompt = [];
     const toolResults: LanguageModelV2ToolResultPart[] = [];
-    // results = memory.removeDuplicateToolUse(results);
-    if (results.length == 0) {
+    if (results.length === 0) {
       return null;
     }
-    if (results.every((s) => s.type == "text")) {
-      return results.map((s) => (s as LanguageModelV2TextPart).text).join("\n\n");
+    const textParts = results.filter(
+      (s): s is LanguageModelV2TextPart => s.type === "text"
+    );
+    if (textParts.length === results.length) {
+      return textParts.map((s) => s.text).join("\n\n");
     }
-    const toolCalls = results.filter((s) => s.type == "tool-call") as LanguageModelV2ToolCallPart[];
+    const toolCalls = results.filter(
+      (s): s is LanguageModelV2ToolCallPart => s.type === "tool-call"
+    );
     if (toolCalls.length > 1 && this.canParallelToolCalls(toolCalls)) {
-      const results = await Promise.all(
+      const resultsArr = await Promise.all(
         toolCalls.map((toolCall) =>
           this.callToolCall(agentContext, agentTools, toolCall, user_messages)
         )
       );
-      for (let i = 0; i < results.length; i++) {
-        toolResults.push(results[i]);
+      for (let i = 0; i < resultsArr.length; i++) {
+        toolResults.push(resultsArr[i]);
       }
     } else {
       for (let i = 0; i < toolCalls.length; i++) {
@@ -517,27 +521,19 @@ export class Agent {
         toolResults.push(toolResult);
       }
     }
-    // 更新对话历史：添加助手响应
     messages.push({
       role: "assistant",
       content: results,
     });
-
-    // 如果有工具调用结果，添加到对话历史
     if (toolResults.length > 0) {
       messages.push({
         role: "tool",
         content: toolResults,
       });
-      // 添加工具生成的用户消息
       user_messages.forEach((message) => messages.push(message));
-      // 返回null表示需要继续推理
       return null;
     } else {
-      return results
-        .filter((s) => s.type == "text")
-        .map((s) => (s as LanguageModelV2TextPart).text)
-        .join("\n\n");
+      return textParts.map((s) => s.text).join("\n\n");
     }
   }
 
@@ -553,14 +549,29 @@ export class Agent {
       agentContext.agentChain.agentRequest as LLMRequest
     );
     agentContext.agentChain.push(toolChain);
+
+    const args =
+      typeof result.input == "string"
+        ? JSON.parse(result.input || "{}")
+        : result.input || {};
+    toolChain.params = args;
+
+    const toolcallCbHelper = createCallbackHelper(
+      this.callback || context.config.callback,
+      context.taskId,
+      this.name,
+      agentContext.agentChain.agent.id
+    );
+
     let toolResult: ToolResult;
+    const startTime = Date.now();
     try {
-      const args =
-        typeof result.input == "string"
-          ? JSON.parse(result.input || "{}")
-          : result.input || {};
-      toolChain.params = args;
-      let tool = getTool(agentTools, result.toolName);
+      await toolcallCbHelper.toolCallStart(
+        result.toolName,
+        result.toolCallId,
+        args
+      );
+      const tool = getTool(agentTools, result.toolName);
       if (!tool) {
         throw new Error(result.toolName + " tool does not exist");
       }
@@ -579,10 +590,45 @@ export class Agent {
         isError: true,
       };
       toolChain.updateToolResult(toolResult);
+      const durationErr = Date.now() - startTime;
+      await toolcallCbHelper.toolCallFinished(
+        result.toolName,
+        result.toolCallId,
+        args,
+        toolResult,
+        durationErr
+      );
       if (++agentContext.consecutiveErrorNum >= 10) {
         throw e;
       }
+      const callback = this.callback || context.config.callback;
+      if (callback) {
+        await callback.onMessage(
+          {
+            taskId: context.taskId,
+            agentName: agentContext.agent.Name,
+            nodeId: agentContext.agentChain.agent.id,
+            type: "tool_result",
+            toolId: result.toolCallId,
+            toolName: result.toolName,
+            params: result.input || {},
+            toolResult: toolResult,
+          },
+          agentContext
+        );
+      }
+      return convertToolResult(result, toolResult, user_messages);
     }
+
+    const duration = Date.now() - startTime;
+    await toolcallCbHelper.toolCallFinished(
+      result.toolName,
+      result.toolCallId,
+      args,
+      toolResult,
+      duration
+    );
+
     const callback = this.callback || context.config.callback;
     if (callback) {
       await callback.onMessage(
@@ -601,6 +647,25 @@ export class Agent {
     }
     return convertToolResult(result, toolResult, user_messages);
   }
+
+  /**
+   * 生成系统自动工具
+   *
+   * 根据代理节点的工作流配置，自动生成所需的系统工具。
+   * 这些工具是基于工作流XML配置动态添加的，不是代理预定义的工具。
+   *
+   * 自动工具映射：
+   * - VariableStorageTool：当工作流包含变量输入/输出时
+   * - ForeachTaskTool：当工作流包含循环结构时
+   * - WatchTriggerTool：当工作流包含监听触发器时
+   *
+   * 工具去重：
+   * 确保不会添加与代理已有工具重复的系统工具。
+   *
+   * @param agentNode 工作流代理节点
+   * @returns 系统自动生成的工具列表
+   * @protected
+   */
   protected system_auto_tools(agentNode: WorkflowAgent): Tool[] {
     let tools: Tool[] = [];
     let agentNodeXml = agentNode.xml;
@@ -1023,6 +1088,7 @@ export class Agent {
   public canParallelToolCalls(toolCalls?: LanguageModelV2ToolCallPart[]): boolean {
     return config.parallelToolCalls;
   }
+
   get Llms(): string[] | undefined {
     return this.llms;
   }
