@@ -6,14 +6,7 @@ const PLAN_SYSTEM_TEMPLATE = `
 You are {name}, an autonomous AI Agent Planner.
 
 ## Task Description
-Your task is to understand the user's requirements, dynamically plan the user's tasks based on the Agent list, and please follow the steps below:
-1. Understand the user's requirements.
-2. Analyze the Agents that need to be used based on the user's requirements.
-3. Generate the Agent calling plan based on the analysis results.
-4. About agent name, please do not arbitrarily fabricate non-existent agent names.
-5. You only need to provide the steps to complete the user's task, key steps only, no need to be too detailed.
-6. Please strictly follow the output format and example output.
-7. The output language should follow the language corresponding to the user's task.
+{task_description}
 
 ## Agent list
 {agents}
@@ -76,16 +69,14 @@ Your task is to understand the user's requirements, dynamically plan the user's 
 {example_prompt}
 `;
 
-const PLAN_CHAT_EXAMPLE = `User: hello.
-Output result:
-<root>
-  <name>Chat</name>
-  <thought>Alright, the user wrote "hello". That's pretty straightforward. I need to respond in a friendly and welcoming manner.</thought>
-  <agents>
-    <!-- Chat agents can exist without the <task> and <nodes> nodes. -->
-    <agent name="Chat" id="0" dependsOn=""></agent>
-  </agents>
-</root>`;
+const PLAN_TASK_DESCRIPTION = `Your task is to understand the user's requirements, dynamically plan the user's tasks based on the Agent list, and please follow the steps below:
+- Analyze the Agents that need to be used based on the user's requirements.
+- Generate the Agent calling plan based on the analysis results.
+- About agent name, please do not arbitrarily fabricate non-existent agent names.
+- You only need to provide the steps to complete the user's task, key steps only, no need to be too detailed.
+- Try to break down tasks into independently completable subtasks, and for maximum efficiency, run multiple independent subtasks in parallel whenever possible.
+- Please strictly follow the output format and example output.
+- The output language should follow the language corresponding to the user's task.`;
 
 const PLAN_EXAMPLE_LIST = [
   `User: Open Boss Zhipin, find 10 operation positions in Chengdu, and send a personal introduction to the recruiters based on the page information.
@@ -247,7 +238,11 @@ Current datetime: {datetime}
 Task Description: {task_prompt}
 `;
 
-export async function getPlanSystemPrompt(context: Context): Promise<string> {
+export async function getPlanSystemPrompt(
+  context: Context,
+  planTaskDescription?: string,
+  planExampleList?: string[]
+): Promise<string> {
   let agents_prompt = "";
   let agents = context.agents;
   for (let i = 0; i < agents.length; i++) {
@@ -277,17 +272,20 @@ export async function getPlanSystemPrompt(context: Context): Promise<string> {
         .join("\n") +
       "\n</agent>\n\n";
   }
-  let plan_example_list =
-    context.variables.get("plan_example_list") || PLAN_EXAMPLE_LIST;
-  let hasChatAgent = context.agents.filter((a) => a.Name == "Chat").length > 0;
+  const task_description =
+    planTaskDescription ||
+    context.variables.get("plan_task_description") ||
+    PLAN_TASK_DESCRIPTION;
+  const plan_example_list =
+    planExampleList ||
+    context.variables.get("plan_example_list") ||
+    PLAN_EXAMPLE_LIST;
   let example_prompt = "";
-  const example_list = hasChatAgent
-    ? [PLAN_CHAT_EXAMPLE, ...plan_example_list]
-    : [...plan_example_list];
-  for (let i = 0; i < example_list.length; i++) {
-    example_prompt += `## Example ${i + 1}\n${example_list[i]}\n\n`;
+  for (let i = 0; i < plan_example_list.length; i++) {
+    example_prompt += `## Example ${i + 1}\n${plan_example_list[i]}\n\n`;
   }
   return PLAN_SYSTEM_TEMPLATE.replace("{name}", config.name)
+    .replace("{task_description}", task_description)
     .replace("{agents}", agents_prompt.trim())
     .replace("{example_prompt}", example_prompt)
     .trim();

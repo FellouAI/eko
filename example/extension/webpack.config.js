@@ -3,7 +3,8 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 const srcDir = path.join(__dirname, "src");
 
 module.exports = {
-  mode: "production",
+  mode: "development",
+  devtool: "source-map",
   entry: {
     sidebar: path.join(srcDir, "sidebar/index.tsx"),
     options: path.join(srcDir, "options/index.tsx"),
@@ -15,6 +16,7 @@ module.exports = {
     filename: "[name].js",
   },
   optimization: {
+    minimize: false,
     splitChunks: {
       name: "vendor",
       chunks(chunk) {

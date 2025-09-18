@@ -1,39 +1,49 @@
+import config from "../../config";
 import { AgentContext } from "../../core/context";
 import { run_build_dom_tree } from "./build_dom_tree";
 import { BaseBrowserAgent, AGENT_NAME } from "./browser_base";
 import {
-  LanguageModelV2FilePart,
   LanguageModelV2Prompt,
+  LanguageModelV2FilePart,
+  LanguageModelV2ToolCallPart,
 } from "@ai-sdk/provider";
 import { Tool, ToolResult, IMcpClient } from "../../types";
 import { mergeTools, sleep, toImage } from "../../common/utils";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
-    const description = `You are a browser operation agent, use structured commands to interact with the browser.
+    let description = `You are a browser operation agent, use structured commands to interact with the browser.
 * This is a browser GUI interface where you need to analyze webpages by taking screenshot and page element structures, and specify action sequences to complete designated tasks.
 * For your first visit, please start by calling either the \`navigate_to\` or \`current_page\` tool. After each action you perform, I will provide you with updated information about the current state, including page screenshots and structured element data that has been specially processed for easier analysis.
+* During execution, please output user-friendly step information. Do not output HTML-related element and index information to users, as this would cause user confusion.
+
 * Screenshot description:
   - Screenshot are used to understand page layouts, with labeled bounding boxes corresponding to element indexes. Each bounding box and its label share the same color, with labels typically positioned in the top-right corner of the box.
   - Screenshot help verify element positions and relationships. Labels may sometimes overlap, so extracted elements are used to verify the correct elements.
   - In addition to screenshot, simplified information about interactive elements is returned, with element indexes corresponding to those in the screenshot.
   - This tool can ONLY screenshot the VISIBLE content. If a complete content is required, use 'extract_page_content' instead.
   - If the webpage content hasn't loaded, please use the \`wait\` tool to allow time for the content to load.
-* ELEMENT INTERACTION:
-   - Only use indexes that exist in the provided element list
-   - Each element has a unique index number (e.g., "[33]:<button>Submit</button>")
-   - Elements marked with "[]:" are non-interactive (for context only, e.g., "[]: Google")
-   - Use the latest element index, do not rely on historical outdated element indexes
-* ERROR HANDLING:
-   - If no suitable elements exist, use other functions to complete the task
-   - If stuck, try alternative approaches, don't refuse tasks
-   - Handle popups/cookies by accepting or closing them
-   - When encountering scenarios that require user assistance such as login, verification codes, QR code scanning, Payment, etc, you can request user help.
-* BROWSER OPERATION:
-   - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content
-   - Please follow user instructions and don't be lazy until the task is completed. For example, if a user asks you to find 30 people, don't just find 10 - keep searching until you find all 30
-* During execution, please output user-friendly step information. Do not output HTML-related element and index information to users, as this would cause user confusion.
-`;
+* Element interaction:
+  - Only use indexes that exist in the provided element list
+  - Browser tools only return elements in visible viewport by default
+  - Each element has a unique index number (e.g., "[33]:<button>Submit</button>")
+  - Elements marked with "[]:" are non-interactive (for context only, e.g., "[]: Google")
+  - Use the latest element index, do not rely on historical outdated element indexes
+  - Due to technical limitations, not all interactive elements may be identified; use coordinates to interact with unlisted elements
+* Error handling:
+  - If no suitable elements exist, use other functions to complete the task
+  - If stuck, try alternative approaches, don't refuse tasks
+  - Handle popups/cookies by accepting or closing them
+  - When encountering scenarios that require user assistance such as login, verification codes, QR code scanning, Payment, etc, you can request user help.
+* Browser operation:
+  - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content
+  - Please follow user instructions and don't be lazy until the task is completed. For example, if a user asks you to find 30 people, don't just find 10 - keep searching until you find all 30.`;
+    if (config.parallelToolCalls) {
+      description += `
+* Parallelism:
+   - When performing multiple independent steps, they should be executed in parallel whenever possible. For example, when filling out a form, fields that are not dependent on each other should be filled simultaneously.
+   - Avoid parallel processing for dependent operations, such as those that need to wait for page loading, DOM changes, redirects, subsequent operations that depend on the results of previous operations, or operations that may interfere with each other and affect the same page elements. In these cases, please do not use parallelization.`;
+    }
     const _tools_ = [] as Tool[];
     super({
       name: AGENT_NAME,
@@ -202,17 +212,34 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     return `window.get_highlight_element(${index});`;
   }
 
+  public canParallelToolCalls(toolCalls?: LanguageModelV2ToolCallPart[]): boolean {
+    if (toolCalls) {
+      for (let i = 0; i < toolCalls.length; i++) {
+        const toolCall = toolCalls[i];
+        if (
+          toolCall.toolName == "wait" ||
+          toolCall.toolName == "navigate_to" ||
+          toolCall.toolName == "switch_tab" ||
+          toolCall.toolName == "scroll_mouse_wheel"
+        ) {
+          return false;
+        }
+      }
+    }
+    return super.canParallelToolCalls(toolCalls);
+  }
+
   private buildInitTools(): Tool[] {
     return [
       {
         name: "navigate_to",
-        description: "Navigate to a specific url",
+        description: "Navigate to a specific URL in the browser. Use this tool when you need to visit a webpage or change the current page location.",
         parameters: {
           type: "object",
           properties: {
             url: {
               type: "string",
-              description: "The url to navigate to",
+              description: "The complete URL to navigate to",
             },
           },
           required: ["url"],
@@ -228,7 +255,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "current_page",
-        description: "Get the information of the current webpage (url, title)",
+        description: "Get the currently active webpage information, return tabId, URL and title",
         parameters: {
           type: "object",
           properties: {},
@@ -244,7 +271,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "go_back",
-        description: "Navigate back in browser history",
+        description: "Go back to the previous page in browser history",
         parameters: {
           type: "object",
           properties: {},
@@ -258,7 +285,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "input_text",
-        description: "Input text into an element",
+        description: "Inputs text into a element by first clicking to focus the element, then clearing any existing text and typing the new text. Optionally presses Enter after input completion.",
         parameters: {
           type: "object",
           properties: {
@@ -371,7 +398,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "hover_to_element",
-        description: "Mouse hover over the element",
+        description: "Hover the mouse over an element, use it when you need to hover to display more interactive information",
         parameters: {
           type: "object",
           properties: {
@@ -394,7 +421,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       {
         name: "extract_page_content",
         description:
-          "Extract the text content and image links of the current webpage, please use this tool to obtain webpage data.",
+          "Extracts all content from the current webpage, including text and image links. Please use this tool when you need to retrieve webpage content.",
         parameters: {
           type: "object",
           properties: {},
@@ -464,7 +491,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "get_all_tabs",
-        description: "Get all tabs of the current browser",
+        description: "Get all tabs of the current browser, returns the tabId, URL, and title of all tab pages",
         parameters: {
           type: "object",
           properties: {},
@@ -480,7 +507,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "switch_tab",
-        description: "Switch to the specified tab page",
+        description: "Switch to the specified tab (based on tabId)",
         parameters: {
           type: "object",
           properties: {
@@ -503,13 +530,13 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       {
         name: "wait",
         noPlan: true,
-        description: "Wait for specified duration",
+        description: "Wait/pause execution for a specified duration. Use this tool when you need to wait for data loading, page rendering, or introduce delays between operations.",
         parameters: {
           type: "object",
           properties: {
             duration: {
               type: "number",
-              description: "Duration in millisecond",
+              description: "Wait duration in milliseconds",
               default: 500,
               minimum: 200,
               maximum: 10000,

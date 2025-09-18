@@ -31,39 +31,39 @@ import config from "../config";
 import Log from "../common/log";
 import * as memory from "../memory";
 import { RetryLanguageModel } from "../llm";
+import { mergeTools } from "../common/utils";
 import { ToolWrapper } from "../tools/wrapper";
 import { AgentChain, ToolChain } from "../core/chain";
 import Context, { AgentContext } from "../core/context";
 import { createCallbackHelper } from "../common/callback-helper";
 import {
-  ForeachTaskTool,
   McpTool,
-  VariableStorageTool,
+  ForeachTaskTool,
   WatchTriggerTool,
+  VariableStorageTool,
 } from "../tools";
-import { mergeTools } from "../common/utils";
 import {
-  WorkflowAgent,
+  Tool,
   IMcpClient,
   LLMRequest,
-  Tool,
-  ToolExecuter,
   ToolResult,
   ToolSchema,
-  StreamCallback,
+  ToolExecuter,
+  WorkflowAgent,
   HumanCallback,
+  StreamCallback,
 } from "../types";
 import {
-  LanguageModelV2FilePart,
   LanguageModelV2Prompt,
+  LanguageModelV2FilePart,
   LanguageModelV2TextPart,
   LanguageModelV2ToolCallPart,
   LanguageModelV2ToolResultPart,
 } from "@ai-sdk/provider";
 import {
-  callAgentLLM,
-  convertTools,
   getTool,
+  convertTools,
+  callAgentLLM,
   convertToolResult,
   defaultMessageProviderOptions,
 } from "./llm";
@@ -216,12 +216,8 @@ export class Agent {
    * @returns 代理执行结果字符串
    */
   public async run(context: Context, agentChain: AgentChain): Promise<string> {
-    // 确定使用的MCP客户端（代理专用或系统默认）
-    let mcpClient = this.mcpClient || context.config.defaultMcpClient;
-
-    // 创建代理执行上下文
-    let agentContext = new AgentContext(context, this, agentChain);
-
+    const mcpClient = this.mcpClient || context.config.defaultMcpClient;
+    const agentContext = new AgentContext(context, this, agentChain);
     try {
       // 保存当前代理上下文引用
       this.agentContext = agentContext;
@@ -230,7 +226,11 @@ export class Agent {
       mcpClient &&
         !mcpClient.isConnected() &&
         (await mcpClient.connect(context.controller.signal));
-      return await this.runWithContext(agentContext, mcpClient, config.maxReactNum);
+      return await this.runWithContext(
+        agentContext,
+        mcpClient,
+        config.maxReactNum
+      );
     } finally {
       // 确保MCP连接被关闭，防止资源泄漏
       mcpClient && (await mcpClient.close());
@@ -486,143 +486,36 @@ export class Agent {
     agentTools: Tool[],
     results: Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>
   ): Promise<string | null> {
-    // 初始化处理变量
-    let text: string | null = null;
-    let context = agentContext.context;
-    let user_messages: LanguageModelV2Prompt = [];
-    let toolResults: LanguageModelV2ToolResultPart[] = [];
-
-    // 创建回调助手
-    const toolcallCbHelper = createCallbackHelper(
-      this.callback || context.config.callback,
-      context.taskId,
-      this.name,
-      agentContext.agentChain.agent.id
-    );
-
-    // 移除重复的工具调用
-    results = memory.removeDuplicateToolUse(results);
-
-    // 如果没有结果，返回null继续推理
+    const user_messages: LanguageModelV2Prompt = [];
+    const toolResults: LanguageModelV2ToolResultPart[] = [];
+    // results = memory.removeDuplicateToolUse(results);
     if (results.length == 0) {
       return null;
     }
-
-    // 处理每个结果项
-    for (let i = 0; i < results.length; i++) {
-      let result = results[i];
-
-      // 处理文本响应
-      if (result.type == "text") {
-        text = result.text;
-        continue;
-      }
-
-      // 处理工具调用
-      let toolResult: ToolResult;
-
-      // 创建工具调用链
-      let toolChain = new ToolChain(
-        result,
-        agentContext.agentChain.agentRequest as LLMRequest
+    if (results.every((s) => s.type == "text")) {
+      return results.map((s) => (s as LanguageModelV2TextPart).text).join("\n\n");
+    }
+    const toolCalls = results.filter((s) => s.type == "tool-call") as LanguageModelV2ToolCallPart[];
+    if (toolCalls.length > 1 && this.canParallelToolCalls(toolCalls)) {
+      const results = await Promise.all(
+        toolCalls.map((toolCall) =>
+          this.callToolCall(agentContext, agentTools, toolCall, user_messages)
+        )
       );
-      agentContext.agentChain.push(toolChain);
-
-      try {
-        // 解析工具参数
-        let args =
-          typeof result.input == "string"
-            ? JSON.parse(result.input || "{}")
-            : result.input || {};
-
-        // 更新工具链参数
-        toolChain.params = args;
-
-        // 发送工具调用开始事件
-        await toolcallCbHelper.toolCallStart(
-          result.toolName,
-          result.toolCallId,
-          args
-        );
-
-        // 查找对应的工具
-        let tool = getTool(agentTools, result.toolName);
-        if (!tool) {
-          throw new Error(result.toolName + " tool does not exist");
-        }
-
-        // 记录开始时间
-        const startTime = Date.now();
-
-        // 执行工具调用
-        toolResult = await tool.execute(args, agentContext, result);
-
-        // 计算执行时间
-        const duration = Date.now() - startTime;
-
-        // 发送工具调用完成事件
-        await toolcallCbHelper.toolCallFinished(
-          result.toolName,
-          result.toolCallId,
-          args,
-          toolResult,
-          duration
-        );
-
-        // 更新工具链结果
-        toolChain.updateToolResult(toolResult);
-
-        // 重置连续错误计数
-        agentContext.consecutiveErrorNum = 0;
-      } catch (e) {
-        // 记录工具调用错误
-        Log.error("tool call error: ", result.toolName, result.input, e);
-
-        // 构造错误结果
-        toolResult = {
-          content: [
-            {
-              type: "text",
-              text: e + "",
-            },
-          ],
-          isError: true,
-        };
-
-        // 更新工具链错误结果
-        toolChain.updateToolResult(toolResult);
-
-        // 检查连续错误次数，如果超过10次则抛出异常
-        if (++agentContext.consecutiveErrorNum >= 10) {
-          throw e;
-        }
+      for (let i = 0; i < results.length; i++) {
+        toolResults.push(results[i]);
       }
-
-      // 触发工具结果回调
-      const callback = this.callback || context.config.callback;
-      if (callback) {
-        await callback.onMessage(
-          {
-            taskId: context.taskId,
-            agentName: agentContext.agent.Name,
-            nodeId: agentContext.agentChain.agent.id,
-            type: "tool_result",
-            toolId: result.toolCallId,
-            toolName: result.toolName,
-            params: result.input || {},
-            toolResult: toolResult,
-          },
-          agentContext
+    } else {
+      for (let i = 0; i < toolCalls.length; i++) {
+        const toolCall = toolCalls[i];
+        const toolResult = await this.callToolCall(
+          agentContext,
+          agentTools,
+          toolCall,
+          user_messages
         );
+        toolResults.push(toolResult);
       }
-
-      // 转换工具结果为LLM格式
-      const llmToolResult = convertToolResult(
-        result,
-        toolResult,
-        user_messages
-      );
-      toolResults.push(llmToolResult);
     }
     // 更新对话历史：添加助手响应
     messages.push({
@@ -641,29 +534,73 @@ export class Agent {
       // 返回null表示需要继续推理
       return null;
     } else {
-      // 返回纯文本结果，结束推理循环
-      return text;
+      return results
+        .filter((s) => s.type == "text")
+        .map((s) => (s as LanguageModelV2TextPart).text)
+        .join("\n\n");
     }
   }
 
-  /**
-   * 生成系统自动工具
-   *
-   * 根据代理节点的工作流配置，自动生成所需的系统工具。
-   * 这些工具是基于工作流XML配置动态添加的，不是代理预定义的工具。
-   *
-   * 自动工具映射：
-   * - VariableStorageTool：当工作流包含变量输入/输出时
-   * - ForeachTaskTool：当工作流包含循环结构时
-   * - WatchTriggerTool：当工作流包含监听触发器时
-   *
-   * 工具去重：
-   * 确保不会添加与代理已有工具重复的系统工具。
-   *
-   * @param agentNode 工作流代理节点
-   * @returns 系统自动生成的工具列表
-   * @protected
-   */
+  protected async callToolCall(
+    agentContext: AgentContext,
+    agentTools: Tool[],
+    result: LanguageModelV2ToolCallPart,
+    user_messages: LanguageModelV2Prompt = []
+  ): Promise<LanguageModelV2ToolResultPart> {
+    const context = agentContext.context;
+    const toolChain = new ToolChain(
+      result,
+      agentContext.agentChain.agentRequest as LLMRequest
+    );
+    agentContext.agentChain.push(toolChain);
+    let toolResult: ToolResult;
+    try {
+      const args =
+        typeof result.input == "string"
+          ? JSON.parse(result.input || "{}")
+          : result.input || {};
+      toolChain.params = args;
+      let tool = getTool(agentTools, result.toolName);
+      if (!tool) {
+        throw new Error(result.toolName + " tool does not exist");
+      }
+      toolResult = await tool.execute(args, agentContext, result);
+      toolChain.updateToolResult(toolResult);
+      agentContext.consecutiveErrorNum = 0;
+    } catch (e) {
+      Log.error("tool call error: ", result.toolName, result.input, e);
+      toolResult = {
+        content: [
+          {
+            type: "text",
+            text: e + "",
+          },
+        ],
+        isError: true,
+      };
+      toolChain.updateToolResult(toolResult);
+      if (++agentContext.consecutiveErrorNum >= 10) {
+        throw e;
+      }
+    }
+    const callback = this.callback || context.config.callback;
+    if (callback) {
+      await callback.onMessage(
+        {
+          taskId: context.taskId,
+          agentName: agentContext.agent.Name,
+          nodeId: agentContext.agentChain.agent.id,
+          type: "tool_result",
+          toolId: result.toolCallId,
+          toolName: result.toolName,
+          params: result.input || {},
+          toolResult: toolResult,
+        },
+        agentContext
+      );
+    }
+    return convertToolResult(result, toolResult, user_messages);
+  }
   protected system_auto_tools(agentNode: WorkflowAgent): Tool[] {
     let tools: Tool[] = [];
     let agentNodeXml = agentNode.xml;
@@ -1083,14 +1020,9 @@ export class Agent {
     }
   }
 
-  /**
-   * 获取LLM模型列表
-   *
-   * 返回代理配置的LLM模型列表，用于多模型支持。
-   * 如果未配置特定模型，则使用系统默认配置。
-   *
-   * @returns 配置的LLM模型名称列表
-   */
+  public canParallelToolCalls(toolCalls?: LanguageModelV2ToolCallPart[]): boolean {
+    return config.parallelToolCalls;
+  }
   get Llms(): string[] | undefined {
     return this.llms;
   }

@@ -46,9 +46,7 @@ export class Planner {
     const messages: LanguageModelV2Prompt = [
       {
         role: "system",
-        content:
-          this.context.variables.get("plan_sys_prompt") ||
-          (await getPlanSystemPrompt(this.context)),
+        content: await getPlanSystemPrompt(this.context),
       },
       {
         role: "user",

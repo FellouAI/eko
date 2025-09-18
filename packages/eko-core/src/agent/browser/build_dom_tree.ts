@@ -1,5 +1,26 @@
 // @ts-nocheck
 export function run_build_dom_tree() {
+  var computedStyleCache = new WeakMap();
+
+  /**
+   * Gets the cached computed style for an element.
+   */
+  function getCachedComputedStyle(element) {
+    if (!element) return null;
+    if (computedStyleCache.has(element)) {
+      return computedStyleCache.get(element);
+    }
+    try {
+      const style = window.getComputedStyle(element);
+      if (style) {
+        computedStyleCache.set(element, style);
+      }
+      return style;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /**
    * Get clickable elements on the page
    *
@@ -9,6 +30,7 @@ export function run_build_dom_tree() {
    */
   function get_clickable_elements(doHighlightElements = true, includeAttributes) {
     window.clickable_elements = {};
+    computedStyleCache = new WeakMap();
     document.querySelectorAll("[eko-user-highlight-id]").forEach(ele => ele.removeAttribute("eko-user-highlight-id"));
     let page_tree = build_dom_tree(doHighlightElements);
     let element_tree = parse_node(page_tree);
@@ -27,6 +49,7 @@ export function run_build_dom_tree() {
     if (highlight) {
       highlight.remove();
     }
+    computedStyleCache = new WeakMap();
   }
 
   function clickable_elements_to_string(element_tree, includeAttributes) {
@@ -323,12 +346,15 @@ export function run_build_dom_tree() {
 
     // Helper function to check if element is accepted
     function isElementAccepted(element) {
-      const leafElementDenyList = new Set(['svg', 'script', 'style', 'link', 'meta']);
+      const leafElementDenyList = new Set(['svg', 'script', 'style', 'link', 'meta', 'noscript', 'template']);
       return !leafElementDenyList.has(element.tagName.toLowerCase());
     }
 
     // Helper function to check if element is interactive
     function isInteractiveElement(element) {
+      if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+        return false;
+      }
       // Base interactive elements and roles
       const interactiveElements = new Set([
         'a',
@@ -343,12 +369,17 @@ export function run_build_dom_tree() {
         'select',
         'textarea',
         'summary',
+        'option',
+        'optgroup',
+        'fieldset',
+        'legend',
       ]);
 
       const interactiveRoles = new Set([
         'button',
         'menu',
         'menuitem',
+        'menubar',
         'link',
         'checkbox',
         'radio',
@@ -399,7 +430,7 @@ export function run_build_dom_tree() {
       if (hasInteractiveRole) return true;
 
       // Get computed style
-      const style = window.getComputedStyle(element);
+      const style = getCachedComputedStyle(element);
 
       // Check if element has click-like styling
       const hasClickStyling = style.cursor === 'pointer' || element.style.cursor === 'pointer';
@@ -468,7 +499,7 @@ export function run_build_dom_tree() {
       const isFormRelated =
         element.form !== undefined ||
         element.hasAttribute('contenteditable') ||
-        style.userSelect !== 'none';
+        (style && style.userSelect !== 'none');
 
       // Check if element is draggable
       const isDraggable = element.draggable || element.getAttribute('draggable') === 'true';
@@ -485,12 +516,13 @@ export function run_build_dom_tree() {
 
     // Helper function to check if element is visible
     function isElementVisible(element) {
-      const style = window.getComputedStyle(element);
+      if (element.offsetWidth === 0 && element.offsetHeight === 0) {
+        return false;
+      }
+      const style = getCachedComputedStyle(element);
       return (
-        element.offsetWidth > 0 &&
-        element.offsetHeight > 0 &&
-        style.visibility !== 'hidden' &&
-        style.display !== 'none'
+        style?.visibility !== 'hidden' &&
+        style?.display !== 'none'
       );
     }
 

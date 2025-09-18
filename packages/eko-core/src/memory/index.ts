@@ -52,7 +52,7 @@ export function removeDuplicateToolUse(
   for (let i = 0; i < results.length; i++) {
     if (results[i].type === "tool-call") {
       let tool = results[i] as LanguageModelV2ToolCallPart;
-      let key = tool.toolName + tool.input;
+      let key = tool.toolName + JSON.stringify(tool.input);
       if (tool_uniques.indexOf(key) == -1) {
         _results.push(results[i]);
         tool_uniques.push(key);

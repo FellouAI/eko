@@ -38,6 +38,7 @@ type GlobalConfig = {
   /** 是否支持工具结果的多模态输出 - 影响工具返回格式 */
   toolResultMultimodal: boolean;
 
+  parallelToolCalls: boolean;
   /** 是否启用专家模式 - 解锁高级功能 */
   expertMode: boolean;
 
@@ -87,6 +88,7 @@ const config: GlobalConfig = {
   toolResultMultimodal: true,  // 支持多模态工具结果
 
   // 专家模式配置
+  parallelToolCalls: true,
   expertMode: false,           // 是否启用专家模式
   expertModeTodoLoopNum: 10,   // 专家模式待办循环次数
 };

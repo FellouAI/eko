@@ -234,7 +234,7 @@ export async function testImageToolsPrompt(llm: "openai" | "claude") {
           },
         ],
       },
-      // Only the calude model supports returning images from tool results, while openai only supports text.
+      // Only the claude model supports returning images from tool results, while openai only supports text.
       ...((llm == "claude"
         ? [
             {

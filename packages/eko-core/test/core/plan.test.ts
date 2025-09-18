@@ -3,15 +3,14 @@ import {
   Agent,
   Log,
   LLMs,
-  StreamCallbackMessage,
   uuidv4,
+  StreamCallbackMessage,
 } from "../../src/index";
 import dotenv from "dotenv";
 import {
-  SimpleBrowserAgent,
-  SimpleChatAgent,
-  SimpleComputerAgent,
   SimpleFileAgent,
+  SimpleBrowserAgent,
+  SimpleComputerAgent,
 } from "./agents";
 
 dotenv.config();
@@ -54,14 +53,13 @@ async function testPlaner() {
       console.log("message: ", JSON.stringify(message, null, 2));
     },
   };
-  let agents: Agent[] = [
-    new SimpleChatAgent(),
+  const agents: Agent[] = [
     new SimpleBrowserAgent(),
     new SimpleComputerAgent(),
     new SimpleFileAgent(),
   ];
-  let eko = new Eko({ llms, agents, callback });
-  let workflow = await eko.generate(
+  const eko = new Eko({ llms, agents, callback });
+  const workflow = await eko.generate(
     'Browser searches for information about Xie Yang, summarizes it, and writes it into a desktop file, then sends it to the WeChat "Information Sharing" group.',
     uuidv4()
   );

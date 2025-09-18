@@ -108,7 +108,7 @@ This is a computer GUI interface, observe the execution through screenshots, and
     return [
       {
         name: "typing",
-        description: "Type specified text",
+        description: "Simulates keyboard typing to input text into the currently focused application or text field on the computer.",
         parameters: {
           type: "object",
           properties: {
@@ -130,27 +130,27 @@ This is a computer GUI interface, observe the execution through screenshots, and
       },
       {
         name: "click",
-        description: "Click at current or specified position",
+        description: "Simulates mouse clicking at an absolute screen position (x, y) on the computer.",
         parameters: {
           type: "object",
           properties: {
             x: {
               type: "number",
-              description: "X coordinate",
+              description: "Absolute X coordinate on the screen where the mouse will click",
             },
             y: {
               type: "number",
-              description: "Y coordinate",
+              description: "Absolute Y coordinate on the screen where the mouse will click",
             },
             num_clicks: {
               type: "number",
-              description: "Number of clicks",
+              description: "Number of times to click at the position",
               enum: [1, 2, 3],
               default: 1,
             },
             button: {
               type: "string",
-              description: "Mouse button to click",
+              description: "Which mouse button to click",
               enum: ["left", "right", "middle"],
               default: "left",
             },
@@ -174,17 +174,17 @@ This is a computer GUI interface, observe the execution through screenshots, and
       },
       {
         name: "move_to",
-        description: "Move cursor to specified position",
+        description: "Moves the mouse cursor to the specified screen coordinates.",
         parameters: {
           type: "object",
           properties: {
             x: {
               type: "number",
-              description: "X coordinate",
+              description: "Absolute X coordinate on the screen",
             },
             y: {
               type: "number",
-              description: "Y coordinate",
+              description: "Absolute Y coordinate on the screen",
             },
           },
           required: ["x", "y"],
@@ -200,7 +200,7 @@ This is a computer GUI interface, observe the execution through screenshots, and
       },
       {
         name: "scroll",
-        description: "Scroll the mouse wheel at current position",
+        description: "Scroll the mouse wheel vertically at the current pointer location.",
         parameters: {
           type: "object",
           properties: {
@@ -232,14 +232,14 @@ This is a computer GUI interface, observe the execution through screenshots, and
       },
       {
         name: "press",
-        description: "Press and release a key",
+        description: "Simulate pressing and releasing a specific keyboard key",
         parameters: {
           type: "object",
           properties: {
             key: {
               type: "string",
-              description: "Key to press",
-              enum: keyboardKeys,
+              description: "The keyboard key",
+              enum: keyboardKeys.filter((key) => key.indexOf("+") == -1),
             },
           },
           required: ["key"],
@@ -255,13 +255,13 @@ This is a computer GUI interface, observe the execution through screenshots, and
       },
       {
         name: "hotkey",
-        description: "Press a key combination",
+        description: "Simulate pressing one or more keyboard keys, including combinations.",
         parameters: {
           type: "object",
           properties: {
             keys: {
               type: "string",
-              description: "Key combination to press",
+              description: "A single key or a combination of keys to press. For combinations, use '+' to join keys.",
               enum: keyboardKeys,
             },
           },
@@ -278,25 +278,25 @@ This is a computer GUI interface, observe the execution through screenshots, and
       },
       {
         name: "drag_and_drop",
-        description: "Drag and drop operation",
+        description: "Performs a mouse drag-and-drop operation from a starting point to a target point on the screen.",
         parameters: {
           type: "object",
           properties: {
             x1: {
               type: "number",
-              description: "From X coordinate",
+              description: "Absolute X coordinate of the starting point (in pixels).",
             },
             y1: {
               type: "number",
-              description: "From Y coordinate",
+              description: "Absolute Y coordinate of the starting point (in pixels).",
             },
             x2: {
               type: "number",
-              description: "Target X coordinate",
+              description: "Absolute X coordinate of the ending (target) point (in pixels).",
             },
             y2: {
               type: "number",
-              description: "Target Y coordinate",
+              description: "Absolute Y coordinate of the ending (target) point (in pixels).",
             },
           },
           required: ["x1", "y1", "x2", "y2"],
@@ -319,13 +319,13 @@ This is a computer GUI interface, observe the execution through screenshots, and
       {
         name: "wait",
         noPlan: true,
-        description: "Wait for specified duration",
+        description: "Wait/pause execution for a specified duration. Use this tool when you need to wait for data loading, or introduce delays between operations.",
         parameters: {
           type: "object",
           properties: {
             duration: {
               type: "number",
-              description: "Duration in millisecond",
+              description: "Wait duration in milliseconds",
               default: 500,
               minimum: 200,
               maximum: 10000,

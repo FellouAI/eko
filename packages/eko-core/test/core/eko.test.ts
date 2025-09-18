@@ -6,7 +6,7 @@ import {
   StreamCallbackMessage,
 } from "../../src/index";
 import dotenv from "dotenv";
-import { SimpleBrowserAgent, SimpleChatAgent, SimpleFileAgent } from "./agents";
+import { SimpleBrowserAgent, SimpleFileAgent } from "./agents";
 
 dotenv.config();
 
@@ -41,13 +41,11 @@ async function run() {
     },
   };
   const agents: Agent[] = [
-    new SimpleChatAgent(),
     new SimpleBrowserAgent(),
     new SimpleFileAgent(),
   ];
   const eko = new Eko({ llms, agents, callback });
-  // let result = await eko.run("Who are you?");
-  const result = await eko.run("How is the weather in Beijing?");
+  const result = await eko.run("Read the desktop file list");
   console.log("result: ", result.result);
 }
 
