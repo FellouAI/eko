@@ -14,8 +14,10 @@ Thank you for your interest in contributing to Eko! This document provides guide
 ### Prerequisites
 
 - Node.js (>= 18.0.0)
-- npm (latest stable version)
+- [pnpm](https://pnpm.io/installation) (latest stable version)
 - Git
+
+This project uses pnpm as its package manager. Please ensure you have it installed.
 
 ### Setting Up the Development Environment
 
@@ -30,28 +32,28 @@ Thank you for your interest in contributing to Eko! This document provides guide
 3. Install dependencies:
 
    ```bash
-   npm install
+   pnpm install
    ```
 
 4. Start the TypeScript compiler in watch mode:
 
    ```bash
-   npm run dev
+   pnpm run dev
    ```
 
 5. Run tests:
    ```bash
-   npm test
+   pnpm test
    ```
 
 ### Development Commands
 
-- `npm run dev`: Start TypeScript compiler in watch mode
-- `npm test`: Run tests
-- `npm run test:watch`: Run tests in watch mode
-- `npm run build`: Build the project
-- `npm run lint`: Run linting
-- `npm run format`: Format code using Prettier
+- `pnpm run dev`: Start TypeScript compiler in watch mode
+- `pnpm test`: Run tests
+- `pnpm run test:watch`: Run tests in watch mode
+- `pnpm run build`: Build the project
+- `pnpm run lint`: Run linting
+- `pnpm run format`: Format code using Prettier
 
 ## Branching Strategy
 
@@ -244,10 +246,10 @@ export class parser {
 
 ### Available Scripts
 
-- `npm run lint`: Check code style
-- `npm run lint:fix`: Fix auto-fixable style issues
-- `npm run format`: Format code using Prettier
-- `npm run format:check`: Check if files are properly formatted
+- `pnpm run lint`: Check code style
+- `pnpm run lint:fix`: Fix auto-fixable style issues
+- `pnpm run format`: Format code using Prettier
+- `pnpm run format:check`: Check if files are properly formatted
 
 ## Questions?
 

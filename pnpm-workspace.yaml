@@ -3,3 +3,4 @@ packages:
   - "packages/eko-extension"
   - "packages/eko-nodejs"
   - "packages/eko-web"
+  - "example/*"

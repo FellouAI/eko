@@ -6,8 +6,8 @@
   "scripts": {
     "build": "rollup -c",
     "start": "node dist/index.cjs",
-    "dev": "npm run build && npm run start",
-    "playwright": "npx playwright install"
+    "dev": "pnpm run build && pnpm run start",
+    "playwright": "pnpm playwright install"
   },
   "author": "FellouAI",
   "license": "MIT",
