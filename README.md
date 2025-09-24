@@ -173,12 +173,8 @@ Eko can be used in multiple environments:
 - **Career Co-Pilot**: https://github.com/wangwangbobo/career_skill_learnig.git
 - **Slides Agent by Eko**: https://github.com/MICAHFANG/slides-agent-by-eko
 - **Universal Sidebar Assistant**: https://github.com/San12341/eko-broser-extension.git
-- **48 Hour Browser Challenge**: https://github.com/MoonIRL/eko
 - **Orbit X Smart Terminal**: https://github.com/Skywang16/OrbitX/tree/main
-- **EkoMeet Recommender**: https://github.com/JasonRobertDestiny/EkoMeet
-- **Vision-Eko Plugin**: https://github.com/dcpwilliam/vision-eko/tree/main/serviceNowPlugin
-- **IC Cafe Platform**: https://cnb.cool/giggle_giraffe/ic-info-wxapp
-- **AI Monitoring Assistant**: https://github.com/yuhoudecheqiancao/eko-ai-monitoring
+- **48 小时极限迭代铸就卓越浏览器体验**: https://github.com/MoonIRL/eko
 
 ## License
 
