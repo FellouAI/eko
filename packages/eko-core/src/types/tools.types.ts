@@ -71,4 +71,5 @@ export interface Tool extends ToolExecuter {
   readonly parameters: JSONSchema7;
   readonly noPlan?: boolean;
   readonly planDescription?: string;
+  readonly supportParallelCalls?: boolean;
 }

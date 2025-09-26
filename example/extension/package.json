@@ -15,8 +15,8 @@
     "antd": "^5.22.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@eko-ai/eko": "file:../../packages/eko-core",
-    "@eko-ai/eko-extension": "file:../../packages/eko-extension"
+    "@eko-ai/eko": "workspace:*",
+    "@eko-ai/eko-extension": "workspace:*"
   },
   "devDependencies": {
     "@types/chrome": "0.0.158",

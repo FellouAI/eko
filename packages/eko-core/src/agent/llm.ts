@@ -6,25 +6,25 @@ import type { AgentContext } from "../core/context";
 import { uuidv4, sleep, toFile, getMimeType } from "../common/utils";
 import { createCallbackHelper } from "../common/callback-helper";
 import {
-  LLMRequest,
-  StreamCallbackMessage,
-  StreamCallback,
-  HumanCallback,
-  StreamResult,
   Tool,
+  LLMRequest,
   ToolResult,
   DialogueTool,
+  StreamResult,
+  HumanCallback,
+  StreamCallback,
+  StreamCallbackMessage,
 } from "../types";
 import {
-  LanguageModelV2FunctionTool,
   LanguageModelV2Prompt,
-  LanguageModelV2StreamPart,
   LanguageModelV2TextPart,
-  LanguageModelV2ToolCallPart,
-  LanguageModelV2ToolChoice,
-  LanguageModelV2ToolResultOutput,
-  LanguageModelV2ToolResultPart,
   SharedV2ProviderOptions,
+  LanguageModelV2ToolChoice,
+  LanguageModelV2StreamPart,
+  LanguageModelV2ToolCallPart,
+  LanguageModelV2FunctionTool,
+  LanguageModelV2ToolResultPart,
+  LanguageModelV2ToolResultOutput,
 } from "@ai-sdk/provider";
 
 export function defaultLLMProviderOptions(): SharedV2ProviderOptions {
@@ -130,7 +130,10 @@ export function convertToolResult(
       type: "error-text",
       value: "Error",
     };
-  } else if (toolResult.content.length == 1 && toolResult.content[0].type == "text") {
+  } else if (
+    toolResult.content.length == 1 &&
+    toolResult.content[0].type == "text"
+  ) {
     let text = toolResult.content[0].text;
     result = {
       type: "text",
@@ -287,7 +290,11 @@ export async function callAgentLLM(
   requestHandler?: (request: LLMRequest) => void
 ): Promise<Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>> {
   await agentContext.context.checkAborted();
-  if (messages.length >= config.compressThreshold && !noCompress) {
+  if (
+    !noCompress &&
+    (messages.length >= config.compressThreshold || (messages.length >= 10 && estimatePromptTokens(messages, tools) >= config.compressTokensThreshold))
+  ) {
+    // Compress messages
     await memory.compressAgentMessages(agentContext, rlm, messages, tools);
   }
   if (!toolChoice) {
@@ -375,8 +382,7 @@ export async function callAgentLLM(
   let textStreamDone = false;
   // toolParts：本次 Assistant Step 内收集到的“行动（工具调用）”结果（仅为调用意图，不含执行结果）
   const toolParts: LanguageModelV2ToolCallPart[] = [];
-  let reader: ReadableStreamDefaultReader<LanguageModelV2StreamPart> | null =
-    null;
+  let reader: ReadableStreamDefaultReader<LanguageModelV2StreamPart> | null = null;
   try {
     agentChain.agentRequest = request;
     context.currentStepControllers.add(stepController);
@@ -743,6 +749,9 @@ export async function callAgentLLM(
     await context.checkAborted();
     if (retryNum < config.maxRetryNum) {
       await sleep(300 * (retryNum + 1) * (retryNum + 1));
+      if ((e + "").indexOf("is too long") > -1) {
+        await memory.compressAgentMessages(agentContext, rlm, messages, tools);
+      }
       return callAgentLLM(
         agentContext,
         rlm,
@@ -766,6 +775,108 @@ export async function callAgentLLM(
         ...toolParts,
       ]
     : toolParts;
+}
+
+export function estimatePromptTokens(
+  messages: LanguageModelV2Prompt,
+  tools?: LanguageModelV2FunctionTool[]
+) {
+  let tokens = messages.reduce((total, message) => {
+    if (message.role == "system") {
+      return total + estimateTokens(message.content);
+    } else if (message.role == "user") {
+      return (
+        total +
+        estimateTokens(
+          message.content
+            .filter((part) => part.type == "text")
+            .map((part) => part.text)
+            .join("\n")
+        )
+      );
+    } else if (message.role == "assistant") {
+      return (
+        total +
+        estimateTokens(
+          message.content
+            .map((part) => {
+              if (part.type == "text") {
+                return part.text;
+              } else if (part.type == "reasoning") {
+                return part.text;
+              } else if (part.type == "tool-call") {
+                return part.toolName + JSON.stringify(part.input || {});
+              } else if (part.type == "tool-result") {
+                return part.toolName + JSON.stringify(part.output || {});
+              }
+              return "";
+            })
+            .join("")
+        )
+      );
+    } else if (message.role == "tool") {
+      return (
+        total +
+        estimateTokens(
+          message.content
+            .map((part) => part.toolName + JSON.stringify(part.output || {}))
+            .join("")
+        )
+      );
+    }
+    return total;
+  }, 0);
+  if (tools) {
+    tokens += tools.reduce((total, tool) => {
+      return total + estimateTokens(JSON.stringify(tool));
+    }, 0);
+  }
+  return tokens;
+}
+
+export function estimateTokens(text: string) {
+  if (!text) {
+    return 0;
+  }
+  let tokenCount = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const code = char.charCodeAt(0);
+    if (
+      (code >= 0x4e00 && code <= 0x9fff) ||
+      (code >= 0x3400 && code <= 0x4dbf) ||
+      (code >= 0x3040 && code <= 0x309f) ||
+      (code >= 0x30a0 && code <= 0x30ff) ||
+      (code >= 0xac00 && code <= 0xd7af)
+    ) {
+      tokenCount += 2;
+    } else if (/\s/.test(char)) {
+      continue;
+    } else if (/[a-zA-Z]/.test(char)) {
+      let word = "";
+      while (i < text.length && /[a-zA-Z]/.test(text[i])) {
+        word += text[i];
+        i++;
+      }
+      i--;
+      if (word.length <= 4) {
+        tokenCount += 1;
+      } else {
+        tokenCount += Math.ceil(word.length / 4);
+      }
+    } else if (/\d/.test(char)) {
+      let number = "";
+      while (i < text.length && /\d/.test(text[i])) {
+        number += text[i];
+        i++;
+      }
+      i--;
+      tokenCount += Math.max(1, Math.ceil(number.length / 3));
+    } else {
+      tokenCount += 1;
+    }
+  }
+  return Math.max(1, tokenCount);
 }
 
 function appendUserConversation(

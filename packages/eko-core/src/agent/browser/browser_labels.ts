@@ -41,7 +41,9 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     if (config.parallelToolCalls) {
       description += `
 * Parallelism:
-   - When performing multiple independent steps, they should be executed in parallel whenever possible. For example, when filling out a form, fields that are not dependent on each other should be filled simultaneously.
+   - Do not call the navigate_to tool simultaneously
+   - Operations that support parallelism generally only include clicking and input operations
+   - When filling out a form, fields that are not dependent on each other should be filled simultaneously
    - Avoid parallel processing for dependent operations, such as those that need to wait for page loading, DOM changes, redirects, subsequent operations that depend on the results of previous operations, or operations that may interfere with each other and affect the same page elements. In these cases, please do not use parallelization.`;
     }
     const _tools_ = [] as Tool[];

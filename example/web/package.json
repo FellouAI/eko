@@ -4,7 +4,7 @@
   "scripts": {
     "build": "react-scripts build",
     "start": "react-scripts start",
-    "dev": "npm run build && npm run start"
+    "dev": "pnpm run build && pnpm run start"
   },
   "author": "FellouAI",
   "license": "MIT",

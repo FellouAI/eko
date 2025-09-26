@@ -488,7 +488,12 @@ export class Agent {
   ): Promise<string | null> {
     const user_messages: LanguageModelV2Prompt = [];
     const toolResults: LanguageModelV2ToolResultPart[] = [];
-    if (results.length === 0) {
+    // results = memory.removeDuplicateToolUse(results);
+    messages.push({
+      role: "assistant",
+      content: results,
+    });
+    if (results.length == 0) {
       return null;
     }
     const textParts = results.filter(
@@ -497,10 +502,14 @@ export class Agent {
     if (textParts.length === results.length) {
       return textParts.map((s) => s.text).join("\n\n");
     }
-    const toolCalls = results.filter(
-      (s): s is LanguageModelV2ToolCallPart => s.type === "tool-call"
-    );
-    if (toolCalls.length > 1 && this.canParallelToolCalls(toolCalls)) {
+    const toolCalls = results.filter((s) => s.type == "tool-call");
+    if (
+      toolCalls.length > 1 &&
+      this.canParallelToolCalls(toolCalls) &&
+      toolCalls.every(
+        (s) => agentTools.find((t) => t.name == s.toolName)?.supportParallelCalls
+      )
+    ) {
       const resultsArr = await Promise.all(
         toolCalls.map((toolCall) =>
           this.callToolCall(agentContext, agentTools, toolCall, user_messages)
@@ -521,10 +530,6 @@ export class Agent {
         toolResults.push(toolResult);
       }
     }
-    messages.push({
-      role: "assistant",
-      content: results,
-    });
     if (toolResults.length > 0) {
       messages.push({
         role: "tool",
@@ -1085,7 +1090,9 @@ export class Agent {
     }
   }
 
-  public canParallelToolCalls(toolCalls?: LanguageModelV2ToolCallPart[]): boolean {
+  public canParallelToolCalls(
+    toolCalls?: LanguageModelV2ToolCallPart[]
+  ): boolean {
     return config.parallelToolCalls;
   }
 

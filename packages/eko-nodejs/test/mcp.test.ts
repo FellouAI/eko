@@ -2,7 +2,7 @@ import { Log } from "@eko-ai/eko";
 import { SimpleStdioMcpClient } from "../src";
 
 async function testMcp() {
-  const mcpClient = new SimpleStdioMcpClient("npx", [
+  const mcpClient = new SimpleStdioMcpClient("pnpm", [
     "-y",
     "mcp-server-code-runner@latest",
   ]);

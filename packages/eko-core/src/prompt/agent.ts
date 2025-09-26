@@ -1,5 +1,5 @@
-import { Agent } from "../agent";
 import config from "../config";
+import { Agent } from "../agent";
 import Context from "../core/context";
 import { sub } from "../common/utils";
 import { WorkflowAgent, Tool } from "../types";
@@ -37,12 +37,13 @@ During the task execution process, you can use the \`${human_interact}\` tool to
 - When performing dangerous operations such as deleting files, confirmation from humans is required.
 - When encountering obstacles while accessing websites, such as requiring user login, captcha verification, QR code scanning, or human verification, you need to request manual assistance.
 - Please do not use the \`${human_interact}\` tool frequently.
+- The \`${human_interact}\` tool does not support parallel calls.
 `;
 
 const VARIABLE_PROMPT = `
 * VARIABLE STORAGE
 When a step node has input/output variable attributes, use the \`${variable_storage}\` tool to read from and write to these variables, these variables enable context sharing and coordination between multiple agents.
-\`${variable_storage}\` tool does not support parallel processing.
+The \`${variable_storage}\` tool does not support parallel calls.
 `;
 
 const FOR_EACH_NODE = `
@@ -120,7 +121,7 @@ export function getAgentSystemPrompt(
       if (agentChain.agentResult) {
         prompt += `\n## ${
           agentChain.agent.task || agentChain.agent.name
-        }\n${sub(agentChain.agentResult, 800, true)}`;
+        }\n<taskResult>\n${sub(agentChain.agentResult, 600, true)}\n</taskResult>`;
       }
     }
   }
@@ -133,7 +134,7 @@ export function getAgentSystemPrompt(
     .trim();
   sysPrompt += "\n"
   if (agent.canParallelToolCalls()) {
-    sysPrompt += "\nFor maximum efficiency, whenever you need to perform multiple independent operations, invoke all relevant tools simultaneously rather than sequentially. Parallel execution should only be used when operations are truly independent and won't cause conflicts or race conditions."
+    sysPrompt += "\nFor maximum efficiency, when executing multiple independent operations that do not depend on each other or conflict with one another, these tools can be called in parallel simultaneously."
   }
   sysPrompt += "\nThe output language should follow the language corresponding to the user's task."
   return sysPrompt;

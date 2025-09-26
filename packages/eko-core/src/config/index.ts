@@ -5,46 +5,23 @@
  * 配置分为多个类别：基础信息、性能限制、功能开关、专家模式等。
  */
 type GlobalConfig = {
-  /** 产品名称 */
-  name: string;
-
-  /** 运行平台 */
+  name: string; // product name
   platform: "windows" | "mac" | "linux";
-
-  /** 最大反应次数 - 限制代理的推理步骤 */
   maxReactNum: number;
-
-  /** 最大token数 - LLM响应的最大长度限制 */
   maxTokens: number;
-
-  /** 最大重试次数 - 网络请求失败时的重试次数 */
   maxRetryNum: number;
-
-  /** 是否启用代理并行执行 - 影响任务执行的并发性 */
   agentParallel: boolean;
-
-  /** 对话上下文压缩阈值 - 消息数量超过此值时触发压缩 */
-  compressThreshold: number;
-
-  /** 大文本长度阈值 - 用于判断是否需要特殊处理 */
+  compressThreshold: number; // Dialogue context compression threshold (message count)
+  compressTokensThreshold: number; // Dialogue context compression threshold (token count)
   largeTextLength: number;
-
-  /** 文件文本最大长度 - 文件内容读取的限制 */
   fileTextMaxLength: number;
-
-  /** 对话中图片文件最大数量 - 限制多媒体内容的数量 */
   maxDialogueImgFileNum: number;
-
-  /** 是否支持工具结果的多模态输出 - 影响工具返回格式 */
   toolResultMultimodal: boolean;
-
   parallelToolCalls: boolean;
-  /** 是否启用专家模式 - 解锁高级功能 */
   expertMode: boolean;
-
-  /** 专家模式待办事项循环次数 - 高级推理的迭代次数 */
   expertModeTodoLoopNum: number;
-};
+}
+
 
 /**
  * Eko 系统全局配置实例
@@ -69,25 +46,16 @@ type GlobalConfig = {
 const config: GlobalConfig = {
   name: "Eko",
   platform: "mac",
-
-  // 核心性能限制
-  maxReactNum: 500,           // 代理最大推理步骤
-  maxTokens: 16000,           // LLM响应最大token数
-  maxRetryNum: 3,             // 网络请求最大重试次数
-
-  // 并发和压缩配置
-  agentParallel: false,        // 是否启用代理并行执行
-  compressThreshold: 80,       // 对话上下文压缩阈值
-
-  // 文件和多媒体处理
-  largeTextLength: 5000,       // 大文本处理阈值
-  fileTextMaxLength: 20000,    // 文件内容最大长度
-  maxDialogueImgFileNum: 1,    // 对话中最大图片数量
-
-  // 功能开关
-  toolResultMultimodal: true,  // 支持多模态工具结果
-
-  // 专家模式配置
+  maxReactNum: 500,
+  maxTokens: 16000,
+  maxRetryNum: 3,
+  agentParallel: false,
+  compressThreshold: 80,
+  compressTokensThreshold: 100000,
+  largeTextLength: 5000,
+  fileTextMaxLength: 20000,
+  maxDialogueImgFileNum: 1,
+  toolResultMultimodal: true,
   parallelToolCalls: true,
   expertMode: false,           // 是否启用专家模式
   expertModeTodoLoopNum: 10,   // 专家模式待办循环次数

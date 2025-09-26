@@ -1,6 +1,6 @@
 {
   "name": "@eko-ai/eko",
-  "version": "3.0.6",
+  "version": "3.0.9",
   "description": "Empowering language to transform human words into action.",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
@@ -26,8 +26,8 @@
   },
   "scripts": {
     "build": "rollup -c",
-    "test": "jest",
-    "docs": "typedoc"
+    "docs": "typedoc",
+    "test": "npx jest test/core/eko.test.ts"
   },
   "author": "FellouAI",
   "license": "MIT",
