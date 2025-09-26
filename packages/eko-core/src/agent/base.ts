@@ -502,12 +502,14 @@ export class Agent {
     if (textParts.length === results.length) {
       return textParts.map((s) => s.text).join("\n\n");
     }
-    const toolCalls = results.filter((s) => s.type == "tool-call");
+    const toolCalls = results.filter(
+      (s): s is LanguageModelV2ToolCallPart => s.type === "tool-call"
+    );
     if (
       toolCalls.length > 1 &&
       this.canParallelToolCalls(toolCalls) &&
       toolCalls.every(
-        (s) => agentTools.find((t) => t.name == s.toolName)?.supportParallelCalls
+        (s) => agentTools.find((t) => t.name == s.toolName)?.supportParallelCalls === true
       )
     ) {
       const resultsArr = await Promise.all(

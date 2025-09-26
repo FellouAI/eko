@@ -16,8 +16,8 @@
     "eko"
   ],
   "dependencies": {
-    "@eko-ai/eko": "file:../../packages/eko-core",
-    "@eko-ai/eko-nodejs": "file:../../packages/eko-nodejs",
+    "@eko-ai/eko": "workspace:*",
+    "@eko-ai/eko-nodejs": "workspace:*",
     "playwright": "^1.52.0"
   },
   "devDependencies": {

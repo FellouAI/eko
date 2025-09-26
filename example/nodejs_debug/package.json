@@ -19,9 +19,9 @@
     "eko"
   ],
   "dependencies": {
-    "@eko-ai/eko": "file:../../packages/eko-core",
-    "@eko-ai/eko-debugger": "file:../../packages/eko-debugger",
-    "@eko-ai/eko-nodejs": "file:../../packages/eko-nodejs",
+    "@eko-ai/eko": "workspace:*",
+    "@eko-ai/eko-debugger": "workspace:*",
+    "@eko-ai/eko-nodejs": "workspace:*",
     "@langfuse/otel": "^4.2.0",
     "@opentelemetry/sdk-node": "^0.205.0",
     "node": "^24.8.0",

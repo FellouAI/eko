@@ -789,7 +789,7 @@ export function estimatePromptTokens(
         total +
         estimateTokens(
           message.content
-            .filter((part) => part.type == "text")
+            .filter((part): part is LanguageModelV2TextPart => part.type === "text")
             .map((part) => part.text)
             .join("\n")
         )

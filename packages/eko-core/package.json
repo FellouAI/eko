@@ -50,7 +50,6 @@
     "@ai-sdk/openai": "^2.0.22",
     "@ai-sdk/openai-compatible": "^1.0.13",
     "@ai-sdk/provider": "^2.0.0",
-    "@eko-ai/eko": "link:",
     "@openrouter/ai-sdk-provider": "^1.1.2",
     "secure-json-parse": "^4.0.0",
     "xmldom": "^0.6.0",
