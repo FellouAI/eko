@@ -1,8 +1,11 @@
 import dotenv from "dotenv";
 import SimpleChatAgent from "./chat";
 import { TraceSystem } from "@eko-ai/eko-debugger";
+// import { replayNode } from "./replay";
 import { FileAgent } from "@eko-ai/eko-nodejs";
 import { Eko, Agent, Log, LLMs } from "@eko-ai/eko";
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { LangfuseSpanProcessor } from "@langfuse/otel";
 
 dotenv.config();
 
@@ -36,6 +39,29 @@ const llms: LLMs = {
   // },
 };
 
+console.log(
+  `LANGFUSE_PUBLIC_KEY: ${process.env.LANGFUSE_PUBLIC_KEY}, 
+  LANGFUSE_SECRET_KEY: ${process.env.LANGFUSE_SECRET_KEY}, 
+  LANGFUSE_BASE_URL: ${process.env.LANGFUSE_BASE_URL}`
+);
+
+const sdk = new NodeSDK({
+  spanProcessors: [
+    new LangfuseSpanProcessor({
+      publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+      secretKey: process.env.LANGFUSE_SECRET_KEY,
+      baseUrl: process.env.LANGFUSE_BASE_URL,
+      environment: "develop_test",
+      mask: ({ data }) => {
+        // Mask sensitive data
+        return data.replace(/api_key=\w+/g, "api_key=***");
+      },
+    }),
+  ],
+});
+
+sdk.start();
+
 // 由 TraceSystem/TraceCollector 进行结构化打印，无需自定义 callback，也不再进行离线分析
 
 async function run() {
@@ -51,13 +77,17 @@ async function run() {
     // new BrowserAgent(), // 可以根据需要启用
   ];
 
-  // 直接使用默认回调，由 TraceCollector 拦截并打印
-  const eko = new Eko({ llms, agents });
+  // 启用 Langfuse 集成（组合到现有回调链，不影响调试器）
+  const eko = new Eko({ llms, agents, enable_langfuse: true });
+
+  // 暴露给重放（最小实现：通过 global 注入运行时依赖）
+  // (global as any).__eko_llms = llms;
+  // (global as any).__eko_agents = agents;
+  // (global as any).__eko_callback = (eko as any).config?.callback;
 
   // 启用调试器系统
   const tracer = new TraceSystem({
     enabled: true,
-    // realtime: { port: 9487 } // 可选：启用WebSocket实时监控
   });
 
   await tracer.start();
@@ -67,32 +97,28 @@ async function run() {
 
   // 执行一个稍微复杂的任务来展示完整流程
   const task =
-    "请先通过Chat Agent向我打招呼，然后并行帮我创建三个包含问候语和当前时间的简单文本文件，文件名为 greeting1，greeting2，greeting3，并行执行，最后告诉我文件创建完成。";
+    "请先通过Chat Agent创建一个叫做greeting1的variable，内容为Hello, World!，然后通过File Agent创建一个叫做greeting1.txt的文件，内容为greeting1的variable";
 
   const startTime = Date.now();
-  const result = await eko.run(task);
+  // 通过 contextParams 注入 toolCallId 作为 sessionId（若不传则回退为 taskId）
+  const result = await eko.run(task, undefined, {
+    toolCallId: `sess_${Date.now()}`,
+  });
   const endTime = Date.now();
 
   console.log(`\n🏁 任务执行完成，总耗时: ${endTime - startTime}ms`);
   console.log(`📄 最终结果: ${result.result}`);
 
   // 等待一小段时间确保所有事件都被处理
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 5000));
 
-  // 演示简单查询功能（不依赖分析器）
-  console.log("\n🔍 演示查询功能:");
-  const events = await tracer.getEvents(result.taskId);
-  const agentEvents = events.filter(
-    (e) => e.type === "agent_start" || e.type === "agent_finished"
-  );
-  const llmRequests = events.filter((e) => e.type === "llm_request_start");
-  const llmResponses = events.filter((e) => e.type === "llm_response_finished");
-  const totalTokens = llmResponses.reduce(
-    (sum, e) => sum + ((e.data as any)?.usage?.totalTokens || 0),
-    0
-  );
-  console.log(`   代理相关事件: ${agentEvents.length}个`);
-  console.log(`   LLM统计: ${llmRequests.length}次请求, ${totalTokens} tokens`);
+
+  // 演示单节点重放（挑选第一个节点）
+  // const firstNodeId = await getFirstNodeId(result.taskId);
+  // if (firstNodeId) {
+  //   console.log(`\n🕰️ 尝试重放节点: ${firstNodeId}`);
+  //   await replayNode(result.taskId, firstNodeId);
+  // }
 
   // 关闭调试器
   await tracer.stop();

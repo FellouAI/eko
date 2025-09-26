@@ -1,35 +1,30 @@
-import { NoopBroadcaster, WsBroadcaster } from '../realtime/broadcaster.js';
-import { InMemoryStorage } from '../storage/index.js';
-import { EnhancedInMemoryStorage, EnhancedMonitorStorage } from '../storage/enhanced-storage.js';
-import { StreamCallback, TraceSystemOptions, EventBroadcaster, MonitorStorage } from '../types/index.js';
-import { TraceCollector } from './collector.js';
+import { StreamCallback, TraceSystemOptions } from '../types/index.js';
+import { TraceRecorder } from './recorder.js';
+import { FileMessageStore, InMemoryMessageStore, MessageStore } from '../storage/message-store.js';
 
 export class TraceSystem {
-  private readonly storage: EnhancedMonitorStorage;
-  private readonly broadcaster: EventBroadcaster;
-  private readonly collector: TraceCollector;
+  private readonly store: MessageStore;
+  private readonly recorder: TraceRecorder;
   private started = false;
 
   constructor(private readonly options: TraceSystemOptions = {}) {
-    this.storage = new EnhancedInMemoryStorage();
-    this.broadcaster = typeof options.realtime === 'object'
-      ? new WsBroadcaster({ port: options.realtime.port })
-      : new NoopBroadcaster();
-    this.collector = new TraceCollector(this.storage, this.broadcaster, {
+
+    // 简化：默认文件落盘，若显式关闭则用内存
+    this.store = new FileMessageStore();
+    this.recorder = new TraceRecorder(this.store, {
       prettyPrint: this.options.prettyPrint !== false,
+      snapshotPolicy: 'on_agent_start',
     });
   }
 
   async start(): Promise<void> {
     if (this.started) return;
     if (this.options.enabled === false) return;
-    await this.broadcaster.start();
     this.started = true;
   }
 
   async stop(): Promise<void> {
     if (!this.started) return;
-    await this.broadcaster.stop();
     this.started = false;
   }
 
@@ -38,30 +33,23 @@ export class TraceSystem {
   enable<T extends object>(ekoInstance: T): T {
     if (this.options.enabled === false) return ekoInstance;
     const original = (ekoInstance as any).config?.callback;
-    const wrapped: StreamCallback = this.collector.interceptCallback(original);
+    const wrapped: StreamCallback = this.recorder.interceptCallback(original);
     if (!(ekoInstance as any).config) (ekoInstance as any).config = {};
     // merge existing callback methods (including possible HumanCallback methods)
     (ekoInstance as any).config.callback = {
       ...(original as any),
       ...wrapped
     } as StreamCallback;
+    // 暴露给重放（最小实现：通过 global 注入运行时依赖）
+    (global as any).__eko_llms = (ekoInstance as any).config?.llms;
+    (global as any).__eko_agents = (ekoInstance as any).config?.agents;
+    (global as any).__eko_callback = (ekoInstance as any).config?.callback;
     return ekoInstance;
   }
 
-  async getSession(sessionId: string) {
-    return await this.storage.getSession(sessionId);
-  }
-
-  async getEvents(sessionId: string, options?: any) {
-    return await this.storage.getEvents(sessionId, options);
-  }
-
-  async searchSessions(query: any) {
-    return await this.storage.searchSessions(query);
-  }
-
-  async getAggregateStats(sessionIds: string[]) {
-    return await this.storage.getAggregateStats(sessionIds);
+  // 兼容导出：提供简单查询以支持示例脚本输出
+  async getEvents(sessionId: string) {
+    return await this.store.readTimeline(sessionId);
   }
 }
 

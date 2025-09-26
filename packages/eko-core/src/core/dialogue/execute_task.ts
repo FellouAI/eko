@@ -66,10 +66,10 @@ export default class ExecuteTaskTool implements DialogueTool {
   private getTaskResult(context: Context, ekoResult: EkoResult): ToolResult {
     let result =
       "# Task execution result\n" + JSON.stringify(ekoResult, null, 2);
-    if (context.chain.agents.length > 1) {
+    if (context.chain.agent_chains.length > 1) {
       result += "\n\n## Subtask execution results";
-      for (let i = 0; i < context.chain.agents.length; i++) {
-        let agentChain = context.chain.agents[i];
+      for (let i = 0; i < context.chain.agent_chains.length; i++) {
+        let agentChain = context.chain.agent_chains[i];
         if (agentChain.agentResult) {
           const task = agentChain.agent.task || agentChain.agent.name;
           result += `\n### ${task}\n${sub(agentChain.agentResult, 800, true)}`;

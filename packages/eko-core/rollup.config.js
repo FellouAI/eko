@@ -2,6 +2,7 @@ import typescript from '@rollup/plugin-typescript';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import copy from 'rollup-plugin-copy';
+import json from '@rollup/plugin-json';
 
 export default [
   {
@@ -13,8 +14,9 @@ export default [
         sourcemap: true
       }
     ],
-    external: ['dotenv'],
+    external: ['dotenv', '@langfuse/otel', '@opentelemetry/sdk-node'],
     plugins: [
+      json(),
       commonjs(),
       resolve({
         preferBuiltins: true,
@@ -36,8 +38,9 @@ export default [
         sourcemap: true
       }
     ],
-    external: ['dotenv', 'buffer'],
+    external: ['dotenv', 'buffer', '@langfuse/otel', '@opentelemetry/sdk-node'],
     plugins: [
+      json(),
       commonjs(),
       resolve({
         browser: true,

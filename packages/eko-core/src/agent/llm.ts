@@ -2,7 +2,7 @@ import config from "../config";
 import Log from "../common/log";
 import * as memory from "../memory";
 import { RetryLanguageModel } from "../llm";
-import { AgentContext } from "../core/context";
+import type { AgentContext } from "../core/context";
 import { uuidv4, sleep, toFile, getMimeType } from "../common/utils";
 import { createCallbackHelper } from "../common/callback-helper";
 import {

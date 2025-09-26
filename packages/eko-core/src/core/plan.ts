@@ -132,6 +132,9 @@ export class Planner {
     let streamText = "";
     let thinkingText = "";
     const streamId = `plan_${this.taskId}_${Date.now()}`;
+    let usagePromptTokens = 0;
+    let usageCompletionTokens = 0;
+    let usageTotalTokens = 0;
 
     // CALLBACK: 发送LLM响应开始事件
     await llmCbHelper.llmResponseStart(streamId);
@@ -157,6 +160,14 @@ export class Planner {
           streamText += chunk.delta || "";
           // CALLBACK: 发送文本更新
           await llmCbHelper.llmResponseProcess(streamId, "text_delta", chunk.delta || "", false);
+        }
+        if (chunk.type == "finish") {
+          const inputTokens = (chunk as any).usage?.inputTokens || 0;
+          const outputTokens = (chunk as any).usage?.outputTokens || 0;
+          const totalTokens = (chunk as any).usage?.totalTokens || inputTokens + outputTokens;
+          usagePromptTokens = inputTokens;
+          usageCompletionTokens = outputTokens;
+          usageTotalTokens = totalTokens;
         }
         
         // 尝试解析部分工作流并发送过程事件
@@ -210,11 +221,29 @@ export class Planner {
       workflow.taskPrompt = taskPrompt.trim();
     }
 
-    // 发送LLM响应完成事件
-    await llmCbHelper.llmResponseFinished(streamId, [{ type: "text", text: streamText }]);
+    // 发送LLM响应完成事件（包含 usage）
+    await llmCbHelper.llmResponseFinished(
+      streamId,
+      [{ type: "text", text: streamText }],
+      {
+        promptTokens: usagePromptTokens,
+        completionTokens: usageCompletionTokens,
+        totalTokens: usageTotalTokens,
+      }
+    );
 
-    // 发送规划完成事件
-    await planCbHelper.planFinished(workflow, request, streamText, this.context as any);
+    // 发送规划完成事件，附带 usage
+    await planCbHelper.planFinished(
+      workflow,
+      request,
+      streamText,
+      {
+        promptTokens: usagePromptTokens,
+        completionTokens: usageCompletionTokens,
+        totalTokens: usageTotalTokens,
+      },
+      this.context as any
+    );
 
     if (this.callback) {
       // OLD VERSION CALLBACK

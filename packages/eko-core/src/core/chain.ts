@@ -135,6 +135,18 @@ export class ToolChain {
     // 触发更新事件，通知监听器结果已更新
     this.onUpdate && this.onUpdate();
   }
+
+  /**
+   * 自定义序列化，移除函数与循环引用风险
+   */
+  toJSON(): Record<string, unknown> {
+    return {
+      toolName: this.toolName,
+      toolCallId: this.toolCallId,
+      params: this.params,
+      toolResult: this.toolResult,
+    };
+  }
 }
 
 /**
@@ -167,7 +179,7 @@ export class AgentChain {
   agent: WorkflowAgent;
 
   /** 该代理调用的所有工具链列表 */
-  tools: ToolChain[] = [];
+  tool_chains: ToolChain[] = [];
 
   /** 代理执行时发送给LLM的请求对象 */
   agentRequest?: LLMRequest;
@@ -213,7 +225,7 @@ export class AgentChain {
     };
 
     // 将工具链添加到列表中
-    this.tools.push(tool);
+    this.tool_chains.push(tool);
 
     // 触发代理链的更新事件，通知上级组件新增了工具
     this.onUpdate &&
@@ -221,6 +233,27 @@ export class AgentChain {
         type: "update",
         target: this,
       });
+  }
+
+  /**
+   * 自定义序列化，仅保留可追溯信息，避免函数与大对象递归
+   */
+  toJSON(): Record<string, unknown> {
+    return {
+      agent: {
+        id: this.agent.id,
+        name: this.agent.name,
+      },
+      agentRequest: this.agentRequest
+        ? {
+            messagesCount: (this.agentRequest as any).messages?.length ?? 0,
+            toolCount: (this.agentRequest as any).tools?.length ?? 0,
+            toolChoice: (this.agentRequest as any).toolChoice,
+          }
+        : undefined,
+      agentResult: this.agentResult,
+      tools: this.tool_chains,
+    };
   }
 }
 
@@ -260,7 +293,7 @@ export default class Chain {
   planResult?: string;
 
   /** 任务中所有代理的执行链列表 */
-  agents: AgentChain[] = [];
+  agent_chains: AgentChain[] = [];
 
   /** 事件监听器列表，支持多个组件同时监听状态变化 */
   private listeners: Callback[] = [];
@@ -296,7 +329,7 @@ export default class Chain {
     };
 
     // 将代理链添加到列表中
-    this.agents.push(agent);
+    this.agent_chains.push(agent);
 
     // 发布代理添加事件
     this.pub({
@@ -340,5 +373,23 @@ export default class Chain {
    */
   public removeListener(callback: Callback): void {
     this.listeners = this.listeners.filter((listener) => listener !== callback);
+  }
+
+  /**
+   * 自定义序列化，仅保留必要信息
+   */
+  toJSON(): Record<string, unknown> {
+    return {
+      taskPrompt: this.taskPrompt,
+      planRequest: this.planRequest
+        ? {
+            messagesCount: (this.planRequest as any).messages?.length ?? 0,
+            toolCount: (this.planRequest as any).tools?.length ?? 0,
+            toolChoice: (this.planRequest as any).toolChoice,
+          }
+        : undefined,
+      planResult: this.planResult,
+      agents: this.agent_chains,
+    };
   }
 }

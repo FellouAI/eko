@@ -34,6 +34,8 @@ import {
   NormalAgentNode,
   WorkflowAgent,
 } from "../types/core.types";
+import { composeCallbacks } from "../common/compose-callbacks";
+import { createLangfuseCallback } from "../common/langfuse-callback";
 
 /**
  * Eko 主引擎类
@@ -61,6 +63,27 @@ export class Eko {
    */
   constructor(config: EkoConfig) {
     this.config = config;
+
+    if (this.config.enable_langfuse) {
+
+      const required = ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL"];
+      // @ts-ignore
+      const missing = required.filter((k) => !process.env[k]);
+      const enabled = missing.length === 0;
+      if (!enabled) {
+        Log.warn(
+          `[Langfuse] Missing environment variables: ${missing.join(", ")}. Langfuse tracing will be disabled.`
+        );
+      }
+      this.config.callback = composeCallbacks(
+        this.config.callback,
+        createLangfuseCallback({
+          enabled,
+          recordStreaming: this.config.langfuse_options?.recordStreaming === true,
+        })
+      );
+    }
+
     this.taskMap = new Map();
   }
 
@@ -431,7 +454,7 @@ export class Eko {
       // 检查是否被中断
       await context.checkAborted();
 
-      if (agentTree.type === "normal") {
+      if (agentTree.type === "normal" && agentTree.agent.status === "init") {
         // 单个代理执行分支
 
         // 根据代理名称查找对应的代理实例
@@ -459,7 +482,7 @@ export class Eko {
 
         // 将执行结果添加到结果列表
         results.push(agentTree.result);
-      } else {
+      } else if (agentTree.type === "parallel" && agentTree.agents.every((agent) => agent.agent.status === "init")) {
         // 并行代理执行分支
 
         const parallelAgents = agentTree.agents;
@@ -651,7 +674,7 @@ export class Eko {
       // 计算执行统计信息
       const duration = Date.now() - startTime;
       // 从agentChain中获取工具调用次数
-      toolCallCount = agentChain.tools.length;
+      toolCallCount = agentChain.tool_chains.length;
 
       // 发送新的代理完成事件
       await runAgentNodeCbHelper.agentNodeFinished(
@@ -683,7 +706,7 @@ export class Eko {
 
       // 计算执行统计信息
       const duration = Date.now() - startTime;
-      toolCallCount = agentChain.tools.length;
+      toolCallCount = agentChain.tool_chains.length;
 
       const runAgentErrorCbHelper = runAgentNodeCbHelper.createChildHelper(agentNode.agent.name);
 

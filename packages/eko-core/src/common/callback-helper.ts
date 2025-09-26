@@ -13,9 +13,9 @@ import {
 } from "../types/core.types";
 import { LLMRequest } from "../types/llm.types";
 import { ToolResult } from "../types/tools.types";
-import { Agent } from "../agent";
-import { AgentContext } from "../core/context";
-import Context from "../core/context";
+import type { Agent } from "../agent/base";
+import type { AgentContext } from "../core/context";
+import type Context from "../core/context";
 
 /**
  * 回调辅助类
@@ -126,6 +126,11 @@ export class CallbackHelper {
     workflow: Workflow,
     planRequest: LLMRequest,
     planResult: string,
+    usage?: {
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+    },
     context?: Context
   ): Promise<void> {
     await this.sendMessage({
@@ -133,6 +138,7 @@ export class CallbackHelper {
       workflow,
       planRequest,
       planResult,
+      usage,
       context,
     });
   }

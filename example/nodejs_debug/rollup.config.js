@@ -9,9 +9,11 @@ export default {
     {
       file: 'dist/index.cjs',
       format: 'cjs',
-      sourcemap: true
+      sourcemap: true,
+      inlineDynamicImports: true
     }
   ],
+  external: ['@opentelemetry/sdk-node', '@langfuse/otel'],
   plugins: [
     json(),
     commonjs(),

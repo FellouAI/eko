@@ -5,6 +5,7 @@ import { IA2aClient } from "../agent/a2a";
 import { IMcpClient } from "./mcp.types";
 import { ToolResult } from "./tools.types";
 import { AgentContext } from "../core/context";
+import { LangfuseCallbackOptions } from "../common/langfuse-callback";
 
 export type EkoConfig = {
   llms: LLMs;
@@ -13,6 +14,13 @@ export type EkoConfig = {
   callback?: StreamCallback & HumanCallback;
   defaultMcpClient?: IMcpClient;
   a2aClient?: IA2aClient;
+  /**
+   * 启用 Langfuse 观测回调组合
+   * 为 true 时，eko-core 会在运行时将内置 Langfuse 回调与用户提供的 callback 组合
+   * 从而实现“一 Session 一 Trace，多 Observation”的旁路记录
+   */
+  enable_langfuse?: boolean;
+  langfuse_options?: LangfuseCallbackOptions;
 };
 
 export type StreamCallbackMessage = {
@@ -59,6 +67,11 @@ export type StreamCallbackMessage = {
       workflow: Workflow;
       planRequest: LLMRequest;
       planResult: string;
+      usage?: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+      };
     }
   // ========== 工作流执行事件 ==========
   | {

@@ -1,15 +1,20 @@
 import { Eko, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
 import { BrowserAgent } from "@eko-ai/eko-web";
 
+
 export async function auto_test_case() {
+
+  const openrouterApiKey = "your_api_key";
+  const openrouterBaseURL = "https://openrouter.ai/api/v1";
+
   // Initialize LLM provider
   const llms: LLMs = {
     default: {
-      provider: "anthropic",
-      model: "claude-sonnet-4-20250514",
-      apiKey: "your_api_key",
+      provider: "openai-compatible",
+      model: "google/gemini-2.5-pro", // any model support image input
+      apiKey: openrouterApiKey || "",
       config: {
-        baseURL: "https://api.anthropic.com/v1",
+        baseURL: openrouterBaseURL,
       },
     },
   };
@@ -47,5 +52,4 @@ export async function auto_test_case() {
   } else {
     alert("Execution failed:\n" + result.result);
   }
-
 }

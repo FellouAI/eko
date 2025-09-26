@@ -20,8 +20,11 @@
   ],
   "dependencies": {
     "@eko-ai/eko": "file:../../packages/eko-core",
-    "@eko-ai/eko-nodejs": "file:../../packages/eko-nodejs",
     "@eko-ai/eko-debugger": "file:../../packages/eko-debugger",
+    "@eko-ai/eko-nodejs": "file:../../packages/eko-nodejs",
+    "@langfuse/otel": "^4.2.0",
+    "@opentelemetry/sdk-node": "^0.205.0",
+    "node": "^24.8.0",
     "playwright": "^1.52.0"
   },
   "devDependencies": {

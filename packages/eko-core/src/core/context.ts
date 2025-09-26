@@ -22,9 +22,10 @@
  * 4. 并发控制：支持并行代理执行的状态管理
  */
 
-import { Agent } from "../agent";
+import type { Agent } from "../agent/base";
 import { sleep } from "../common/utils";
-import Chain, { AgentChain } from "./chain";
+import Chain from "./chain";
+import type { AgentChain } from "./chain";
 import {
   EkoConfig,
   LanguageModelV2Prompt,
@@ -183,7 +184,7 @@ export default class Context {
    */
   currentAgent(): [Agent, WorkflowAgent, AgentContext] | null {
     // 从执行链中获取最后一个代理链
-    const agentNode = this.chain.agents[this.chain.agents.length - 1];
+    const agentNode = this.chain.agent_chains[this.chain.agent_chains.length - 1];
 
     // 如果没有代理链，返回 null
     if (!agentNode) {
@@ -261,6 +262,30 @@ export default class Context {
     this.currentStepControllers.clear();
     this.controller = new AbortController();
   }
+
+  /**
+   * 自定义序列化，去除不可序列化与循环引用
+   */
+  toJSON(): Record<string, unknown> {
+    const variablesObj: Record<string, any> = {};
+    this.variables.forEach((v, k) => (variablesObj[k] = v));
+    return {
+      taskId: this.taskId,
+      pause: this.pause,
+      conversationLength: this.conversation.length,
+      variables: variablesObj,
+      workflow: this.workflow
+        ? {
+            taskId: this.workflow.taskId,
+            name: this.workflow.name,
+            agentsCount: this.workflow.agents?.length ?? 0,
+            modified: this.workflow.modified,
+          }
+        : undefined,
+      chain: this.chain,
+      agents: this.agents ? this.agents.map((a) => a.Name) : undefined,
+    };
+  }
 }
 
 /**
@@ -327,5 +352,20 @@ export class AgentContext {
     this.agentChain = agentChain;
     this.variables = new Map();
     this.consecutiveErrorNum = 0;
+  }
+
+  /**
+   * 自定义序列化，去除回指 Context/Agent 等运行时对象
+   */
+  toJSON(): Record<string, unknown> {
+    const variablesObj: Record<string, any> = {};
+    this.variables.forEach((v, k) => (variablesObj[k] = v));
+    return {
+      agentName: this.agent?.Name,
+      consecutiveErrorNum: this.consecutiveErrorNum,
+      messagesLength: this.messages?.length ?? 0,
+      variables: variablesObj,
+      agentChain: this.agentChain,
+    };
   }
 }
