@@ -9,7 +9,7 @@ export class TraceSystem {
 
   constructor(private readonly options: TraceSystemOptions = {}) {
 
-    // 简化：默认文件落盘，若显式关闭则用内存
+    // Simplification: default to file-backed; if explicitly disabled, use memory
     this.store = new FileMessageStore();
     this.recorder = new TraceRecorder(this.store, {
       prettyPrint: this.options.prettyPrint !== false,
@@ -40,14 +40,14 @@ export class TraceSystem {
       ...(original as any),
       ...wrapped
     } as StreamCallback;
-    // 暴露给重放（最小实现：通过 global 注入运行时依赖）
+    // Expose to replay (minimal impl: inject runtime deps into global)
     (global as any).__eko_llms = (ekoInstance as any).config?.llms;
     (global as any).__eko_agents = (ekoInstance as any).config?.agents;
     (global as any).__eko_callback = (ekoInstance as any).config?.callback;
     return ekoInstance;
   }
 
-  // 兼容导出：提供简单查询以支持示例脚本输出
+  // Compatibility: provide simple query for example scripts
   async getEvents(sessionId: string) {
     return await this.store.readTimeline(sessionId);
   }

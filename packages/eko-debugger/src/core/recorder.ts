@@ -4,12 +4,12 @@ import { MessageStore, serializeContextForSnapshot } from '../storage/message-st
 /**
  * TraceRecorder
  *
- * 职责：
- * - 拦截 eko-core 的 StreamCallbackMessage
- * - 原样写入原始消息（JSONL 或内存）
- * - 增量更新派生视图（planning/tree/timeline/nodes）
- * - 基于全局 Context 进行快照采集（用于 TimeMachine）
- * - 可选控制台结构化打印
+ * Responsibilities:
+ * - Intercept eko-core StreamCallbackMessage
+ * - Persist raw messages (JSONL or memory)
+ * - Incrementally update derived views (planning/tree/timeline/nodes)
+ * - Capture snapshots from global Context (for TimeMachine)
+ * - Optional structured console pretty-printing
  */
 export class TraceRecorder {
   constructor(
@@ -47,13 +47,13 @@ export class TraceRecorder {
     const ts = msg.timestamp || Date.now();
     const { base } = this.normalizeType(msg.type);
 
-    // 1) 原始消息
+    // 1) Raw message
     await this.store.appendRawMessage(msg.taskId, { ...msg, timestamp: ts });
 
-    // 2) 派生视图
+    // 2) Derived views
     await this.updateDerivedViews(msg.taskId, base, ts, msg);
 
-    // 3) 快照
+    // 3) Snapshot
     await this.maybeSnapshot(msg.taskId, base, ts, msg, agentCtx);
   }
 
@@ -100,7 +100,7 @@ export class TraceRecorder {
       await this.store.appendTimelineItem(runId, { timestamp: ts, type: 'workflow_finished', data: { ...msg } });
     }
 
-    // Node execution（优先 agent_node_*，兼容 agent_*）
+    // Node execution (prefer agent_node_*, compatible with agent_*)
     if (baseType === 'agent_node_start' || baseType === 'agent_start') {
       const nodeId = (msg as any).agentNode?.id || msg.nodeId || '';
       if (nodeId) {
@@ -213,7 +213,7 @@ export class TraceRecorder {
     await this.store.saveSnapshot(runId, nodeId, snapshot);
   }
 
-  // ============== 控制台结构化打印（沿用原样式） ==============
+    // ============== Structured console pretty-printing (legacy style) ==============
   private prettyPrint(msg: StreamCallbackMessage) {
     const ts = new Date(msg.timestamp || Date.now()).toISOString();
     const { base: type, isDebug } = this.normalizeType(msg.type);

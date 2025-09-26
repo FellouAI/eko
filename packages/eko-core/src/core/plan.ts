@@ -88,16 +88,16 @@ export class Planner {
     const rlm = new RetryLanguageModel(config.llms, config.planLlms);
     
     
-    // 准备规划启动信息
+    // Prepare planning metadata
     const systemPrompt = messages[0]?.content as string || "";
     const userPromptContent = messages[1]?.content?.[0];
     const userPrompt = userPromptContent && typeof userPromptContent === 'object' && 'text' in userPromptContent ? userPromptContent.text : "";
 
 
-    // CALLBACK: 开始planning的回调消息发送
+    // CALLBACK: send planning-start callbacks
     const planCbHelper = createCallbackHelper(this.callback, this.taskId, "Planner");
 
-    // CALLBACK: 发送规划开始事件
+    // CALLBACK: planning start event
     await planCbHelper.planStart(
       taskPrompt,
       {
@@ -114,12 +114,12 @@ export class Planner {
       abortSignal: this.context.controller.signal,
     };
 
-    // CALLBACK: 创建LLM回调助手，作为Planner Callback helper 的子助手
+    // CALLBACK: create LLM callback helper as a child of planCbHelper
     const llmCbHelper = planCbHelper.createChildHelper("LLM");
-    // CALLBACK: 发送LLM请求开始事件
+    // CALLBACK: LLM request start
     await llmCbHelper.llmRequestStart(
       request,
-      undefined, // rlm.getCurrentModel()?.name 暂时不可用
+      undefined, // rlm.getCurrentModel()?.name currently unavailable
       {
         messageCount: messages.length,
         toolCount: 0,
@@ -136,7 +136,7 @@ export class Planner {
     let usageCompletionTokens = 0;
     let usageTotalTokens = 0;
 
-    // CALLBACK: 发送LLM响应开始事件
+    // CALLBACK: LLM response start
     await llmCbHelper.llmResponseStart(streamId);
 
     try {
@@ -153,12 +153,12 @@ export class Planner {
         }
         if (chunk.type == "reasoning-delta") {
           thinkingText += chunk.delta || "";
-          // CALLBACK: 发送思考过程更新
+          // CALLBACK: thinking delta
           await llmCbHelper.llmResponseProcess(streamId, "thinking_delta", chunk.delta || "", false);
         }
         if (chunk.type == "text-delta") {
           streamText += chunk.delta || "";
-          // CALLBACK: 发送文本更新
+          // CALLBACK: text delta
           await llmCbHelper.llmResponseProcess(streamId, "text_delta", chunk.delta || "", false);
         }
         if (chunk.type == "finish") {
@@ -170,7 +170,7 @@ export class Planner {
           usageTotalTokens = totalTokens;
         }
         
-        // 尝试解析部分工作流并发送过程事件
+        // Try to parse partial workflow and send process event
         if (this.callback) {
           let workflow = parseWorkflow(
             this.taskId,
@@ -180,9 +180,9 @@ export class Planner {
           );
           
           
-          // 保持旧的兼容性回调
+          // Keep legacy callbacks
           if (workflow) {
-            // 发送新的规划过程事件
+            // Send new planning process event
             await planCbHelper.planProcess(false, workflow, thinkingText, this.context as any);
             // OLD VERSION CALLBACK
             await this.callback.onMessage({
@@ -197,9 +197,9 @@ export class Planner {
       }
     } finally {
       reader.releaseLock();
-      //if (Log.isEnableInfo()) {
-      //  Log.info("Planner result: \n" + streamText);
-      //}
+      // if (Log.isEnableInfo()) {
+      //   Log.info("Planner result: \n" + streamText);
+      // }
     }
 
     if (saveHistory) {
@@ -221,7 +221,7 @@ export class Planner {
       workflow.taskPrompt = taskPrompt.trim();
     }
 
-    // 发送LLM响应完成事件（包含 usage）
+    // Send LLM response finished (with usage)
     await llmCbHelper.llmResponseFinished(
       streamId,
       [{ type: "text", text: streamText }],
@@ -232,7 +232,7 @@ export class Planner {
       }
     );
 
-    // 发送规划完成事件，附带 usage
+    // Send planning finished (with usage)
     await planCbHelper.planFinished(
       workflow,
       request,

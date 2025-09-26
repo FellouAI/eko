@@ -3,7 +3,7 @@ import type {
   StreamCallbackMessage,
 } from "../types/core.types";
 import type { AgentContext } from "../core/context";
-// 运行时依赖。此文件仅在 enable_langfuse 为 true 且包已安装时被使用
+// Runtime dependency. Used only when enable_langfuse is true and package is installed
 // @ts-ignore
 import {
   LangfuseAgent,
@@ -50,7 +50,7 @@ export function createLangfuseCallback(
         : undefined,
       metadata: payload?.context ? { context: payload.context } : undefined,
     });
-    // 用 taskId 作为 sessionId
+    // Use taskId as sessionId
     try {
       root.updateTrace?.({ sessionId: taskId });
     } catch {}
@@ -326,7 +326,7 @@ export function createLangfuseCallback(
           agentContext?.agentChain?.agent?.id ||
           (message as any).nodeId ||
           "unknown";
-        // Tool 从属于 Agent
+        // Tool belongs to the Agent
         const agentObs = rec.agents.get(nodeId) || rec.workflow;
         const tool = agentObs?.startObservation?.(
           (message as any).toolName,

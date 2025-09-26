@@ -21,41 +21,41 @@ import {
 import { defaultLLMProviderOptions } from "../agent/llm";
 
 /**
- * 重试语言模型管理器
+ * Retry Language Model manager
  *
- * RetryLanguageModel 是 Eko 系统中的 LLM 管理核心，负责：
- * 1. 多模型提供商支持（OpenAI、Anthropic、Google等）
- * 2. 自动故障转移和重试机制
- * 3. 流式和非流式响应的统一接口
- * 4. 超时控制和资源管理
- * 5. 配置化模型选择策略
+ * Core LLM management for Eko:
+ * 1) Multi-provider support (OpenAI, Anthropic, Google, etc.)
+ * 2) Automatic failover and retries
+ * 3) Unified streaming and non-streaming interfaces
+ * 4) Timeout control and resource management
+ * 5) Configurable model selection strategy
  *
- * 核心特性：
- * - 多模型并行尝试：按优先级尝试不同模型
- * - 智能重试策略：网络错误自动重试，其他错误快速失败
- * - 流式处理优化：支持实时响应和超时控制
- * - 资源管理：自动释放流资源，防止内存泄漏
+ * Key characteristics:
+ * - Try multiple models by priority
+ * - Smart retries: auto-retry on network errors, fail fast otherwise
+ * - Streaming optimization with timeouts
+ * - Resource safety: release streams to avoid leaks
  */
 export class RetryLanguageModel {
-  /** LLM配置映射表，key为模型名称，value为配置 */
+  /** LLM configuration map: key=model name, value=config */
   private llms: LLMs;
 
-  /** 模型名称列表，按优先级排序 */
+  /** Model names ordered by priority */
   private names: string[];
 
-  /** 流式响应首次数据超时时间（毫秒） */
+  /** Timeout for first streaming chunk (ms) */
   private stream_first_timeout: number;
 
-  /** 流式响应单个token超时时间（毫秒） */
+  /** Timeout per streaming token (ms) */
   private stream_token_timeout: number;
 
   /**
-   * 构造函数
+   * Constructor
    *
-   * @param llms LLM配置映射表
-   * @param names 模型名称列表，可选，默认为空数组
-   * @param stream_first_timeout 流式响应首次数据超时时间，默认30秒
-   * @param stream_token_timeout 流式响应单个token超时时间，默认180秒
+   * @param llms LLM config map
+   * @param names Optional model names (priority order)
+   * @param stream_first_timeout First-chunk timeout (ms)
+   * @param stream_token_timeout Per-token timeout (ms)
    */
   constructor(
     llms: LLMs,
@@ -68,7 +68,7 @@ export class RetryLanguageModel {
     this.stream_first_timeout = stream_first_timeout || 30_000;
     this.stream_token_timeout = stream_token_timeout || 180_000;
 
-    // 确保包含默认模型
+    // Ensure default model is present
     if (this.names.indexOf("default") == -1) {
       this.names.push("default");
     }

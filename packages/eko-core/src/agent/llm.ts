@@ -57,22 +57,23 @@ export function defaultMessageProviderOptions(): SharedV2ProviderOptions {
 }
 
 /**
- * 转换工具为LLM格式
+ * Convert tools to LLM format
  *
- * 将自定义工具对象转换为LLM提供商的标准函数工具格式。
- * 这个函数是工具系统与LLM集成的关键桥梁。
+ * Converts custom tool objects into the provider-agnostic function-tool format
+ * required by LLM providers. This is the key bridge between the tool system
+ * and LLM integration.
  *
- * 转换过程：
- * 1. 提取工具的基本信息（名称、描述、参数模式）
- * 2. 转换为标准化的LanguageModelV2FunctionTool格式
- * 3. 确保与LLM提供商的兼容性
+ * Conversion steps:
+ * 1. Extract basic tool info (name, description, parameter schema)
+ * 2. Convert to standardized LanguageModelV2FunctionTool
+ * 3. Ensure compatibility with provider expectations
  *
- * 支持的工具类型：
- * - Tool：标准工具接口
- * - DialogueTool：对话专用工具接口
+ * Supported tool types:
+ * - Tool: standard tool interface
+ * - DialogueTool: dialogue-specific tool interface
  *
- * @param tools 要转换的工具数组
- * @returns LLM标准格式的工具数组
+ * @param tools Tools to convert
+ * @returns Tools in LLM-standard format
  */
 export function convertTools(
   tools: Tool[] | DialogueTool[]
@@ -87,25 +88,25 @@ export function convertTools(
 }
 
 /**
- * 根据名称查找工具
+ * Find tool by name
  *
- * 在工具数组中查找指定名称的工具实例。
- * 这个函数是工具调用的核心查找逻辑。
+ * Searches the tool array for a tool instance with the specified name.
+ * This is the core lookup logic for tool invocation.
  *
- * 查找策略：
- * 1. 遍历工具数组
- * 2. 精确匹配工具名称
- * 3. 返回第一个匹配的工具实例
- * 4. 未找到时返回null
+ * Strategy:
+ * 1. Iterate over the tool array
+ * 2. Strictly match tool name
+ * 3. Return the first matched tool instance
+ * 4. Return null if not found
  *
- * 性能特点：
- * - 线性查找，时间复杂度O(n)
- * - 适用于小规模工具集合
- * - 保证返回结果的类型安全
+ * Performance:
+ * - Linear scan, O(n)
+ * - Suitable for small tool sets
+ * - Type-safe return value
  *
- * @param tools 工具数组
- * @param name 要查找的工具名称
- * @returns 找到的工具实例，如果不存在则返回null
+ * @param tools Tool array
+ * @param name Tool name to look up
+ * @returns The found tool instance, or null if not found
  */
 export function getTool<T extends Tool | DialogueTool>(
   tools: T[],
@@ -220,63 +221,67 @@ export function convertToolResult(
 }
 
 /**
- * 调用代理LLM
+ * Call the agent LLM
  *
- * 这是代理系统与LLM集成的核心函数，负责：
- * 1. 代理与LLM的完整交互流程
- * 2. 流式响应的处理和解析
- * 3. 工具调用的触发和参数传递
- * 4. 错误处理和重试机制
- * 5. 实时回调和状态通知
+ * Core integration point between the agent system and the LLM. Handles:
+ * 1) Full interaction lifecycle with the LLM
+ * 2) Streaming response parsing
+ * 3) Tool-call triggering and argument passing
+ * 4) Error handling and retry
+ * 5) Real-time callbacks and status notifications
  *
- * 核心流程：
- * 1. 上下文压缩：检查并压缩过长的对话历史
- * 2. 用户对话追加：添加代理执行中的用户干预
- * 3. LLM调用：发送请求并处理流式响应
- * 4. 结果解析：解析文本、工具调用、推理等不同类型的响应
- * 5. 状态回调：实时通知外部监听器
- * 6. 错误重试：处理网络错误和长度限制等异常情况
+ * Core flow:
+ * 1) Context compression: check and compress long conversation history
+ * 2) Append user intervention: merge user inputs during execution
+ * 3) LLM call: send request and process the streaming response
+ * 4) Result parsing: handle text, tool calls, reasoning, etc.
+ * 5) Status callbacks: notify listeners in real time
+ * 6) Retry on errors such as network issues or length limits
  *
- * 流式处理特性：
- * - 实时文本输出
- * - 推理过程展示
- * - 工具调用参数流式传递
- * - 文件和多媒体内容支持
- * - 完成状态和使用统计
+ * Streaming characteristics:
+ * - Real-time text output
+ * - Reasoning stream exposure
+ * - Streaming tool-args
+ * - File and multimedia support
+ * - Completion status and usage stats
  *
- * ReAct 循环说明（本函数所在的一次 Assistant Step）：
- * - 本函数实现的是一次“助理回复阶段”的流式生成与解析。它会产出纯文本与若干工具调用（ToolCall），
- *   但并不在本函数内执行工具。工具的实际执行、结果回填、以及再次调用本函数，发生在本函数的上层调度逻辑中，
- *   由此构成完整的 ReAct 外层循环（思考 -> 行动 -> 观察 -> 再思考）。
+ * ReAct loop note (one Assistant Step of the outer loop in this function):
+ * - This function generates a streaming assistant reply and tool calls, but does
+ *   not execute tools. Execution, result injection, and subsequent re-calls are
+ *   done by upper-level orchestration to complete the ReAct loop
+ *   (Think -> Act -> Observe -> Think).
  *
- * - 映射到流事件的 ReAct 阶段：
- *   1) Observe（观察）：
- *      - 在调用前，通过 `appendUserConversation` 将用户干预并入 `messages`；
- *      - 上一轮工具执行结果（若有）也在上层被并入 `messages`，因此本函数开局收到的 `messages` 已包含“观察”。
- *   2) Reason/Think（思考）：
- *      - 由模型以推理通道输出，体现在事件 `reasoning-start` / `reasoning-delta` / `reasoning-end`；
- *      - 本函数将其汇聚到 `thinkText`，并通过回调对外暴露。
- *   3) Act（行动，调用工具）：
- *      - 由事件 `tool-input-start` / `tool-input-delta` 增量传输工具参数文本；
- *      - 由事件 `tool-call` 给出完整的调用（含工具名与最终 JSON 参数），本函数收敛为 `toolParts` 返回给上层；
- *   4) Finalize（收尾）：
- *      - 由 `text-*` 事件传出自然语言回复；
- *      - `finish` 事件收束本次 Assistant Step，携带用量与终止原因；
- *      - 若终止原因为长度限制且满足条件，则触发压缩与重试，仍属于一次 Step 的自恢复策略。
+ * - Mapping to stream events:
+ *   1) Observe:
+ *      - `appendUserConversation` merges user interventions before the call
+ *      - Previous tool results are also merged at upper level, so `messages`
+ *        already include the observation
+ *   2) Reason/Think:
+ *      - Emitted via reasoning channel: `reasoning-start/delta/end`
+ *      - Aggregated into `thinkText` and exposed via callbacks
+ *   3) Act (tool call):
+ *      - Parameters streamed via `tool-input-start/delta`
+ *      - Complete call emitted via `tool-call`; consolidated as `toolParts`
+ *   4) Finalize:
+ *      - Natural language reply via `text-*`
+ *      - `finish` closes the step with usage and stop reason
+ *      - If stopped due to length, compression and retry may be triggered
  *
- * - 小结：本函数“只生成，不执行”。上层据 `toolParts` 执行工具，得到结果（可能是文本/图片/JSON），再把结果
- *   作为新的消息加入 `messages`，随后再次调用本函数，形成多轮 ReAct 迭代，直到没有新的工具调用且文本输出完成。
+ * - Summary: this function “generates but does not execute”. Upper layer
+ *   executes tools based on `toolParts`, injects results as new messages, then
+ *   calls this function again, forming multi-turn ReAct iterations until no
+ *   more tool calls and text is finalized.
  *
- * @param agentContext 代理执行上下文
- * @param rlm 重试语言模型管理器
- * @param messages 对话消息历史
- * @param tools 可用的工具列表
- * @param noCompress 是否禁用上下文压缩
- * @param toolChoice 工具选择策略
- * @param retryNum 当前重试次数
- * @param callback 流式回调函数
- * @param requestHandler 请求预处理函数
- * @returns LLM响应结果数组
+ * @param agentContext Agent execution context
+ * @param rlm Retry LLM manager
+ * @param messages Conversation history
+ * @param tools Available tools
+ * @param noCompress Disable context compression
+ * @param toolChoice Tool choice policy
+ * @param retryNum Current retry count
+ * @param callback Streaming callback
+ * @param requestHandler Request pre-processor
+ * @returns Array of LLM response parts
  */
 export async function callAgentLLM(
   agentContext: AgentContext,
@@ -303,7 +308,7 @@ export async function callAgentLLM(
   }
   const context = agentContext.context;
 
-  // 创建回调助手
+  // Create callback helper
   const agentllmCbHelper = createCallbackHelper(
     callback,
     context.taskId,
@@ -317,7 +322,7 @@ export async function callAgentLLM(
       onMessage: async () => {},
     };
   const stepController = new AbortController();
-  // 兼容性：部分运行时/TS lib 未提供 AbortSignal.any，这里做降级处理
+  // Compatibility: some runtimes/TS libs do not provide AbortSignal.any; fallback
   let cleanupAbortListeners: (() => void) | null = null;
   const signal: AbortSignal = (AbortSignal as any).any
     ? (AbortSignal as any).any([
@@ -342,7 +347,7 @@ export async function callAgentLLM(
         };
         context.controller.signal.addEventListener("abort", abortFromContext);
         stepController.signal.addEventListener("abort", abortFromStep);
-        // 若任一已提前中止，立即同步中止
+        // If either already aborted, abort immediately
         if (context.controller.signal.aborted) abortFromContext();
         if (stepController.signal.aborted) abortFromStep();
         cleanupAbortListeners = () => {
@@ -362,7 +367,7 @@ export async function callAgentLLM(
   };
   requestHandler && requestHandler(request);
 
-  // CALLBACK: 发送LLM请求开始事件
+  // CALLBACK: send LLM request start event
   await agentllmCbHelper.llmRequestStart(
     request,
     undefined, // model name not available
@@ -380,18 +385,18 @@ export async function callAgentLLM(
   let thinkStreamId = uuidv4();
   let llmResponseStreamId = uuidv4();
   let textStreamDone = false;
-  // toolParts：本次 Assistant Step 内收集到的“行动（工具调用）”结果（仅为调用意图，不含执行结果）
+  // toolParts: collected tool-call intents within this Assistant Step (no results)
   const toolParts: LanguageModelV2ToolCallPart[] = [];
   let reader: ReadableStreamDefaultReader<LanguageModelV2StreamPart> | null = null;
   try {
     agentChain.agentRequest = request;
     context.currentStepControllers.add(stepController);
     const result: StreamResult = await rlm.callStream(request);
-    // 新版：LLM 响应开始
+    // New: LLM response start
     await agentllmCbHelper.llmResponseStart(llmResponseStreamId);
     reader = result.stream.getReader();
     let toolPart: LanguageModelV2ToolCallPart | null = null;
-    // 读取与解析流式事件：将提供商的细粒度事件映射为 ReAct 的“思考/行动/输出”要素
+    // Read and parse streaming events: map provider-specific events to ReAct phases
     while (true) {
       await context.checkAborted();
       const { done, value } = await reader.read();
@@ -409,7 +414,7 @@ export async function callAgentLLM(
             continue;
           }
           streamText += chunk.delta || "";
-          // 新版：LLM 响应流过程 - 文本
+          // New: LLM response streaming - text
           await agentllmCbHelper.llmResponseProcess(
             llmResponseStreamId,
             "text_start",
@@ -490,7 +495,7 @@ export async function callAgentLLM(
         }
         case "reasoning-delta": {
           thinkText += chunk.delta || "";
-          // 新版：LLM 响应流过程 - 思维
+          // New: LLM response streaming - reasoning
           await agentllmCbHelper.llmResponseProcess(
             llmResponseStreamId,
             "thinking_delta",
@@ -567,7 +572,7 @@ export async function callAgentLLM(
             );
           }
           toolArgsText += chunk.delta || "";
-          // 新版：LLM 响应流过程 - 工具参数
+          // New: LLM response streaming - tool args
           await agentllmCbHelper.llmResponseProcess(
             llmResponseStreamId,
             "tool_call_delta",
@@ -684,7 +689,7 @@ export async function callAgentLLM(
             );
             toolPart = null;
           }
-          // 新版：LLM 响应完成
+          // New: LLM response finished
           await agentllmCbHelper.llmResponseFinished(
             llmResponseStreamId,
             [

@@ -15,9 +15,9 @@ export type EkoConfig = {
   defaultMcpClient?: IMcpClient;
   a2aClient?: IA2aClient;
   /**
-   * 启用 Langfuse 观测回调组合
-   * 为 true 时，eko-core 会在运行时将内置 Langfuse 回调与用户提供的 callback 组合
-   * 从而实现“一 Session 一 Trace，多 Observation”的旁路记录
+   * Enable Langfuse observation callback composition
+   * When true, eko-core composes built-in Langfuse callbacks with user-provided
+   * callback at runtime to achieve session-level tracing with multiple observations.
    */
   enable_langfuse?: boolean;
   langfuse_options?: LangfuseCallbackOptions;
@@ -27,9 +27,9 @@ export type StreamCallbackMessage = {
   taskId: string;
   agentName: string;
   nodeId?: string | null; // agent nodeId
-  timestamp?: number; // 事件时间戳
+  timestamp?: number; // event timestamp
 } & (
-  // ========== 任务级别事件 ==========
+  // ========== Task-level events ==========
   | {
       type: "debug_task_start";
       taskPrompt: string;
@@ -42,7 +42,7 @@ export type StreamCallbackMessage = {
       error?: any;
       stopReason?: string;
     }
-  // ========== 规划阶段事件 ==========
+  // ========== Planning events ==========
   | {
       type: "debug_plan_start";
       taskPrompt: string;
@@ -73,18 +73,18 @@ export type StreamCallbackMessage = {
         totalTokens: number;
       };
     }
-  // ========== 工作流执行事件 ==========
+  // ========== Workflow execution events ==========
   | {
       type: "debug_workflow_start";
       workflow: Workflow;
-      agentTree: any; // 构建后的执行树
+      agentTree: any; // built agent execution tree
     }
   | {
       type: "debug_workflow_finished";
       results: string[];
       finalResult: string;
     }
-  // ========== 代理级别事件 ==========
+  // ========== Agent-level events ==========
   | {
       type: "debug_agent_start";
       agentNode: WorkflowAgent;
@@ -94,13 +94,13 @@ export type StreamCallbackMessage = {
         tools: string[];
         llms?: string[];
       };
-      requirements: string; // 传递给Agent的需求
+      requirements: string; // requirement passed to the agent
     }
   | {
       type: "debug_agent_process";
       loopNum: number;
       maxReactNum: number;
-      currentMessages: any; // 当前的消息历史长度统计
+      currentMessages: any; // current message history stats
     }
   | {
       type: "debug_agent_finished";
@@ -113,7 +113,7 @@ export type StreamCallbackMessage = {
         duration: number;
       };
     }
-  // ========== LLM交互事件 ==========
+  // ========== LLM interaction events ==========
   | {
       type: "debug_llm_request_start";
       request: LLMRequest;
@@ -144,7 +144,7 @@ export type StreamCallbackMessage = {
         totalTokens: number;
       };
     }
-  // ========== 工具调用事件 ==========
+  // ========== Tool-call events ==========
   | {
       type: "debug_tool_call_start";
       toolName: string;
@@ -167,7 +167,7 @@ export type StreamCallbackMessage = {
       toolResult: ToolResult;
       duration: number;
     }
-  // ========== 兼容性保留的旧事件类型 ==========
+  // ========== Backward-compatible legacy event types ==========
   | {
       type: "workflow";
       streamDone: boolean;

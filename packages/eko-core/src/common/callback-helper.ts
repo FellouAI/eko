@@ -1,8 +1,7 @@
 /**
- * 回调辅助工具模块
+ * Callback helper module
  *
- * 这个文件提供了统一的回调管理和发送功能，简化了可观测性事件的触发。
- * 主要目标是提供标准化的方式来发送不同类型的观测事件。
+ * Unified helpers to send standardized observability events.
  */
 
 import {
@@ -18,9 +17,7 @@ import type { AgentContext } from "../core/context";
 import type Context from "../core/context";
 
 /**
- * 回调辅助类
- *
- * 提供标准化的回调事件发送方法，统一管理时间戳和基础信息
+ * CallbackHelper: standardizes callback event sending and timestamps
  */
 export class CallbackHelper {
   private callback?: StreamCallback;
@@ -41,7 +38,7 @@ export class CallbackHelper {
   }
 
   /**
-   * 发送回调消息的通用方法
+   * Send a callback message
    */
   private async sendMessage(
     partialMessage: any,
@@ -60,7 +57,7 @@ export class CallbackHelper {
     await this.callback.onMessage(message, agentContext);
   }
 
-  // ========== 任务级别事件 ==========
+  // ========== Task-level events ==========
 
   async taskStart(
     taskPrompt: string,
@@ -92,7 +89,7 @@ export class CallbackHelper {
     });
   }
 
-  // ========== 规划阶段事件 ==========
+  // ========== Planning events ==========
 
   async planStart(
     taskPrompt: string,
@@ -143,7 +140,7 @@ export class CallbackHelper {
     });
   }
 
-  // ========== 工作流执行事件 ==========
+  // ========== Workflow events ==========
 
   async workflowStart(workflow: Workflow, agentTree: AgentNode): Promise<void> {
     await this.sendMessage({
@@ -166,7 +163,7 @@ export class CallbackHelper {
     });
   }
 
-  // ========== 代理级别事件 ==========
+  // ========== Agent-level events ==========
 
   async agentStart(agent: Agent, agentContext: AgentContext): Promise<void> {
     await this.sendMessage({
@@ -208,7 +205,7 @@ export class CallbackHelper {
     });
   }
 
-  // ========== 代理节点级别事件 ==========
+  // ========== Agent-node level events ==========
 
   async agentNodeStart(agentNode: AgentNode, task: string, context?: Context): Promise<void> {
     await this.sendMessage({
@@ -240,7 +237,7 @@ export class CallbackHelper {
     });
   }
 
-  // ========== LLM交互事件 ==========
+  // ========== LLM interaction events ==========
 
   async llmRequestStart(
     request: LLMRequest,
@@ -311,7 +308,7 @@ export class CallbackHelper {
     });
   }
 
-  // ========== 工具调用事件 ==========
+  // ========== Tool-call events ==========
 
   async toolCallStart(
     toolName: string,
@@ -360,17 +357,17 @@ export class CallbackHelper {
     });
   }
 
-  // ========== 工厂方法 ==========
+  // ========== Factory methods ==========
 
   /**
-   * 创建子级回调助手，用于代理执行中的回调
+   * Create a child helper for agent-scoped callbacks
    */
   createChildHelper(agentName: string, nodeId?: string | null): CallbackHelper {
     return new CallbackHelper(this.callback, this.taskId, agentName, nodeId);
   }
 
   /**
-   * 检查是否有回调函数
+   * Whether callback is present
    */
   hasCallback(): boolean {
     return !!this.callback;
@@ -378,7 +375,7 @@ export class CallbackHelper {
 }
 
 /**
- * 创建回调助手的便捷函数
+ * Convenience factory to create CallbackHelper
  */
 export function createCallbackHelper(
   callback: StreamCallback | undefined,

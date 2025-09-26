@@ -4,15 +4,16 @@ import { fileURLToPath } from 'node:url';
 import { StreamCallbackMessage } from '../types/index.js';
 
 /**
- * 消息存储与派生视图定义（零侵入方案的基础设施）
+ * Message store and derived views (infrastructure for zero-intrusion design)
  *
- * 设计目标：
- * - 原始消息按 JSONL 追加写入，作为唯一事实源。
- * - 结构化派生视图（planning/tree/timeline/nodes/snapshots）增量更新，供 UI 与重放直接消费。
- * - 提供内存与文件双实现，便于测试与实际落盘使用。
+ * Goals:
+ * - Append raw messages (JSONL) as the single source of truth
+ * - Incrementally update structured derived views (planning/tree/timeline/nodes/snapshots)
+ *   for direct UI and replay consumption
+ * - Provide both in-memory and file-backed implementations for tests and persistence
  */
 
-// ========== 衍生视图类型定义（最小必要集合） ==========
+// ========== Derived view types (minimal set) ==========
 
 export type RunId = string;
 export type NodeId = string;
@@ -27,7 +28,7 @@ export interface PlanningRecord {
 export interface AgentTreeDocument {
   runId: RunId;
   createdAt: number;
-  root: unknown; // 直接保存来自 core 的 agentTree（保持原样）
+  root: unknown; // Preserve agentTree from core as-is
 }
 
 export interface TimelineItem {
@@ -71,7 +72,7 @@ export interface ContextSnapshot {
   runId: RunId;
   nodeId: NodeId;
   createdAt: number;
-  // 仅保留可序列化且对重放必要的数据
+  // Keep only serializable data required for replay
   context: {
     taskId: string;
     workflow?: unknown;
@@ -88,7 +89,7 @@ export interface ContextSnapshot {
   };
 }
 
-// ========== 存储接口 ==========
+// ========== Store interface ==========
 
 export interface MessageStore {
   appendRawMessage(runId: RunId, message: StreamCallbackMessage): Promise<void>;
@@ -98,7 +99,7 @@ export interface MessageStore {
   appendTimelineItem(runId: RunId, item: TimelineItem): Promise<void>;
   saveSnapshot(runId: RunId, nodeId: NodeId, snapshot: ContextSnapshot): Promise<void>;
 
-  // 读取接口（供 UI/重放使用）
+  // Read interfaces (for UI/replay)
   readPlanning(runId: RunId): Promise<PlanningRecord | undefined>;
   readAgentTree(runId: RunId): Promise<AgentTreeDocument | undefined>;
   readNode(runId: RunId, nodeId: NodeId): Promise<NodeExecutionRecord | undefined>;
@@ -107,7 +108,7 @@ export interface MessageStore {
   readLatestSnapshot(runId: RunId, nodeId: NodeId): Promise<ContextSnapshot | undefined>;
 }
 
-// ========== 内存实现 ==========
+// ========== In-memory implementation ==========
 
 export class InMemoryMessageStore implements MessageStore {
   private raw: Map<RunId, StreamCallbackMessage[]> = new Map();
@@ -174,7 +175,7 @@ export class InMemoryMessageStore implements MessageStore {
   }
 }
 
-// ========== 文件实现 ==========
+// ========== File-backed implementation ==========
 
 export class FileMessageStore implements MessageStore {
   constructor(private readonly rootDir: string = join(process.cwd(), 'runs')) {}
@@ -196,7 +197,7 @@ export class FileMessageStore implements MessageStore {
   private safeStringify(data: unknown): string {
     // const seen = new WeakSet<object>();
     // const replacer = (key: string, value: any) => {
-    //   // 移除可能引入循环的大对象或无关的数据态
+    //   // Remove large/cyclic or irrelevant fields if needed
     //   if (key === 'context' || key === 'agent' || key === 'agentContext') {
     //     return undefined;
     //   }
@@ -217,7 +218,7 @@ export class FileMessageStore implements MessageStore {
     await fs.writeFile(file, this.safeStringify(data), 'utf8');
   }
 
-  // 专用于快照：快照数据已通过 serializeContextForSnapshot 规整，无需 replacer，必须保留 context 字段
+  // Snapshots only: data already normalized by serializeContextForSnapshot; must keep the context field
   private async writeJsonSnapshot(file: string, data: unknown): Promise<void> {
     await this.ensureDir(dirname(file));
     await fs.writeFile(file, JSON.stringify(data, null, 2), 'utf8');
@@ -228,12 +229,12 @@ export class FileMessageStore implements MessageStore {
   }
 
   async appendRawMessage(runId: RunId, message: StreamCallbackMessage): Promise<void> {
-    // 文件实现不再落盘 messages；改为 no-op（仍满足接口）
+    // File implementation no longer persists messages; keep as no-op
     return;
   }
 
   async upsertPlanning(runId: RunId, updater: (prev?: PlanningRecord) => PlanningRecord): Promise<void> {
-    // 文件实现不再落盘 planning；改为 no-op（仍满足接口）
+    // File implementation no longer persists planning; keep as no-op
     return;
   }
 
@@ -250,18 +251,18 @@ export class FileMessageStore implements MessageStore {
   }
 
   async appendTimelineItem(runId: RunId, item: TimelineItem): Promise<void> {
-    // 文件实现不再落盘 timeline；改为 no-op（仍满足接口）
+    // File implementation no longer persists timeline; keep as no-op
     return;
   }
 
   async saveSnapshot(runId: RunId, nodeId: NodeId, snapshot: ContextSnapshot): Promise<void> {
     const file = join(this.snapshotsDir(runId), `${nodeId}-${snapshot.createdAt}.json`);
-    // 注意：不能使用 writeJson（含 replacer 会移除 context 字段）
+    // NOTE: cannot use writeJson (custom replacer would drop context field)
     await this.writeJsonSnapshot(file, snapshot);
   }
 
   async readPlanning(runId: RunId): Promise<PlanningRecord | undefined> {
-    // 文件实现不再落盘 planning；返回 undefined
+    // File implementation does not persist planning; return undefined
     return undefined;
   }
   async readAgentTree(runId: RunId): Promise<AgentTreeDocument | undefined> {
@@ -277,7 +278,7 @@ export class FileMessageStore implements MessageStore {
     } catch { return []; }
   }
   async readTimeline(runId: RunId): Promise<TimelineItem[]> {
-    // 文件实现不再落盘 timeline；返回空数组
+    // File implementation does not persist timeline; return empty
     return [];
   }
   async readLatestSnapshot(runId: RunId, nodeId: NodeId): Promise<ContextSnapshot | undefined> {
@@ -293,15 +294,15 @@ export class FileMessageStore implements MessageStore {
   }
 }
 
-// ========== 工具：Context 快照序列化 ==========
+// ========== Utils: Context snapshot serialization ==========
 
 export function serializeContextForSnapshot(agentOrTaskContext: any): ContextSnapshot['context'] {
-  // 入参可能是 AgentContext 或 Context；优先取其 context 字段
+  // Input might be AgentContext or Context; prefer its `context` field
   const ctx = agentOrTaskContext?.context ?? agentOrTaskContext;
   const variablesObj: Record<string, unknown> = {};
   if (ctx?.variables instanceof Map) {
     for (const [k, v] of ctx.variables.entries()) {
-      // 仅保留可 JSON 序列化的数据；函数/流等直接跳过
+      // Keep only JSON-serializable data; skip functions/streams
       if (typeof v === 'function') continue;
       variablesObj[k] = v;
     }
@@ -313,7 +314,7 @@ export function serializeContextForSnapshot(agentOrTaskContext: any): ContextSna
     variables: variablesObj,
     conversation,
     flags: {
-      // 预留可能影响执行的开关（按需扩展）
+      // Reserved flags that may affect execution (extensible)
       agentParallel: ctx?.variables?.get ? ctx.variables.get('agentParallel') : undefined,
     },
   };

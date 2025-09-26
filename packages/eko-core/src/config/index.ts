@@ -1,8 +1,9 @@
 /**
- * 全局配置类型定义
+ * Global configuration type definitions
  *
- * 定义了 Eko 系统运行时的所有全局配置参数，这些配置影响整个系统的行为和性能。
- * 配置分为多个类别：基础信息、性能限制、功能开关、专家模式等。
+ * Defines all runtime-wide configuration parameters for the Eko system. These
+ * parameters influence overall system behavior and performance.
+ * Categories include: basic info, performance limits, feature flags, and expert mode.
  */
 type GlobalConfig = {
   name: string; // product name
@@ -24,24 +25,24 @@ type GlobalConfig = {
 
 
 /**
- * Eko 系统全局配置实例
+ * Global configuration instance for the Eko system
  *
- * 这是 Eko 系统的默认配置，定义了系统的运行参数和行为特征。
- * 这些配置值经过优化，在性能和功能之间取得了良好的平衡。
+ * This is the default configuration defining runtime parameters and behavioral
+ * characteristics. Values are tuned to balance performance and functionality.
  *
- * 性能配置：
- * - maxReactNum: 500 - 允许代理进行深入推理
- * - maxTokens: 16000 - 支持较长的上下文和响应
- * - maxRetryNum: 3 - 平衡可靠性和响应速度
+ * Performance:
+ * - maxReactNum: 500 - allow deep agent reasoning
+ * - maxTokens: 16000 - support long context and responses
+ * - maxRetryNum: 3 - balance reliability and latency
  *
- * 功能配置：
- * - agentParallel: false - 默认串行执行，更稳定可控
- * - compressThreshold: 80 - 合理的消息压缩阈值
- * - toolResultMultimodal: true - 支持丰富的工具输出格式
+ * Features:
+ * - agentParallel: false - serial by default for stability and control
+ * - compressThreshold: 80 - reasonable message compression threshold
+ * - toolResultMultimodal: true - support rich tool output formats
  *
- * 专家配置：
- * - expertMode: false - 默认关闭，需要时手动启用
- * - expertModeTodoLoopNum: 10 - 专家模式的迭代深度
+ * Expert mode:
+ * - expertMode: false - disabled by default, enable when needed
+ * - expertModeTodoLoopNum: 10 - iteration depth in expert mode
  */
 const config: GlobalConfig = {
   name: "Eko",
@@ -57,8 +58,8 @@ const config: GlobalConfig = {
   maxDialogueImgFileNum: 1,
   toolResultMultimodal: true,
   parallelToolCalls: true,
-  expertMode: false,           // 是否启用专家模式
-  expertModeTodoLoopNum: 10,   // 专家模式待办循环次数
+  expertMode: false,           // Whether to enable expert mode
+  expertModeTodoLoopNum: 10,   // Todo loop interval in expert mode
 };
 
 export default config;

@@ -11,7 +11,7 @@ export function composeCallbacks(...callbacks: MaybeCallback[]): StreamCallback 
         try {
           await cb.onMessage(message, agentContext);
         } catch (e) {
-          // 隔离单个回调异常，避免影响主流程与其他回调
+          // Isolate individual callback errors to avoid impacting main flow or others
         }
       }
     },

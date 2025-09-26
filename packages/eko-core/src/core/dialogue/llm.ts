@@ -54,7 +54,7 @@ export async function callChatLLM(
     const result = await rlm.callStream(request);
     reader = result.stream.getReader();
     let toolPart: LanguageModelV2ToolCallPart | null = null;
-    // 新版：通知响应开始
+    // New: notify response start
     await streamCallback.onMessage({ type: "llm_response_start", streamId: llmResponseStreamId });
     while (true) {
       const { done, value } = await reader.read();
