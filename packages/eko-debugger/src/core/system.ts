@@ -1,6 +1,6 @@
 import { StreamCallback, TraceSystemOptions } from '../types/index.js';
 import { TraceRecorder } from './recorder.js';
-import { FileMessageStore, InMemoryMessageStore, MessageStore } from '../storage/message-store.js';
+import { InMemoryMessageStore, MessageStore } from '../storage/message-store.js';
 
 export class TraceSystem {
   private readonly store: MessageStore;
@@ -8,9 +8,8 @@ export class TraceSystem {
   private started = false;
 
   constructor(private readonly options: TraceSystemOptions = {}) {
-
-    // Simplification: default to file-backed; if explicitly disabled, use memory
-    this.store = new FileMessageStore();
+    const providedStore = options.store;
+    this.store = providedStore ?? new InMemoryMessageStore();
     this.recorder = new TraceRecorder(this.store, {
       prettyPrint: this.options.prettyPrint !== false,
       snapshotPolicy: 'on_agent_start',
@@ -41,9 +40,14 @@ export class TraceSystem {
       ...wrapped
     } as StreamCallback;
     // Expose to replay (minimal impl: inject runtime deps into global)
-    (global as any).__eko_llms = (ekoInstance as any).config?.llms;
-    (global as any).__eko_agents = (ekoInstance as any).config?.agents;
-    (global as any).__eko_callback = (ekoInstance as any).config?.callback;
+    const runtimeGlobal: any = typeof globalThis !== 'undefined'
+      ? globalThis
+      : (typeof global !== 'undefined' ? global : undefined);
+    if (runtimeGlobal) {
+      runtimeGlobal.__eko_llms = (ekoInstance as any).config?.llms;
+      runtimeGlobal.__eko_agents = (ekoInstance as any).config?.agents;
+      runtimeGlobal.__eko_callback = (ekoInstance as any).config?.callback;
+    }
     return ekoInstance;
   }
 

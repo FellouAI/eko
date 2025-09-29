@@ -1,5 +1,24 @@
+import fs from 'fs/promises';
+import { join } from 'node:path';
 import { Eko } from '@eko-ai/eko';
-import { FileMessageStore } from '@eko-ai/eko-debugger';
+import type { ContextSnapshot } from '@eko-ai/eko-debugger';
+
+async function readLatestSnapshot(taskId: string, nodeId: string): Promise<ContextSnapshot | undefined> {
+  try {
+    const root = join(process.cwd(), 'runs');
+    const dir = join(root, taskId, 'snapshots');
+    const files = await fs.readdir(dir);
+    const matched = files
+      .filter((f) => f.startsWith(`${nodeId}-`) && f.endsWith('.json'))
+      .sort();
+    const latest = matched[matched.length - 1];
+    if (!latest) return undefined;
+    const buf = await fs.readFile(join(dir, latest), 'utf8');
+    return JSON.parse(buf) as ContextSnapshot;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * EkoDebuggerAdapter：零侵入重放适配器
@@ -11,8 +30,7 @@ import { FileMessageStore } from '@eko-ai/eko-debugger';
  *   3) 结果以新 runId 进行记录（避免污染原 run）
  */
 export async function replayNode(taskId: string, nodeId: string, overrides?: Record<string, unknown>): Promise<void> {
-  const store = new FileMessageStore();
-  const snapshot = await store.readLatestSnapshot(taskId, nodeId);
+  const snapshot = await readLatestSnapshot(taskId, nodeId);
   if (!snapshot) throw new Error(`No snapshot found for ${taskId}/${nodeId}`);
 
   const contextData = snapshot.context;

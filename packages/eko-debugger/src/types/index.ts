@@ -1,3 +1,4 @@
+import type { MessageStore } from '../storage/message-store.js';
 // Removed MonitorEvent/EventBroadcaster; keep only core callback types
 // Import types from eko-core via relative path to avoid circular deps
 export interface StreamCallback {
@@ -22,5 +23,7 @@ export type TraceSystemOptions = {
   enabled?: boolean;
   // Whether to pretty print to console (default: true)
   prettyPrint?: boolean;
+  // Custom message store implementation; defaults to in-memory store for universal compatibility
+  store?: MessageStore;
 };
 

@@ -18,7 +18,7 @@
 
 ## Observability & debugging
 - Instrumentation uses `debug_*` event types produced by `CallbackHelper`; preserve these names so `@eko-ai/eko-debugger` can derive timelines.
-- `packages/eko-debugger` wraps an existing `StreamCallback`, writes node snapshots to `runs/<taskId>/` via `FileMessageStore`, and exposes events through `TraceSystem.enable(ekoInstance)`.
+- `packages/eko-debugger` wraps an existing `StreamCallback`, stores telemetry through a pluggable `MessageStore` (defaulting to in-memory), and exposes events through `TraceSystem.enable(ekoInstance)`.
 - Langfuse support (`enable_langfuse`) composes another callback; it is a no-op unless `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and `LANGFUSE_BASE_URL` are resolvable from the environment.
 - Browser tracing: `trace/init-tracing.ts` registers an OpenTelemetry `BasicTracerProvider` with the custom `TransparentBrowserExporter` which prefers `navigator.sendBeacon` and falls back to axios.
 

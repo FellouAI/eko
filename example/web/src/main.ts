@@ -1,9 +1,11 @@
 import { Eko, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
 import { BrowserAgent } from "@eko-ai/eko-web";
+import { TraceSystem } from "@eko-ai/eko-debugger";
+import { trace } from "console";
 
 export async function auto_test_case() {
 
-  const openrouterApiKey = "your-api-key";
+  const openrouterApiKey = "your_openrouter_api_key";
   const openrouterBaseURL = "https://openrouter.ai/api/v1";
 
   // Initialize LLM provider
@@ -20,16 +22,17 @@ export async function auto_test_case() {
 
   const callback = {
     onMessage: async (message: StreamCallbackMessage) => {
-      if (message.type == "workflow" && !message.streamDone) {
-        return;
-      }
-      if (message.type == "text" && !message.streamDone) {
-        return;
-      }
-      if (message.type == "tool_streaming") {
-        return;
-      }
-      console.log("message: ", JSON.stringify(message, null, 2));
+      // if (message.type == "workflow" && !message.streamDone) {
+      //   return;
+      // }
+      // if (message.type == "text" && !message.streamDone) {
+      //   return;
+      // }
+      // if (message.type == "tool_streaming") {
+      //   return;
+      // }
+      // console.log("message: ", JSON.stringify(message, null, 2));
+      return;
     },
   };
 
@@ -50,6 +53,13 @@ export async function auto_test_case() {
       recordStreaming: false,
     }
   });
+
+  const tracer = new TraceSystem({
+    enabled: true
+  });
+
+  await tracer.start();
+  tracer.enable(eko);
 
   // Run: Generate workflow from natural language description
   const result = await eko.run(`

@@ -15,6 +15,7 @@
   "dependencies": {
     "@eko-ai/eko": "file:../../packages/eko-core",
     "@eko-ai/eko-web": "file:../../packages/eko-web",
+    "@eko-ai/eko-debugger": "file:../../packages/eko-debugger",
     "@langfuse/otel": "^4.2.0",
     "@opentelemetry/context-zone": "^2.1.0",
     "@opentelemetry/sdk-trace-web": "^2.1.0",

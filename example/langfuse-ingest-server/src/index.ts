@@ -5,9 +5,11 @@ import "dotenv/config";
 import express from "express";
 import type { Request, Response } from "express";
 import { LangfuseSpanProcessor } from "@langfuse/otel";
+import { LangfuseAPIClient, LANGFUSE_SDK_VERSION } from "@langfuse/core";
 
 import { toReadableSpan } from "./converter.js";
 import type { TransportSpan, IngestResult } from "./types.js";
+import { MediaService } from "./media-service.js";
 
 const PORT = Number.parseInt(process.env.PORT ?? "3418", 10);
 const BODY_LIMIT = process.env.BODY_LIMIT ?? "1mb";
@@ -39,6 +41,10 @@ console.log(
   )} corsOrigins=${allowedOrigins.join(",")}`
 );
 
+const publicKey = process.env.LANGFUSE_PUBLIC_KEY;
+const secretKey = process.env.LANGFUSE_SECRET_KEY;
+const baseUrl = process.env.LANGFUSE_BASE_URL;
+
 const processor = new LangfuseSpanProcessor({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
   secretKey: process.env.LANGFUSE_SECRET_KEY,
@@ -47,30 +53,46 @@ const processor = new LangfuseSpanProcessor({
   release: defaultRelease,
 });
 
+const apiClient = new LangfuseAPIClient({
+  baseUrl,
+  username: publicKey,
+  password: secretKey,
+  xLangfusePublicKey: publicKey,
+  xLangfuseSdkVersion: LANGFUSE_SDK_VERSION,
+  xLangfuseSdkName: "langfuse-ingest-server",
+  environment: defaultEnvironment ?? "",
+});
+
+const mediaService = new MediaService({ apiClient });
+
 const app = express();
 app.use(express.json({ limit: BODY_LIMIT }));
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const allowAll = allowedOrigins.includes("*");
-  const isAllowed = allowAll || (origin ? allowedOrigins.includes(origin) : false);
+  const allowAll = allowedOrigins.length === 0 || allowedOrigins.includes("*");
+  const isExplicitlyAllowed = origin ? allowedOrigins.includes(origin) : false;
+  const shouldAllow = allowAll || isExplicitlyAllowed;
 
-  if (isAllowed && origin) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  } else if (allowAll) {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-  }
+  if (shouldAllow) {
+    const responseOrigin = origin && shouldAllow ? origin : "*";
+    res.setHeader("Access-Control-Allow-Origin", responseOrigin);
 
-  if (isAllowed || allowAll) {
+    if (responseOrigin !== "*") {
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Vary", "Origin");
+    }
+
     res.setHeader(
       "Access-Control-Allow-Headers",
-      req.headers["access-control-request-headers"] ?? "Content-Type, Authorization"
+      req.headers["access-control-request-headers"] ?? "*"
     );
     res.setHeader(
       "Access-Control-Allow-Methods",
       req.headers["access-control-request-method"] ?? "GET,POST,OPTIONS"
     );
-    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Expose-Headers", "*");
+    res.setHeader("Access-Control-Max-Age", "86400");
   }
 
   if (req.method === "OPTIONS") {
@@ -109,7 +131,7 @@ app.post("/otel-ingest", async (req: Request, res: Response) => {
     }`
   );
 
-  const result = processSpans(spans);
+  const result = await processSpans(spans);
 
   const shouldForceFlush =
     (req.query[FORCE_FLUSH_QUERY_KEY] ?? "false") === "true" ||
@@ -117,6 +139,7 @@ app.post("/otel-ingest", async (req: Request, res: Response) => {
 
   if (shouldForceFlush) {
     console.log("[langfuse-ingest-server] Force flushing Langfuse processor");
+    await mediaService.flush();
     await processor.forceFlush();
   }
 
@@ -131,6 +154,7 @@ app.post("/otel-ingest", async (req: Request, res: Response) => {
 
 app.post("/flush", async (_req: Request, res: Response) => {
   console.log("[langfuse-ingest-server] Manual flush requested");
+  await mediaService.flush();
   await processor.forceFlush();
   res.status(202).json({ status: "flushed" });
 });
@@ -141,17 +165,18 @@ const server = app.listen(PORT, () => {
   );
 });
 
-function processSpans(spans: TransportSpan[]): IngestResult {
+async function processSpans(spans: TransportSpan[]): Promise<IngestResult> {
   const errors: IngestResult["errors"] = [];
   let accepted = 0;
 
-  spans.forEach((span, index) => {
+  for (const [index, span] of spans.entries()) {
     try {
       const readableSpan = toReadableSpan(span, {
         defaultEnvironment,
         defaultRelease,
       });
 
+      await mediaService.process(readableSpan);
       processor.onEnd(readableSpan);
       accepted += 1;
     } catch (error) {
@@ -169,7 +194,7 @@ function processSpans(spans: TransportSpan[]): IngestResult {
         message: error instanceof Error ? error.message : String(error),
       });
     }
-  });
+  }
 
   return {
     accepted,
@@ -204,6 +229,7 @@ async function gracefulShutdown(signal: NodeSignal) {
   await new Promise<void>((resolve) => server.close(() => resolve()));
 
   try {
+    await mediaService.flush();
     await processor.forceFlush();
     await processor.shutdown();
     console.log("[langfuse-ingest-server] Shutdown complete");

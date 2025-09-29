@@ -1,6 +1,3 @@
-import { promises as fs } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { StreamCallbackMessage } from '../types/index.js';
 
 /**
@@ -10,7 +7,7 @@ import { StreamCallbackMessage } from '../types/index.js';
  * - Append raw messages (JSONL) as the single source of truth
  * - Incrementally update structured derived views (planning/tree/timeline/nodes/snapshots)
  *   for direct UI and replay consumption
- * - Provide both in-memory and file-backed implementations for tests and persistence
+ * - Default to in-memory implementation; callers can extend MessageStore for persistence
  */
 
 // ========== Derived view types (minimal set) ==========
@@ -172,125 +169,6 @@ export class InMemoryMessageStore implements MessageStore {
   async readLatestSnapshot(runId: RunId, nodeId: NodeId): Promise<ContextSnapshot | undefined> {
     const list = this.snapshots.get(runId)?.get(nodeId) ?? [];
     return list[list.length - 1];
-  }
-}
-
-// ========== File-backed implementation ==========
-
-export class FileMessageStore implements MessageStore {
-  constructor(private readonly rootDir: string = join(process.cwd(), 'runs')) {}
-
-  private runDir(runId: RunId): string {
-    return join(this.rootDir, runId);
-  }
-  private nodeDir(runId: RunId): string {
-    return join(this.runDir(runId), 'nodes');
-  }
-  private snapshotsDir(runId: RunId): string {
-    return join(this.runDir(runId), 'snapshots');
-  }
-
-  private async ensureDir(path: string): Promise<void> {
-    await fs.mkdir(path, { recursive: true });
-  }
-
-  private safeStringify(data: unknown): string {
-    // const seen = new WeakSet<object>();
-    // const replacer = (key: string, value: any) => {
-    //   // Remove large/cyclic or irrelevant fields if needed
-    //   if (key === 'context' || key === 'agent' || key === 'agentContext') {
-    //     return undefined;
-    //   }
-    //   if (typeof value === 'function') return undefined;
-    //   if (typeof value === 'object' && value !== null) {
-    //     if (seen.has(value)) return '[Circular]';
-    //     seen.add(value);
-    //   }
-    //   return value;
-    // };
-
-    // return JSON.stringify(data, replacer, 2);
-    return JSON.stringify(data);
-  }
-
-  private async writeJson(file: string, data: unknown): Promise<void> {
-    await this.ensureDir(dirname(file));
-    await fs.writeFile(file, this.safeStringify(data), 'utf8');
-  }
-
-  // Snapshots only: data already normalized by serializeContextForSnapshot; must keep the context field
-  private async writeJsonSnapshot(file: string, data: unknown): Promise<void> {
-    await this.ensureDir(dirname(file));
-    await fs.writeFile(file, JSON.stringify(data, null, 2), 'utf8');
-  }
-
-  private async readJson<T>(file: string): Promise<T | undefined> {
-    try { const buf = await fs.readFile(file, 'utf8'); return JSON.parse(buf) as T; } catch { return undefined; }
-  }
-
-  async appendRawMessage(runId: RunId, message: StreamCallbackMessage): Promise<void> {
-    // File implementation no longer persists messages; keep as no-op
-    return;
-  }
-
-  async upsertPlanning(runId: RunId, updater: (prev?: PlanningRecord) => PlanningRecord): Promise<void> {
-    // File implementation no longer persists planning; keep as no-op
-    return;
-  }
-
-  async saveAgentTree(runId: RunId, doc: AgentTreeDocument): Promise<void> {
-    const file = join(this.runDir(runId), 'tree.json');
-    await this.writeJson(file, doc);
-  }
-
-  async upsertNodeRecord(runId: RunId, nodeId: NodeId, updater: (prev?: NodeExecutionRecord) => NodeExecutionRecord): Promise<void> {
-    const file = join(this.nodeDir(runId), `${nodeId}.json`);
-    const prev = await this.readJson<NodeExecutionRecord>(file);
-    const next = updater(prev);
-    await this.writeJson(file, next);
-  }
-
-  async appendTimelineItem(runId: RunId, item: TimelineItem): Promise<void> {
-    // File implementation no longer persists timeline; keep as no-op
-    return;
-  }
-
-  async saveSnapshot(runId: RunId, nodeId: NodeId, snapshot: ContextSnapshot): Promise<void> {
-    const file = join(this.snapshotsDir(runId), `${nodeId}-${snapshot.createdAt}.json`);
-    // NOTE: cannot use writeJson (custom replacer would drop context field)
-    await this.writeJsonSnapshot(file, snapshot);
-  }
-
-  async readPlanning(runId: RunId): Promise<PlanningRecord | undefined> {
-    // File implementation does not persist planning; return undefined
-    return undefined;
-  }
-  async readAgentTree(runId: RunId): Promise<AgentTreeDocument | undefined> {
-    return this.readJson<AgentTreeDocument>(join(this.runDir(runId), 'tree.json'));
-  }
-  async readNode(runId: RunId, nodeId: NodeId): Promise<NodeExecutionRecord | undefined> {
-    return this.readJson<NodeExecutionRecord>(join(this.nodeDir(runId), `${nodeId}.json`));
-  }
-  async listNodes(runId: RunId): Promise<NodeId[]> {
-    try {
-      const files = await fs.readdir(this.nodeDir(runId));
-      return files.filter(f => f.endsWith('.json')).map(f => f.replace(/\.json$/, ''));
-    } catch { return []; }
-  }
-  async readTimeline(runId: RunId): Promise<TimelineItem[]> {
-    // File implementation does not persist timeline; return empty
-    return [];
-  }
-  async readLatestSnapshot(runId: RunId, nodeId: NodeId): Promise<ContextSnapshot | undefined> {
-    try {
-      const dir = this.snapshotsDir(runId);
-      const files = await fs.readdir(dir);
-      const matched = files.filter(f => f.startsWith(`${nodeId}-`) && f.endsWith('.json'));
-      matched.sort();
-      const last = matched[matched.length - 1];
-      if (!last) return undefined;
-      return this.readJson<ContextSnapshot>(join(dir, last));
-    } catch { return undefined; }
   }
 }
 
