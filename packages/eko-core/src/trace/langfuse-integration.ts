@@ -3,8 +3,6 @@ import type {
   StreamCallbackMessage,
 } from "../types/core.types";
 import type { AgentContext } from "../core/context";
-import { initTracing } from "./init-tracing";
-import { setLangfuseTracerProvider } from "@langfuse/tracing";
 
 // Runtime dependency. Used only when enable_langfuse is true and package is installed
 // @ts-ignore

@@ -9,7 +9,7 @@ import { LangfuseAPIClient, LANGFUSE_SDK_VERSION } from "@langfuse/core";
 
 import { toReadableSpan } from "./converter.js";
 import type { TransportSpan, IngestResult } from "./types.js";
-import { MediaService } from "./media-service.js";
+
 
 const PORT = Number.parseInt(process.env.PORT ?? "3418", 10);
 const BODY_LIMIT = process.env.BODY_LIMIT ?? "1mb";
@@ -32,18 +32,12 @@ const allowedOrigins = (process.env.CORS_ALLOW_ORIGINS ?? "*")
   .filter(Boolean);
 
 console.log(
-  `[langfuse-ingest-server] Langfuse target baseUrl=${
-    process.env.LANGFUSE_BASE_URL ?? "<unset>"
-  } environment=${defaultEnvironment ?? "<unset>"} release=${
-    defaultRelease ?? "<unset>"
+  `[langfuse-ingest-server] Langfuse target baseUrl=${process.env.LANGFUSE_BASE_URL ?? "<unset>"
+  } environment=${defaultEnvironment ?? "<unset>"} release=${defaultRelease ?? "<unset>"
   } publicKey=${masked(process.env.LANGFUSE_PUBLIC_KEY)} secretKey=${masked(
     process.env.LANGFUSE_SECRET_KEY
   )} corsOrigins=${allowedOrigins.join(",")}`
 );
-
-const publicKey = process.env.LANGFUSE_PUBLIC_KEY;
-const secretKey = process.env.LANGFUSE_SECRET_KEY;
-const baseUrl = process.env.LANGFUSE_BASE_URL;
 
 const processor = new LangfuseSpanProcessor({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
@@ -53,17 +47,6 @@ const processor = new LangfuseSpanProcessor({
   release: defaultRelease,
 });
 
-const apiClient = new LangfuseAPIClient({
-  baseUrl,
-  username: publicKey,
-  password: secretKey,
-  xLangfusePublicKey: publicKey,
-  xLangfuseSdkVersion: LANGFUSE_SDK_VERSION,
-  xLangfuseSdkName: "langfuse-ingest-server",
-  environment: defaultEnvironment ?? "",
-});
-
-const mediaService = new MediaService({ apiClient });
 
 const app = express();
 app.use(express.json({ limit: BODY_LIMIT }));
@@ -126,8 +109,7 @@ app.post("/otel-ingest", async (req: Request, res: Response) => {
   }
 
   console.log(
-    `[langfuse-ingest-server] Received ${spans.length} span(s) from ${
-      req.ip
+    `[langfuse-ingest-server] Received ${spans.length} span(s) from ${req.ip
     }`
   );
 
@@ -139,13 +121,11 @@ app.post("/otel-ingest", async (req: Request, res: Response) => {
 
   if (shouldForceFlush) {
     console.log("[langfuse-ingest-server] Force flushing Langfuse processor");
-    await mediaService.flush();
     await processor.forceFlush();
   }
 
   console.log(
-    `[langfuse-ingest-server] Processed spans (accepted=${result.accepted}, rejected=${result.rejected}, forceFlush=${shouldForceFlush}) in ${
-      Date.now() - startedAt
+    `[langfuse-ingest-server] Processed spans (accepted=${result.accepted}, rejected=${result.rejected}, forceFlush=${shouldForceFlush}) in ${Date.now() - startedAt
     }ms`
   );
 
@@ -154,7 +134,6 @@ app.post("/otel-ingest", async (req: Request, res: Response) => {
 
 app.post("/flush", async (_req: Request, res: Response) => {
   console.log("[langfuse-ingest-server] Manual flush requested");
-  await mediaService.flush();
   await processor.forceFlush();
   res.status(202).json({ status: "flushed" });
 });
@@ -176,7 +155,42 @@ async function processSpans(spans: TransportSpan[]): Promise<IngestResult> {
         defaultRelease,
       });
 
-      await mediaService.process(readableSpan);
+
+      // 找到 attribute 中 langufuse.observation.type === 'generation' 的 span
+      // 检查 langfuse.observation.input 字段，这个字段的内容应当是一个 message 列表。
+      // 针对每个message，检查他们ccontent 字段，这也是一个列表，内容暂且称作 content item
+      // 如果某个 content item 的 type 是 file，mediaType 是 image/jpeg
+      // 那么就要将这个 content item 的 data 增加 data:image/jpeg;base64, 前缀
+      // 以便 langfuse 前端正确显示图片
+      if (readableSpan.attributes["langfuse.observation.type"] === "generation") {
+        try {
+          const input = readableSpan.attributes["langfuse.observation.input"];
+          if (input && typeof input === "string") {
+            const messages = JSON.parse(input);
+            if (Array.isArray(messages)) {
+              for (const message of messages) {
+                if (message && Array.isArray(message.content)) {
+                  for (const contentItem of message.content) {
+                    if (
+                      contentItem.type === "file" &&
+                      contentItem.data &&
+                      typeof contentItem.data === "string" &&
+                      !contentItem.data.startsWith("data:")
+                    ) {
+                      contentItem.data = `data:${contentItem.mediaType};base64,${contentItem.data}`;
+                    }
+                  }
+                }
+              }
+              // 更新 attributes
+              readableSpan.attributes["langfuse.observation.input"] = JSON.stringify(messages);
+            }
+          }
+        } catch (e) {
+          console.warn("[langfuse-ingest-server] Failed to process generation input for images", e);
+        }
+      }
+
       processor.onEnd(readableSpan);
       accepted += 1;
     } catch (error) {
@@ -229,7 +243,6 @@ async function gracefulShutdown(signal: NodeSignal) {
   await new Promise<void>((resolve) => server.close(() => resolve()));
 
   try {
-    await mediaService.flush();
     await processor.forceFlush();
     await processor.shutdown();
     console.log("[langfuse-ingest-server] Shutdown complete");

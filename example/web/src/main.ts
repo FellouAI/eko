@@ -1,11 +1,10 @@
 import { Eko, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
 import { BrowserAgent } from "@eko-ai/eko-web";
 import { TraceSystem } from "@eko-ai/eko-debugger";
-import { trace } from "console";
 
 export async function auto_test_case() {
 
-  const openrouterApiKey = "your_openrouter_api_key";
+  const openrouterApiKey = "api_key";
   const openrouterBaseURL = "https://openrouter.ai/api/v1";
 
   // Initialize LLM provider
