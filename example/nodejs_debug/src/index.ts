@@ -1,11 +1,10 @@
 import dotenv from "dotenv";
 import SimpleChatAgent from "./chat";
-import { TraceSystem } from "@eko-ai/eko-debugger";
 // import { replayNode } from "./replay";
+import { TraceSystem } from "@eko-ai/eko-debugger";
 import { FileAgent } from "@eko-ai/eko-nodejs";
 import { Eko, Agent, Log, LLMs } from "@eko-ai/eko";
-import { NodeSDK } from "@opentelemetry/sdk-node";
-import { LangfuseSpanProcessor } from "@langfuse/otel";
+
 
 dotenv.config();
 
@@ -17,7 +16,14 @@ dotenv.config();
 
 // OpenRouter 配置
 const openrouterApiKey = process.env.OPENROUTER_API_KEY;
-const openrouterBaseURL = process.env.OPENROUTER_BASE_URL;
+const openrouterBaseURL =
+  process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1";
+
+if (!openrouterApiKey) {
+  throw new Error(
+    "缺少 OPENROUTER_API_KEY。请在 .env 中设置有效的 OpenRouter API Key 后再运行示例。"
+  );
+}
 
 const llms: LLMs = {
   default: {
@@ -39,30 +45,6 @@ const llms: LLMs = {
   // },
 };
 
-console.log(
-  `LANGFUSE_PUBLIC_KEY: ${process.env.LANGFUSE_PUBLIC_KEY}, 
-  LANGFUSE_SECRET_KEY: ${process.env.LANGFUSE_SECRET_KEY}, 
-  LANGFUSE_BASE_URL: ${process.env.LANGFUSE_BASE_URL}`
-);
-
-const sdk = new NodeSDK({
-  spanProcessors: [
-    new LangfuseSpanProcessor({
-      publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-      secretKey: process.env.LANGFUSE_SECRET_KEY,
-      baseUrl: process.env.LANGFUSE_BASE_URL,
-      environment: "develop_test",
-      mask: ({ data }) => {
-        // Mask sensitive data
-        return data.replace(/api_key=\w+/g, "api_key=***");
-      },
-    }),
-  ],
-});
-
-sdk.start();
-
-// 由 TraceSystem/TraceCollector 进行结构化打印，无需自定义 callback，也不再进行离线分析
 
 async function run() {
   Log.setLevel(1);
@@ -78,7 +60,22 @@ async function run() {
   ];
 
   // 启用 Langfuse 集成（组合到现有回调链，不影响调试器）
-  const eko = new Eko({ llms, agents, enable_langfuse: true });
+  const eko = new Eko({
+    llms, agents, enable_langfuse: true,
+    langfuse_options: {
+      enabled: true,
+      endpoint: process.env.LANGFUSE_ENDPOINT,
+      serviceName: process.env.LANGFUSE_SERVICE_NAME || "eko-service",
+      serviceVersion: process.env.LANGFUSE_SERVICE_VERSION || "1.0.0",
+      /** Whether to use navigator.sendBeacon if available (browser only) */
+      useSendBeacon: true,
+      /** Max payload size in bytes, default 800_000 (800KB) */
+      batchBytesLimit: 800_000,
+      /** Whether to record streaming events like plan_process, default false */
+      recordStreaming: false,
+    }
+  });
+
 
   // 暴露给重放（最小实现：通过 global 注入运行时依赖）
   // (global as any).__eko_llms = llms;
@@ -86,12 +83,12 @@ async function run() {
   // (global as any).__eko_callback = (eko as any).config?.callback;
 
   // 启用调试器系统
-  // const tracer = new TraceSystem({
-  //   enabled: true,
-  // });
+  const tracer = new TraceSystem({
+    enabled: true,
+  });
 
-  // await tracer.start();
-  // tracer.enable(eko);
+  await tracer.start();
+  tracer.enable(eko);
 
   // console.log("\n📊 调试器已启用，开始执行任务...\n");
 

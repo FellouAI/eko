@@ -1,13 +1,9 @@
 import { Eko, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
 import { BrowserAgent } from "@eko-ai/eko-web";
-import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
-import { setLangfuseTracerProvider } from "@langfuse/tracing";
-import { LangfuseSpanProcessor } from "@langfuse/otel";
-import { ZoneContextManager } from "@opentelemetry/context-zone";
 
 export async function auto_test_case() {
 
-  const openrouterApiKey = "your_api_key";
+  const openrouterApiKey = "your-api-key";
   const openrouterBaseURL = "https://openrouter.ai/api/v1";
 
   // Initialize LLM provider
@@ -39,7 +35,21 @@ export async function auto_test_case() {
 
   // Initialize eko
   let agents = [new BrowserAgent()];
-  let eko = new Eko({ llms, agents, callback });
+  let eko = new Eko({
+    llms, agents, callback, enable_langfuse: true,
+    langfuse_options: {
+      enabled: true,
+      endpoint: "http://localhost:3418/otel-ingest",
+      serviceName: "eko-service",
+      serviceVersion: "1.0.0",
+      /** Whether to use navigator.sendBeacon if available (browser only) */
+      useSendBeacon: true,
+      /** Max payload size in bytes, default 800_000 (800KB) */
+      batchBytesLimit: 800_000,
+      /** Whether to record streaming events like plan_process, default false */
+      recordStreaming: false,
+    }
+  });
 
   // Run: Generate workflow from natural language description
   const result = await eko.run(`
