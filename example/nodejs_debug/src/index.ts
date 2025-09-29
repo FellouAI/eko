@@ -86,14 +86,14 @@ async function run() {
   // (global as any).__eko_callback = (eko as any).config?.callback;
 
   // 启用调试器系统
-  const tracer = new TraceSystem({
-    enabled: true,
-  });
+  // const tracer = new TraceSystem({
+  //   enabled: true,
+  // });
 
-  await tracer.start();
-  tracer.enable(eko);
+  // await tracer.start();
+  // tracer.enable(eko);
 
-  console.log("\n📊 调试器已启用，开始执行任务...\n");
+  // console.log("\n📊 调试器已启用，开始执行任务...\n");
 
   // 执行一个稍微复杂的任务来展示完整流程
   const task =
@@ -121,8 +121,8 @@ async function run() {
   // }
 
   // 关闭调试器
-  await tracer.stop();
-  console.log("\n✅ 调试器已关闭");
+  // await tracer.stop();
+  // console.log("\n✅ 调试器已关闭");
 }
 
 run().catch((e) => {

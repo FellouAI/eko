@@ -3,6 +3,9 @@ import type {
   StreamCallbackMessage,
 } from "../types/core.types";
 import type { AgentContext } from "../core/context";
+import { initTracing } from "./init-tracing";
+import { setLangfuseTracerProvider } from "@langfuse/tracing";
+
 // Runtime dependency. Used only when enable_langfuse is true and package is installed
 // @ts-ignore
 import {
@@ -12,6 +15,7 @@ import {
   LangfuseTool,
   startObservation,
 } from "@langfuse/tracing";
+
 
 type Handles = {
   root: LangfuseSpan;
@@ -27,14 +31,24 @@ type Handles = {
 
 export type LangfuseCallbackOptions = {
   enabled?: boolean;
+  endpoint?: string; // Langfuse OTEL Ingest URL
+  serviceName?: string; // 服务名，默认 eko-service
+  serviceVersion?: string; // 服务版本，默认 1.0.0
+  /** Whether to use navigator.sendBeacon if available (browser only) */
+  useSendBeacon?: boolean;
+  /** Max payload size in bytes, default 800_000 (800KB) */
+  batchBytesLimit?: number;
+  /** Whether to record streaming events like plan_process, default false */
   recordStreaming?: boolean;
 };
+
 
 export function createLangfuseCallback(
   opts?: LangfuseCallbackOptions
 ): StreamCallback {
   const enabled = opts?.enabled !== false;
   const taskMap = new Map<string, Handles>();
+
 
   function ensureRoot(taskId: string, payload?: any): Handles | null {
     if (!enabled) return null;
@@ -50,9 +64,15 @@ export function createLangfuseCallback(
         : undefined,
       metadata: payload?.context ? { context: payload.context } : undefined,
     });
-    // Use taskId as sessionId
+    // Prefer sessionId from injected toolCallId, fallback to taskId
     try {
-      root.updateTrace?.({ sessionId: taskId });
+      const sessionId =
+        payload?.contextParams?.toolCallId ??
+        (payload?.context?.variables?.get
+          ? payload.context.variables.get("toolCallId")
+          : undefined) ??
+        taskId;
+      root.updateTrace?.({ sessionId: sessionId });
     } catch {}
 
     rec = {

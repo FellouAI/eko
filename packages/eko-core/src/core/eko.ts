@@ -36,7 +36,9 @@ import {
   WorkflowAgent,
 } from "../types/core.types";
 import { composeCallbacks } from "../common/compose-callbacks";
-import { createLangfuseCallback } from "../common/langfuse-callback";
+import { createLangfuseCallback } from "../trace/langfuse-integration";
+import { setLangfuseTracerProvider } from "@langfuse/tracing";
+import { initTracing } from "../trace/init-tracing";
 
 /**
  * Eko main engine class
@@ -67,19 +69,22 @@ export class Eko {
 
     if (this.config.enable_langfuse) {
 
-      const required = ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL"];
-      // @ts-ignore
-      const missing = required.filter((k) => !process.env[k]);
-      const enabled = missing.length === 0;
-      if (!enabled) {
-        Log.warn(
-          `[Langfuse] Missing environment variables: ${missing.join(", ")}. Langfuse tracing will be disabled.`
-        );
-      }
+      // Initialize tracing
+      const { provider } = initTracing({
+        endpoint: this.config.langfuse_options?.endpoint || "https://api.langfuse.com/otel-ingest",
+        serviceName: this.config.langfuse_options?.serviceName || "eko-service",
+        serviceVersion: this.config.langfuse_options?.serviceVersion || "1.0.0",
+        useSendBeacon: true,
+        batchBytesLimit: 800_000,
+      });
+
+      // Compose langfuse callback into existing callback chain
+      setLangfuseTracerProvider(provider);
+
       this.config.callback = composeCallbacks(
         this.config.callback,
         createLangfuseCallback({
-          enabled,
+          enabled: this.config.enable_langfuse,
           recordStreaming: this.config.langfuse_options?.recordStreaming === true,
         })
       );

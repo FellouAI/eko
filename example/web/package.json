@@ -13,12 +13,15 @@
     "eko"
   ],
   "dependencies": {
+    "@eko-ai/eko": "file:../../packages/eko-core",
+    "@eko-ai/eko-web": "file:../../packages/eko-web",
+    "@langfuse/otel": "^4.2.0",
+    "@opentelemetry/context-zone": "^2.1.0",
+    "@opentelemetry/sdk-trace-web": "^2.1.0",
+    "@react-login-page/base": "^1.0.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-scripts": "^5.0.1",
-    "@react-login-page/base": "^1.0.4",
-    "@eko-ai/eko": "file:../../packages/eko-core",
-    "@eko-ai/eko-web": "file:../../packages/eko-web"
+    "react-scripts": "^5.0.1"
   },
   "browserslist": {
     "production": [

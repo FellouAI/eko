@@ -5,7 +5,7 @@ import { IA2aClient } from "../agent/a2a";
 import { IMcpClient } from "./mcp.types";
 import { ToolResult } from "./tools.types";
 import { AgentContext } from "../core/context";
-import { LangfuseCallbackOptions } from "../common/langfuse-callback";
+import { LangfuseCallbackOptions } from "../trace/langfuse-integration";
 
 export type EkoConfig = {
   llms: LLMs;

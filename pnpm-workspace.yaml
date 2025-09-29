@@ -4,4 +4,5 @@ packages:
   - "packages/eko-debugger"
   - "packages/eko-nodejs"
   - "packages/eko-web"
+  - "packages/eko-trace-server"
   - "example/*"

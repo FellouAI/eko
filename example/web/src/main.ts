@@ -1,6 +1,9 @@
 import { Eko, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
 import { BrowserAgent } from "@eko-ai/eko-web";
-
+import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
+import { setLangfuseTracerProvider } from "@langfuse/tracing";
+import { LangfuseSpanProcessor } from "@langfuse/otel";
+import { ZoneContextManager } from "@opentelemetry/context-zone";
 
 export async function auto_test_case() {
 
