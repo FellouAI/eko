@@ -52,7 +52,7 @@ const config: GlobalConfig = {
   maxRetryNum: 3,
   agentParallel: false,
   compressThreshold: 80,
-  compressTokensThreshold: 100000,
+  compressTokensThreshold: 80000,
   largeTextLength: 5000,
   fileTextMaxLength: 20000,
   maxDialogueImgFileNum: 1,

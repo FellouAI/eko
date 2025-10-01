@@ -1,17 +1,17 @@
 import {
-  LanguageModelV2FunctionTool,
   LanguageModelV2Prompt,
   LanguageModelV2TextPart,
   LanguageModelV2ToolCallPart,
+  LanguageModelV2FunctionTool,
 } from "@ai-sdk/provider";
 import config from "../config";
 import { Tool } from "../types";
+import Log from "../common/log";
 import TaskSnapshotTool from "./snapshot";
 import { callAgentLLM } from "../agent/llm";
 import { RetryLanguageModel } from "../llm";
 import { mergeTools } from "../common/utils";
 import { AgentContext } from "../core/context";
-import Log from "../common/log";
 
 export function extractUsedTool<T extends Tool | LanguageModelV2FunctionTool>(
   messages: LanguageModelV2Prompt,
@@ -66,7 +66,6 @@ export function removeDuplicateToolUse(
 
 export async function compressAgentMessages(
   agentContext: AgentContext,
-  rlm: RetryLanguageModel,
   messages: LanguageModelV2Prompt,
   tools: LanguageModelV2FunctionTool[]
 ) {
@@ -74,7 +73,7 @@ export async function compressAgentMessages(
     return;
   }
   try {
-    await doCompressAgentMessages(agentContext, rlm, messages, tools);
+    await doCompressAgentMessages(agentContext, messages, tools);
   } catch (e) {
     Log.error("Error compressing agent messages:", e);
   }
@@ -82,10 +81,11 @@ export async function compressAgentMessages(
 
 async function doCompressAgentMessages(
   agentContext: AgentContext,
-  rlm: RetryLanguageModel,
   messages: LanguageModelV2Prompt,
   tools: LanguageModelV2FunctionTool[]
 ) {
+  const ekoConfig = agentContext.context.config;
+  const rlm = new RetryLanguageModel(ekoConfig.llms, ekoConfig.compressLlms);
   // extract used tool
   const usedTools = extractUsedTool(messages, tools);
   const snapshotTool = new TaskSnapshotTool();
@@ -107,6 +107,7 @@ async function doCompressAgentMessages(
       break;
     }
   }
+  compressLargeContextMessages(newMessages);
   newMessages.push({
     role: "user",
     content: [
@@ -166,6 +167,64 @@ async function doCompressAgentMessages(
       text: string;
     }>,
   });
+}
+
+function compressLargeContextMessages(messages: LanguageModelV2Prompt) {
+  for (let r = 2; r < messages.length; r++) {
+    const message = messages[r];
+    if (message.role == "assistant") {
+      message.content = message.content.map((c) => {
+        if (c.type == "text" && c.text.length > config.largeTextLength) {
+          return {
+            ...c,
+            text: c.text.substring(0, config.largeTextLength) + "...",
+          };
+        }
+        return c;
+      });
+    } else if (message.role == "user") {
+      message.content = message.content.map((c) => {
+        if (c.type == "text" && c.text.length > config.largeTextLength) {
+          return {
+            ...c,
+            text: c.text.substring(0, config.largeTextLength) + "...",
+          };
+        }
+        return c;
+      });
+    } else if (message.role == "tool") {
+      message.content = message.content.map((c) => {
+        if (c.type == "tool-result" && c.output) {
+          const output = c.output;
+          if (
+            (output.type == "text" || output.type == "error-text") &&
+            output.value.length > config.largeTextLength
+          ) {
+            return {
+              ...c,
+              output: {
+                ...output,
+                value:
+                  output.value.substring(0, config.largeTextLength) + "...",
+              },
+            };
+          } else if (output.type == "content") {
+            for (let i = 0; i < output.value.length; i++) {
+              const content = output.value[i];
+              if (
+                content.type == "text" &&
+                content.text.length > config.largeTextLength
+              ) {
+                content.text =
+                  content.text.substring(0, config.largeTextLength) + "...";
+              }
+            }
+          }
+        }
+        return c;
+      });
+    }
+  }
 }
 
 export function handleLargeContextMessages(messages: LanguageModelV2Prompt) {

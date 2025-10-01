@@ -11,6 +11,7 @@ export type EkoConfig = {
   llms: LLMs;
   agents?: Agent[];
   planLlms?: string[];
+  compressLlms?: string[];
   callback?: StreamCallback & HumanCallback;
   defaultMcpClient?: IMcpClient;
   a2aClient?: IA2aClient;

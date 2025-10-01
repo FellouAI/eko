@@ -10,7 +10,7 @@ const OptionsPage = () => {
   const [config, setConfig] = useState({
     llm: "anthropic",
     apiKey: "",
-    modelName: "claude-sonnet-4-20250514",
+    modelName: "claude-sonnet-4-5-20250929",
     options: {
       baseURL: "https://api.anthropic.com/v1",
     },
@@ -56,7 +56,8 @@ const OptionsPage = () => {
 
   const modelOptions = {
     anthropic: [
-      { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4 (default)" },
+      { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5 (default)" },
+      { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
       { value: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet" },
     ],
     openai: [
@@ -67,8 +68,9 @@ const OptionsPage = () => {
       { value: "o4-mini", label: "o4-mini" },
     ],
     openrouter: [
-      { value: "anthropic/claude-sonnet-4", label: "claude-sonnet-4 (default)" },
-      { value: "anthropic/claude-3.7-sonnet", label: "claude-3.7-sonnet (default)" },
+      { value: "anthropic/claude-sonnet-4.5", label: "claude-sonnet-4.5 (default)" },
+      { value: "anthropic/claude-sonnet-4", label: "claude-sonnet-4" },
+      { value: "anthropic/claude-3.7-sonnet", label: "claude-3.7-sonnet" },
       { value: "google/gemini-2.5-pro", label: "gemini-2.5-pro" },
       { value: "openai/gpt-5", label: "gpt-5" },
       { value: "openai/gpt-5-mini", label: "gpt-5-mini" },
@@ -76,6 +78,7 @@ const OptionsPage = () => {
       { value: "openai/o4-mini", label: "o4-mini" },
       { value: "openai/gpt-4.1-mini", label: "gpt-4.1-mini" },
       { value: "x-ai/grok-4", label: "grok-4" },
+      { value: "x-ai/grok-4-fast", label: "grok-4-fast" },
     ],
     "openai-compatible": [
       { value: "doubao-seed-1-6-250615", label: "doubao-seed-1-6-250615" },

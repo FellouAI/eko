@@ -300,7 +300,7 @@ export async function callAgentLLM(
     (messages.length >= config.compressThreshold || (messages.length >= 10 && estimatePromptTokens(messages, tools) >= config.compressTokensThreshold))
   ) {
     // Compress messages
-    await memory.compressAgentMessages(agentContext, rlm, messages, tools);
+    await memory.compressAgentMessages(agentContext, messages, tools);
   }
   if (!toolChoice) {
     // Append user dialogue
@@ -731,7 +731,6 @@ export async function callAgentLLM(
           ) {
             await memory.compressAgentMessages(
               agentContext,
-              rlm,
               messages,
               tools
             );
@@ -755,7 +754,7 @@ export async function callAgentLLM(
     if (retryNum < config.maxRetryNum) {
       await sleep(300 * (retryNum + 1) * (retryNum + 1));
       if ((e + "").indexOf("is too long") > -1) {
-        await memory.compressAgentMessages(agentContext, rlm, messages, tools);
+        await memory.compressAgentMessages(agentContext, messages, tools);
       }
       return callAgentLLM(
         agentContext,
