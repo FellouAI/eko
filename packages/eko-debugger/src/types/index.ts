@@ -20,7 +20,6 @@ export interface WsOptions {
 
 // System
 export type TraceSystemOptions = {
-  enabled?: boolean;
   // Whether to pretty print to console (default: true)
   prettyPrint?: boolean;
   // Custom message store implementation; defaults to in-memory store for universal compatibility

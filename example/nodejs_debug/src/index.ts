@@ -56,7 +56,6 @@ async function run() {
   const agents: Agent[] = [
     new SimpleChatAgent(),
     new FileAgent(),
-    // new BrowserAgent(), // 可以根据需要启用
   ];
 
   // 启用 Langfuse 集成（组合到现有回调链，不影响调试器）
@@ -83,11 +82,7 @@ async function run() {
   // (global as any).__eko_callback = (eko as any).config?.callback;
 
   // 启用调试器系统
-  const tracer = new TraceSystem({
-    enabled: true,
-  });
-
-  await tracer.start();
+  const tracer = new TraceSystem();
   tracer.enable(eko);
 
   // console.log("\n📊 调试器已启用，开始执行任务...\n");
@@ -108,7 +103,6 @@ async function run() {
 
   // 等待一小段时间确保所有事件都被处理
   await new Promise((resolve) => setTimeout(resolve, 5000));
-
 
   // 演示单节点重放（挑选第一个节点）
   // const firstNodeId = await getFirstNodeId(result.taskId);

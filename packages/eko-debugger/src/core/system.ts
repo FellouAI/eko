@@ -5,7 +5,6 @@ import { InMemoryMessageStore, MessageStore } from '../storage/message-store.js'
 export class TraceSystem {
   private readonly store: MessageStore;
   private readonly recorder: TraceRecorder;
-  private started = false;
 
   constructor(private readonly options: TraceSystemOptions = {}) {
     const providedStore = options.store;
@@ -16,21 +15,10 @@ export class TraceSystem {
     });
   }
 
-  async start(): Promise<void> {
-    if (this.started) return;
-    if (this.options.enabled === false) return;
-    this.started = true;
-  }
-
-  async stop(): Promise<void> {
-    if (!this.started) return;
-    this.started = false;
-  }
 
   enable<T extends object>(ekoInstance: T): T;
   enable<T extends { config?: { callback?: StreamCallback } }>(ekoInstance: T): T;
   enable<T extends object>(ekoInstance: T): T {
-    if (this.options.enabled === false) return ekoInstance;
     const original = (ekoInstance as any).config?.callback;
     const wrapped: StreamCallback = this.recorder.interceptCallback(original);
     if (!(ekoInstance as any).config) (ekoInstance as any).config = {};

@@ -53,11 +53,7 @@ export async function auto_test_case() {
     }
   });
 
-  const tracer = new TraceSystem({
-    enabled: true
-  });
-
-  await tracer.start();
+  const tracer = new TraceSystem();
   tracer.enable(eko);
 
   // Run: Generate workflow from natural language description
