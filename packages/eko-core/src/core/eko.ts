@@ -80,7 +80,9 @@ export class Eko {
 
       // Compose langfuse callback into existing callback chain
       setLangfuseTracerProvider(provider);
-
+      
+      // We have to combine langfuse callback with existing callbacks
+      // to avoid overwriting user-defined callbacks
       this.config.callback = composeCallbacks(
         this.config.callback,
         createLangfuseCallback({
@@ -136,7 +138,7 @@ export class Eko {
       // Use planner to generate workflow from prompt
       const planner = new Planner(context);
 
-      // CALLBACK: send task start
+      // NEW CALLBACK: send task start info
       const taskStartCbHelper = createCallbackHelper(
         this.config.callback,
         taskId,
@@ -149,6 +151,7 @@ export class Eko {
       // Return workflow
       return context.workflow;
     } catch (e) {
+      // NEW CALLBACK: send task error info
       const taskErrorCbHelper = createCallbackHelper(
         this.config.callback,
         taskId,
@@ -156,7 +159,7 @@ export class Eko {
       );
       // Cleanup and rethrow on error
       this.deleteTask(taskId);
-      // CALLBACK: send task error
+      // NEW CALLBACK: send task error info
       await taskErrorCbHelper.taskFinished(
         false,
         `Task Failed at generate state\nError: ${
