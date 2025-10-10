@@ -1,7 +1,7 @@
 {
   "name": "@eko-ai/eko-debugger",
   "version": "0.1.0",
-  "description": "Eko debugger & trace system (realtime WS + storage).",
+  "description": "Eko debugger & trace system",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
