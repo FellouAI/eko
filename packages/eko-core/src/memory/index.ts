@@ -98,8 +98,8 @@ export function removeDuplicateToolUse(
   ) {
     return results;
   }
-  let _results = [];
-  let tool_uniques = [];
+  let _results: Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart> = [];
+  let tool_uniques: string[] = [];
   for (let i = 0; i < results.length; i++) {
     if (results[i].type === "tool-call") {
       let tool = results[i] as LanguageModelV2ToolCallPart;
