@@ -455,29 +455,24 @@ export class Agent {
     if (results.length == 0) {
       return null;
     }
-    const textParts = results.filter(
-      (s): s is LanguageModelV2TextPart => s.type === "text"
-    );
-    if (textParts.length === results.length) {
-      return textParts.map((s) => s.text).join("\n\n");
+    if (results.every((s) => s.type == "text")) {
+      return results.map((s) => s.text).join("\n\n");
     }
-    const toolCalls = results.filter(
-      (s): s is LanguageModelV2ToolCallPart => s.type === "tool-call"
-    );
+    const toolCalls = results.filter((s) => s.type == "tool-call");
     if (
       toolCalls.length > 1 &&
       this.canParallelToolCalls(toolCalls) &&
       toolCalls.every(
-        (s) => agentTools.find((t) => t.name == s.toolName)?.supportParallelCalls === true
+        (s) => agentTools.find((t) => t.name == s.toolName)?.supportParallelCalls
       )
     ) {
-      const resultsArr = await Promise.all(
+      const results = await Promise.all(
         toolCalls.map((toolCall) =>
           this.callToolCall(agentContext, agentTools, toolCall, user_messages)
         )
       );
-      for (let i = 0; i < resultsArr.length; i++) {
-        toolResults.push(resultsArr[i]);
+      for (let i = 0; i < results.length; i++) {
+        toolResults.push(results[i]);
       }
     } else {
       for (let i = 0; i < toolCalls.length; i++) {
@@ -499,7 +494,10 @@ export class Agent {
       user_messages.forEach((message) => messages.push(message));
       return null;
     } else {
-      return textParts.map((s) => s.text).join("\n\n");
+      return results
+        .filter((s) => s.type == "text")
+        .map((s) => s.text)
+        .join("\n\n");
     }
   }
 
