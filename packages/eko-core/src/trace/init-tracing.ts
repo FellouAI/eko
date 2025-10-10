@@ -53,41 +53,4 @@ export function initTracing(options: InitTracingOptions): InitTracingResult {
   };
 }
 
-// 实用方法：在当前活动上下文中绑定一个函数，便于跨异步边界调用时保留上下文
-export function bindWithCurrentContext<TArgs extends unknown[], TResult>(
-  fn: (...args: TArgs) => TResult
-): (...args: TArgs) => TResult {
-  const active = otelContext.active();
-  return (...args: TArgs) => otelContext.with(active, () => fn(...args));
-}
-
-// 实用方法：在活动上下文中启动一个 Span，自动 end；适配异步函数
-export async function startActiveSpan<T>(
-  tracer: Tracer,
-  name: string,
-  run: (span: import("@opentelemetry/api").Span) => Promise<T> | T
-): Promise<T> {
-  return await new Promise<T>((resolve, reject) => {
-    tracer.startActiveSpan(name, async (span) => {
-      try {
-        const result = await run(span);
-        resolve(result);
-      } catch (err) {
-        reject(err);
-      } finally {
-        span.end();
-      }
-    });
-  });
-}
-
-// 实用方法：注入与提取上下文，便于跨进程/跨请求传递
-export function injectHeaders(carrier: Record<string, string>): void {
-  propagation.inject(otelContext.active(), carrier);
-}
-
-export function extractContext(carrier: Record<string, string>): Context {
-  return propagation.extract(otelContext.active(), carrier);
-}
-
 

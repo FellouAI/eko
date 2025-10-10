@@ -56,3 +56,6 @@ coverage/
 
 # Test generated files
 /test/fixtures/generated/
+
+.codemap
+.codemap/*
