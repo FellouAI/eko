@@ -99,7 +99,7 @@ export class AgentChain {
   agent: WorkflowAgent;
 
   /** Tool chains invoked by the agent */
-  tool_chains: ToolChain[] = [];
+  tools: ToolChain[] = [];
 
   /** LLM request for agent execution */
   agentRequest?: LLMRequest;
@@ -131,7 +131,7 @@ export class AgentChain {
     };
 
     // Add to list
-    this.tool_chains.push(tool);
+    this.tools.push(tool);
 
     // Notify parent listeners
     this.onUpdate &&
@@ -158,7 +158,7 @@ export class AgentChain {
           }
         : undefined,
       agentResult: this.agentResult,
-      tools: this.tool_chains,
+      tools: this.tools,
     };
   }
 }
@@ -177,7 +177,7 @@ export default class Chain {
   planResult?: string;
 
   /** All AgentChains */
-  agent_chains: AgentChain[] = [];
+  agents: AgentChain[] = [];
 
   /** Event listeners */
   private listeners: Callback[] = [];
@@ -199,7 +199,7 @@ export default class Chain {
     };
 
     // Add to list
-    this.agent_chains.push(agent);
+    this.agents.push(agent);
 
     // Publish update event
     this.pub({
@@ -244,7 +244,7 @@ export default class Chain {
           }
         : undefined,
       planResult: this.planResult,
-      agents: this.agent_chains,
+      agents: this.agents,
     };
   }
 }

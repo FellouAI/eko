@@ -132,7 +132,7 @@ export default class Context {
    */
   currentAgent(): [Agent, WorkflowAgent, AgentContext] | null {
     // Get last agent chain
-    const agentNode = this.chain.agent_chains[this.chain.agent_chains.length - 1];
+    const agentNode = this.chain.agents[this.chain.agents.length - 1];
 
     // If none, return null
     if (!agentNode) {

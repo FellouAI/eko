@@ -575,7 +575,7 @@ export class Eko {
       // Compute stats
       const duration = Date.now() - startTime;
       // Get tool-call count from chain
-      toolCallCount = agentChain.tool_chains.length;
+      toolCallCount = agentChain.tools.length;
 
       // Send new agent finished event
       await runAgentNodeCbHelper.agentNodeFinished(
@@ -607,7 +607,7 @@ export class Eko {
 
       // Compute stats
       const duration = Date.now() - startTime;
-      toolCallCount = agentChain.tool_chains.length;
+      toolCallCount = agentChain.tools.length;
 
       const runAgentErrorCbHelper = runAgentNodeCbHelper.createChildHelper(agentNode.agent.name);
 

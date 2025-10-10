@@ -113,11 +113,11 @@ export function getAgentSystemPrompt(
     prompt += "\n" + extSysPrompt.trim() + "\n";
   }
   prompt += "\nCurrent datetime: {datetime}";
-  if (context.chain.agent_chains.length > 1) {
+  if (context.chain.agents.length > 1) {
     prompt += "\n Main task: " + context.chain.taskPrompt;
     prompt += "\n\n# Pre-task execution results";
-    for (let i = 0; i < context.chain.agent_chains.length; i++) {
-      let agentChain = context.chain.agent_chains[i];
+    for (let i = 0; i < context.chain.agents.length; i++) {
+      let agentChain = context.chain.agents[i];
       if (agentChain.agentResult) {
         prompt += `\n## ${
           agentChain.agent.task || agentChain.agent.name
