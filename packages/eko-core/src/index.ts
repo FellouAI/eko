@@ -72,6 +72,10 @@ export {
   buildSimpleAgentWorkflow,
 } from "./common/xml";
 
+export {
+  composeCallbacks,
+} from "./common/compose-callbacks";
+
 export { buildAgentTree } from "./common/tree";
 export { extract_page_content } from "./agent/browser/utils";
 export { CallbackHelper, createCallbackHelper } from "./common/callback-helper";

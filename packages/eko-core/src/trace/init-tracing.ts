@@ -1,5 +1,5 @@
 import { BasicTracerProvider, BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
-import { trace, Tracer, TracerProvider, propagation, context as otelContext, Context } from "@opentelemetry/api";
+import { trace, Tracer, TracerProvider, propagation } from "@opentelemetry/api";
 import { W3CTraceContextPropagator, W3CBaggagePropagator, CompositePropagator } from "@opentelemetry/core";
 import { TransparentBrowserExporter } from "./transparet-exporter";
 
