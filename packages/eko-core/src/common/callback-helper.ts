@@ -247,11 +247,15 @@ export class CallbackHelper {
       toolCount: number;
       hasSystemPrompt: boolean;
     },
+    streamId?: string,
+    name?: string  // 自定义 generation span 名称
   ): Promise<void> {
     await this.sendMessage({
       type: "debug_llm_request_start",
       request,
       modelName,
+      streamId,
+      name,  // 添加 name
       context: context || {
         messageCount: 0,
         toolCount: 0,

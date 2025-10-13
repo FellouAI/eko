@@ -6,7 +6,7 @@ import {
 import Log from "../common/log";
 import config from "../config";
 import { createOpenAI } from "@ai-sdk/openai";
-import { call_timeout } from "../common/utils";
+import { call_timeout, uuidv4 } from "../common/utils";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
@@ -19,6 +19,7 @@ import {
   StreamResult,
 } from "../types/llm.types";
 import { defaultLLMProviderOptions } from "../agent/llm";
+import { createCallbackHelper } from "../common/callback-helper";
 
 /**
  * Retry Language Model manager
@@ -75,6 +76,15 @@ export class RetryLanguageModel {
   }
 
   async call(request: LLMRequest): Promise<GenerateResult> {
+    // DEBUG: Log call entry point
+    // console.warn('[RetryLanguageModel.call] Called with request:', {
+    //   hasCallbackContext: !!request?.callbackContext,
+    //   hasCallback: !!request?.callbackContext?.callback,
+    //   messagesCount: request?.messages?.length,
+    //   taskId: request?.callbackContext?.taskId,
+    //   streamId: request?.callbackContext?.streamId
+    // });
+    
     return await this.doGenerate({
       prompt: request.messages,
       tools: request.tools,
@@ -85,16 +95,63 @@ export class RetryLanguageModel {
       topK: request.topK,
       stopSequences: request.stopSequences,
       abortSignal: request.abortSignal,
-    });
+    }, request);
   }
 
   async doGenerate(
-    options: LanguageModelV2CallOptions
+    options: LanguageModelV2CallOptions,
+    request?: LLMRequest
   ): Promise<GenerateResult> {
+    // Setup callback helper if request context is provided
+    const callbackCtx = request?.callbackContext;
+    let cbHelper;
+    let requestId: string | undefined;
+    
+    // DEBUG: Log callbackContext details
+    // console.warn('[RetryLanguageModel.doGenerate] callbackContext:', {
+    //   hasCallbackContext: !!callbackCtx,
+    //   hasCallback: !!callbackCtx?.callback,
+    //   taskId: callbackCtx?.taskId,
+    //   agentName: callbackCtx?.agentName,
+    //   nodeId: callbackCtx?.nodeId,
+    //   streamId: callbackCtx?.streamId
+    // });
+    
+    if (callbackCtx?.callback) {
+      cbHelper = createCallbackHelper(
+        callbackCtx.callback,
+        callbackCtx.taskId,
+        callbackCtx.agentName,
+        callbackCtx.nodeId
+      );
+      requestId = callbackCtx?.streamId || uuidv4();
+      // DEBUG: Log cbHelper creation
+      // console.warn('[RetryLanguageModel.doGenerate] cbHelper created, will call llmRequestStart');
+    } else {
+      // DEBUG: Log missing callback
+      // console.warn('[RetryLanguageModel.doGenerate] NO cbHelper - callback not available');
+    }
+
     const maxTokens = options.maxOutputTokens;
     const providerOptions = options.providerOptions;
     const names = [...this.names, ...this.names];
     let lastError;
+    
+    // Trigger llmRequestStart callback before attempting any model
+    if (cbHelper && request) {
+      await cbHelper.llmRequestStart(
+        request,
+        undefined, // model name will be known after successful call
+        {
+          messageCount: request.messages.length,
+          toolCount: request.tools?.length || 0,
+          hasSystemPrompt: request.messages.some(m => m.role === 'system'),
+        },
+        requestId,  // 传递 streamId/requestId
+        request.callbackContext?.name  // 传递自定义名称
+      );
+    }
+
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
       const llmConfig = this.llms[name];
@@ -115,6 +172,11 @@ export class RetryLanguageModel {
         _options = await llmConfig.handler(_options);
       }
       try {
+        // Trigger llmResponseStart callback
+        if (cbHelper && requestId) {
+          await cbHelper.llmResponseStart(requestId);
+        }
+
         let result = (await llm.doGenerate(_options)) as GenerateResult;
         if (Log.isEnableDebug()) {
           Log.debug(
@@ -124,7 +186,19 @@ export class RetryLanguageModel {
         }
         result.llm = name;
         result.llmConfig = llmConfig;
-        result.text = result.content.find((c) => c.type === "text")?.text;
+        const textContent = result.content.find((c) => c.type === "text");
+        result.text = textContent && 'text' in textContent ? textContent.text : undefined;
+
+        // Trigger llmResponseFinished callback
+        if (cbHelper && requestId) {
+          await cbHelper.llmResponseFinished(requestId, result.content, {
+            promptTokens: result.usage?.inputTokens || 0,
+            completionTokens: result.usage?.outputTokens || 0,
+            totalTokens: result.usage?.totalTokens || 
+              (result.usage?.inputTokens || 0) + (result.usage?.outputTokens || 0),
+          });
+        }
+
         return result;
       } catch (e: any) {
         if (e?.name === "AbortError") {
@@ -156,14 +230,63 @@ export class RetryLanguageModel {
       topK: request.topK,
       stopSequences: request.stopSequences,
       abortSignal: request.abortSignal,
-    });
+    }, request);
   }
 
-  async doStream(options: LanguageModelV2CallOptions): Promise<StreamResult> {
+  async doStream(
+    options: LanguageModelV2CallOptions,
+    request?: LLMRequest
+  ): Promise<StreamResult> {
+    // Setup callback helper if request context is provided
+    const callbackCtx = request?.callbackContext;
+    let cbHelper;
+    let streamId: string | undefined;
+    
+    // DEBUG: Log callbackContext details
+    // console.warn('[RetryLanguageModel.doStream] callbackContext:', {
+    //   hasCallbackContext: !!callbackCtx,
+    //   hasCallback: !!callbackCtx?.callback,
+    //   taskId: callbackCtx?.taskId,
+    //   agentName: callbackCtx?.agentName,
+    //   nodeId: callbackCtx?.nodeId,
+    //   streamId: callbackCtx?.streamId
+    // });
+    
+    if (callbackCtx?.callback) {
+      cbHelper = createCallbackHelper(
+        callbackCtx.callback,
+        callbackCtx.taskId,
+        callbackCtx.agentName,
+        callbackCtx.nodeId
+      );
+      streamId = callbackCtx?.streamId || uuidv4();
+      // DEBUG: Log cbHelper creation
+      // console.warn('[RetryLanguageModel.doStream] cbHelper created, will call llmRequestStart');
+    } else {
+      // DEBUG: Log missing callback
+      // console.warn('[RetryLanguageModel.doStream] NO cbHelper - callback not available');
+    }
+
     const maxTokens = options.maxOutputTokens;
     const providerOptions = options.providerOptions;
     const names = [...this.names, ...this.names];
     let lastError;
+
+    // Trigger llmRequestStart callback before attempting any model
+    if (cbHelper && request) {
+      await cbHelper.llmRequestStart(
+        request,
+        undefined, // model name will be known after successful call
+        {
+          messageCount: request.messages.length,
+          toolCount: request.tools?.length || 0,
+          hasSystemPrompt: request.messages.some(m => m.role === 'system'),
+        },
+        streamId,  // 传递 streamId
+        request.callbackContext?.name  // 传递自定义名称
+      );
+    }
+
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
       const llmConfig = this.llms[name];
@@ -186,7 +309,7 @@ export class RetryLanguageModel {
       try {
         const controller = new AbortController();
         const signal = _options.abortSignal
-          ? AbortSignal.any([_options.abortSignal, controller.signal])
+          ? (AbortSignal as any).any([_options.abortSignal, controller.signal])
           : controller.signal;
         const result = (await call_timeout(
           async () => await llm.doStream({ ..._options, abortSignal: signal }),
@@ -223,6 +346,12 @@ export class RetryLanguageModel {
         result.llm = name;
         result.llmConfig = llmConfig;
         result.stream = this.streamWrapper([chunk], reader, controller);
+        
+        // Wrap stream with callback if needed
+        if (cbHelper && streamId) {
+          result.stream = this.callbackStreamWrapper(result.stream, cbHelper, streamId);
+        }
+        
         return result;
       } catch (e: any) {
         if (e?.name === "AbortError") {
@@ -361,6 +490,70 @@ export class RetryLanguageModel {
       },
       cancel: (reason) => {
         timer && clearTimeout(timer);
+        reader.cancel(reason);
+      },
+    });
+  }
+
+  /**
+   * Wrap stream to trigger callback events
+   */
+  private callbackStreamWrapper(
+    stream: ReadableStream<LanguageModelV2StreamPart>,
+    cbHelper: any,
+    streamId: string
+  ): ReadableStream<LanguageModelV2StreamPart> {
+    const reader = stream.getReader();
+    let hasStarted = false;
+    let collectedResponse: any[] = [];
+    let usage = {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    };
+
+    return new ReadableStream<LanguageModelV2StreamPart>({
+      start: async (controller) => {
+        // Trigger llmResponseStart on first chunk
+        await cbHelper.llmResponseStart(streamId);
+        hasStarted = true;
+      },
+      pull: async (controller) => {
+        try {
+          const { done, value } = await reader.read();
+          if (done) {
+            // Trigger llmResponseFinished
+            await cbHelper.llmResponseFinished(streamId, collectedResponse, usage);
+            controller.close();
+            return;
+          }
+
+          // Collect response parts for final callback
+          if (value.type === 'text-delta' && (value as any).delta) {
+            const existingText = collectedResponse.find(p => p.type === 'text');
+            if (existingText) {
+              existingText.text += (value as any).delta;
+            } else {
+              collectedResponse.push({ type: 'text', text: (value as any).delta });
+            }
+          } else if (value.type === 'tool-call') {
+            collectedResponse.push(value);
+          } else if (value.type === 'finish') {
+            const chunk = value as any;
+            usage = {
+              promptTokens: chunk.usage?.inputTokens || 0,
+              completionTokens: chunk.usage?.outputTokens || 0,
+              totalTokens: chunk.usage?.totalTokens || (chunk.usage?.inputTokens || 0) + (chunk.usage?.outputTokens || 0),
+            };
+          }
+
+          controller.enqueue(value);
+        } catch (error) {
+          controller.error(error);
+          throw error;
+        }
+      },
+      cancel: async (reason) => {
         reader.cancel(reason);
       },
     });

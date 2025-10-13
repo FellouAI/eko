@@ -85,4 +85,13 @@ export type LLMRequest = {
   topK?: number;
   stopSequences?: string[];
   abortSignal?: AbortSignal;
+  // Callback context for observability
+  callbackContext?: {
+    callback?: any; // StreamCallback type
+    taskId: string;
+    agentName: string;
+    nodeId?: string | null;
+    streamId?: string;
+    name?: string;  // 自定义 generation span 名称
+  };
 };

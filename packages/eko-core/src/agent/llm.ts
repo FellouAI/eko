@@ -359,31 +359,28 @@ export async function callAgentLLM(
         };
         return combined.signal;
       })();
+  const llmResponseStreamId = uuidv4();
   const request: LLMRequest = {
     tools: tools,
     toolChoice,
     messages: messages,
     abortSignal: signal,
+    // Pass callback context to RetryLanguageModel for unified callback triggering
+    callbackContext: {
+      callback: callback || context.config.callback,
+      taskId: context.taskId,
+      agentName: agentContext.agent.Name,
+      nodeId: agentContext.agentChain.agent.id,
+      streamId: llmResponseStreamId,
+    },
   };
   requestHandler && requestHandler(request);
-
-  // CALLBACK: send LLM request start event
-  await agentllmCbHelper.llmRequestStart(
-    request,
-    undefined, // model name not available
-    {
-      messageCount: messages.length,
-      toolCount: tools.length,
-      hasSystemPrompt: messages.some(m => m.role === 'system'),
-    }
-  );
 
   let streamText = "";
   let thinkText = "";
   let toolArgsText = "";
   let textStreamId = uuidv4();
   let thinkStreamId = uuidv4();
-  let llmResponseStreamId = uuidv4();
   let textStreamDone = false;
   // toolParts: collected tool-call intents within this Assistant Step (no results)
   const toolParts: LanguageModelV2ToolCallPart[] = [];
@@ -392,8 +389,7 @@ export async function callAgentLLM(
     agentChain.agentRequest = request;
     context.currentStepControllers.add(stepController);
     const result: StreamResult = await rlm.callStream(request);
-    // New: LLM response start
-    await agentllmCbHelper.llmResponseStart(llmResponseStreamId);
+    // LLM callbacks are now handled inside rlm.callStream
     reader = result.stream.getReader();
     let toolPart: LanguageModelV2ToolCallPart | null = null;
     // Read and parse streaming events: map provider-specific events to ReAct phases
@@ -689,21 +685,7 @@ export async function callAgentLLM(
             );
             toolPart = null;
           }
-          // New: LLM response finished
-          await agentllmCbHelper.llmResponseFinished(
-            llmResponseStreamId,
-            [
-              ...(streamText ? [{ type: "text", text: streamText } as any] : []),
-              ...toolParts,
-            ],
-            {
-              promptTokens: chunk.usage.inputTokens || 0,
-              completionTokens: chunk.usage.outputTokens || 0,
-              totalTokens:
-                chunk.usage.totalTokens ||
-                (chunk.usage.inputTokens || 0) + (chunk.usage.outputTokens || 0),
-            }
-          );
+          // LLM response finished is now handled inside rlm.callStream wrapper
           // OLD VERSION CALLBACK
           await streamCallback.onMessage(
             {

@@ -1,6 +1,4 @@
-import type { MessageStore } from '../storage/message-store.js';
-// Removed MonitorEvent/EventBroadcaster; keep only core callback types
-// Import types from eko-core via relative path to avoid circular deps
+// Core callback types for structured logging
 export interface StreamCallback {
   onMessage: (msg: any, agentCtx?: unknown) => void | Promise<void>;
 }
@@ -14,15 +12,9 @@ export interface StreamCallbackMessage {
   [key: string]: any;
 }
 
-export interface WsOptions {
-  port: number;
-}
-
-// System
+// System options
 export type TraceSystemOptions = {
   // Whether to pretty print to console (default: true)
   prettyPrint?: boolean;
-  // Custom message store implementation; defaults to in-memory store for universal compatibility
-  store?: MessageStore;
 };
 

@@ -73,7 +73,7 @@ export {
 } from "./common/xml";
 
 export {
-  composeCallbacks,
+  composeCallbacks
 } from "./common/compose-callbacks";
 
 export { buildAgentTree } from "./common/tree";

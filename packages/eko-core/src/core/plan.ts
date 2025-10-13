@@ -107,37 +107,33 @@ export class Planner {
       this.context.agents
     );
 
+    const streamId = `plan_${this.taskId}_${Date.now()}`;
     const request: LLMRequest = {
       maxTokens: 4096,
       temperature: 0.7,
       messages: messages,
       abortSignal: this.context.controller.signal,
+      // Pass callback context to RetryLanguageModel for unified callback triggering
+      callbackContext: {
+        callback: this.callback,
+        taskId: this.taskId,
+        agentName: "Planner",
+        nodeId: null,
+        streamId: streamId,
+      },
     };
 
-    // CALLBACK: create LLM callback helper as a child of planCbHelper
-    const llmCbHelper = planCbHelper.createChildHelper("LLM");
-    // CALLBACK: LLM request start
-    await llmCbHelper.llmRequestStart(
-      request,
-      undefined, // rlm.getCurrentModel()?.name currently unavailable
-      {
-        messageCount: messages.length,
-        toolCount: 0,
-        hasSystemPrompt: !!systemPrompt,
-      }
-    );
-
+    // LLM callbacks are now handled inside rlm.callStream
     const result = await rlm.callStream(request);
     const reader = result.stream.getReader();
     let streamText = "";
     let thinkingText = "";
-    const streamId = `plan_${this.taskId}_${Date.now()}`;
     let usagePromptTokens = 0;
     let usageCompletionTokens = 0;
     let usageTotalTokens = 0;
 
-    // CALLBACK: LLM response start
-    await llmCbHelper.llmResponseStart(streamId);
+    // Create LLM callback helper for fine-grained streaming callbacks
+    const llmCbHelper = planCbHelper.createChildHelper("LLM");
 
     try {
       while (true) {
@@ -221,16 +217,7 @@ export class Planner {
       workflow.taskPrompt = taskPrompt.trim();
     }
 
-    // Send LLM response finished (with usage)
-    await llmCbHelper.llmResponseFinished(
-      streamId,
-      [{ type: "text", text: streamText }],
-      {
-        promptTokens: usagePromptTokens,
-        completionTokens: usageCompletionTokens,
-        totalTokens: usageTotalTokens,
-      }
-    );
+    // LLM response finished is now handled inside rlm.callStream wrapper
 
     // Send planning finished (with usage)
     await planCbHelper.planFinished(

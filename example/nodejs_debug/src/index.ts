@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 import SimpleChatAgent from "./chat";
-// import { replayNode } from "./replay";
 import { TraceSystem } from "@eko-ai/eko-debugger";
 import { FileAgent } from "@eko-ai/eko-nodejs";
 import { Eko, Agent, Log, LLMs } from "@eko-ai/eko";
@@ -103,17 +102,6 @@ async function run() {
 
   // 等待一小段时间确保所有事件都被处理
   await new Promise((resolve) => setTimeout(resolve, 5000));
-
-  // 演示单节点重放（挑选第一个节点）
-  // const firstNodeId = await getFirstNodeId(result.taskId);
-  // if (firstNodeId) {
-  //   console.log(`\n🕰️ 尝试重放节点: ${firstNodeId}`);
-  //   await replayNode(result.taskId, firstNodeId);
-  // }
-
-  // 关闭调试器
-  // await tracer.stop();
-  // console.log("\n✅ 调试器已关闭");
 }
 
 run().catch((e) => {

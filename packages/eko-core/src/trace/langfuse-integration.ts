@@ -19,6 +19,14 @@ type Handles = {
   root: LangfuseSpan;
   plan?: LangfuseSpan;
   workflow?: LangfuseSpan;
+  
+  // 新增：统一的 span 池
+  allSpans: Map<string, any>;  // spanId -> span 对象
+  
+  // 新增：执行栈（按 nodeId 隔离，支持并行 Agent）
+  activeSpanStacks: Map<string, string[]>;  // nodeId -> [spanId1, spanId2, ...]
+  
+  // 保留原有字段（向后兼容）
   agents: Map<string, LangfuseAgent>;
   genSeq: Map<string, number>;
   gens: Map<string, LangfuseGeneration>;
@@ -77,6 +85,8 @@ export function createLangfuseCallback(
       root,
       plan: undefined,
       workflow: undefined,
+      allSpans: new Map(),
+      activeSpanStacks: new Map(),
       agents: new Map(),
       genSeq: new Map(),
       gens: new Map(),
@@ -95,12 +105,69 @@ export function createLangfuseCallback(
     rec.workflow?.end?.();
     rec.plan?.end?.();
     rec.root?.end?.();
+    
+    // 清理新增的数据结构
+    rec.allSpans.clear();
+    rec.activeSpanStacks.clear();
   }
 
   function nextGenKey(nodeId: string, rec: Handles): string {
     const curr = (rec.genSeq.get(nodeId) ?? 0) + 1;
     rec.genSeq.set(nodeId, curr);
     return `${nodeId}:${curr}`;
+  }
+
+  // 推入栈
+  function pushStack(rec: Handles, nodeId: string, spanId: string) {
+    if (!rec.activeSpanStacks.has(nodeId)) {
+      rec.activeSpanStacks.set(nodeId, []);
+    }
+    rec.activeSpanStacks.get(nodeId)!.push(spanId);
+  }
+
+  // 弹出栈，返回上一层 spanId
+  function popStack(rec: Handles, nodeId: string): string | undefined {
+    const stack = rec.activeSpanStacks.get(nodeId);
+    if (stack && stack.length > 0) {
+      stack.pop();  // 弹出当前层
+      return stack[stack.length - 1];  // 返回新的栈顶（上一层）
+    }
+    return undefined;
+  }
+
+  // 推断 parent span（核心逻辑）
+  function inferParentSpan(
+    rec: Handles,
+    nodeId: string | undefined,
+    agentContext?: AgentContext
+  ): any {
+    // 1. 优先：从 agentContext.variables 获取当前 spanId（最精确）
+    if (agentContext) {
+      const spanId = agentContext.variables.get('_langfuse_current_span_id');
+      if (spanId && rec.allSpans.has(spanId)) {
+        return rec.allSpans.get(spanId);
+      }
+    }
+    
+    // 2. 从执行流的栈顶获取
+    if (nodeId) {
+      const stack = rec.activeSpanStacks.get(nodeId);
+      if (stack && stack.length > 0) {
+        const topSpanId = stack[stack.length - 1];
+        if (rec.allSpans.has(topSpanId)) {
+          return rec.allSpans.get(topSpanId);
+        }
+      }
+    }
+    
+    // 3. Plan 阶段特殊处理（仅在 Plan 执行中有效）
+    if (rec.plan) return rec.plan;
+    
+    // 4. Workflow fallback
+    if (rec.workflow) return rec.workflow;
+    
+    // 5. Root fallback
+    return rec.root;
   }
 
   async function onMessage(
@@ -110,6 +177,9 @@ export function createLangfuseCallback(
     if (!enabled) return;
     const { taskId, type } = message as any;
     if (!taskId || !type) return;
+
+    // DEBUG: Log all incoming messages
+    console.warn(`收到消息: ${type} (任务 ID: ${taskId})`);
 
     switch (type) {
       case "debug_task_start": {
@@ -250,7 +320,19 @@ export function createLangfuseCallback(
           },
           { asType: "agent" }
         );
+        
+        // 存储到原有 Map（兼容性）
         rec.agents.set(nodeId, agentObs);
+        
+        // 新增：存储到 allSpans + 推入栈 + 注入到 agentContext
+        const spanId = `agent_${nodeId}`;
+        rec.allSpans.set(spanId, agentObs);
+        pushStack(rec, nodeId, spanId);
+        
+        if (agentContext) {
+          agentContext.variables.set('_langfuse_current_span_id', spanId);
+        }
+        
         return;
       }
       case "debug_agent_node_finished": {
@@ -271,7 +353,23 @@ export function createLangfuseCallback(
           });
         } catch {}
         agentObs?.end?.();
+        
+        // 新增：弹出栈 + 恢复上一层 spanId
+        const prevSpanId = popStack(rec, nodeId);
+        if (agentContext) {
+          if (prevSpanId) {
+            agentContext.variables.set('_langfuse_current_span_id', prevSpanId);
+          } else {
+            // Agent 是顶层，清空 spanId
+            agentContext.variables.delete('_langfuse_current_span_id');
+          }
+        }
+        
+        // 清理
         rec.agents.delete(nodeId);
+        const spanId = `agent_${nodeId}`;
+        rec.allSpans.delete(spanId);
+        
         return;
       }
 
@@ -282,11 +380,23 @@ export function createLangfuseCallback(
           agentContext?.agentChain?.agent?.id ||
           (message as any).nodeId ||
           "unknown";
-        const agentObs = rec.agents.get(nodeId) || rec.workflow;
-        const parent = rec.plan ?? agentObs;
-        const key = nextGenKey(nodeId, rec);
+        
+        // 核心改动：使用 inferParentSpan 动态推断 parent
+        const parent = inferParentSpan(rec, nodeId, agentContext);
+        
+        // 优先使用 streamId 作为唯一标识，避免并行冲突
+        const streamId = (message as any).streamId;
+        const key = streamId || nextGenKey(nodeId, rec);
+        
+        // 获取自定义名称，默认为 "generation"
+        const customName = (message as any).name;
+        const spanName = customName || (message as any).modelName || "generation";
+        
+        // DEBUG: Log key generation
+        // console.warn('[Langfuse] debug_llm_request_start - key:', key, 'nodeId:', nodeId, 'streamId:', streamId);
+        
         const gen = parent.startObservation?.(
-          (message as any).modelName || "generation",
+          spanName,
           {
             input: (message as any).request?.messages,
             metadata: {
@@ -295,12 +405,18 @@ export function createLangfuseCallback(
               context: (message as any).context,
               model: (message as any).modelName,
               modelParameters: (message as any).request?.providerOptions,
+              streamId: streamId,  // 保存 streamId 到 metadata
             },
           },
           { asType: "generation" }
         );
         rec.gens.set(key, gen);
         rec.genStartAt.set(key, Date.now());
+        
+        // DEBUG: Log span storage
+        // console.warn('[Langfuse] Stored generation span with key:', key, 'total gens:', rec.gens.size);
+        
+        // Generation 是叶子节点，不推入栈
         return;
       }
       case "debug_llm_response_finished": {
@@ -310,12 +426,35 @@ export function createLangfuseCallback(
           agentContext?.agentChain?.agent?.id ||
           (message as any).nodeId ||
           "unknown";
+        
+        // 优先使用 streamId 匹配，避免并行冲突
+        const streamId = (message as any).streamId;
         const lastSeq = rec.genSeq.get(nodeId) || 1;
-        const key = `${nodeId}:${lastSeq}`;
+        const key = streamId || `${nodeId}:${lastSeq}`;
+        
+        // DEBUG: Log key lookup
+        // console.warn('[Langfuse] debug_llm_response_finished - key:', key, 'nodeId:', nodeId, 'streamId:', streamId);
+        // console.warn('[Langfuse] Available keys in rec.gens:', Array.from(rec.gens.keys()));
+        
         const gen = rec.gens.get(key);
+        
+        // DEBUG: Log span retrieval
+        // if (!gen) {
+        //   console.warn('[Langfuse] WARNING: Generation span not found for key:', key);
+        // } else {
+        //   console.warn('[Langfuse] Found generation span for key:', key);
+        // }
+        
         try {
           const startAt = rec.genStartAt.get(key);
           const latency = startAt ? Date.now() - startAt : undefined;
+          
+          // DEBUG: Log response data
+          // console.warn('[Langfuse] Response data:', {
+          //   hasResponse: !!(message as any).response,
+          //   response: (message as any).response,
+          //   hasUsage: !!(message as any).usage
+          // });
           gen?.update?.({
             output: (message as any).response,
             usageDetails: (message as any).usage 
@@ -344,9 +483,11 @@ export function createLangfuseCallback(
           agentContext?.agentChain?.agent?.id ||
           (message as any).nodeId ||
           "unknown";
-        // Tool belongs to the Agent
-        const agentObs = rec.agents.get(nodeId) || rec.workflow;
-        const tool = agentObs?.startObservation?.(
+        
+        // 核心改动：使用 inferParentSpan 替代固定的 agentObs
+        const parent = inferParentSpan(rec, nodeId, agentContext);
+        
+        const tool = parent?.startObservation?.(
           (message as any).toolName,
           {
             input: (message as any).params,
@@ -354,8 +495,22 @@ export function createLangfuseCallback(
           },
           { asType: "tool" }
         );
+        
         const toolCallId = (message as any).toolId;
-        if (toolCallId && tool) rec.tools.set(toolCallId, tool);
+        if (toolCallId && tool) {
+          // 存储到原有 Map（兼容性）
+          rec.tools.set(toolCallId, tool);
+          
+          // 新增：存储到 allSpans + 推入栈 + 注入到 agentContext
+          const spanId = `tool_${toolCallId}`;
+          rec.allSpans.set(spanId, tool);
+          pushStack(rec, nodeId, spanId);
+          
+          if (agentContext) {
+            agentContext.variables.set('_langfuse_current_span_id', spanId);
+          }
+        }
+        
         return;
       }
       case "debug_tool_call_finished": {
@@ -371,7 +526,27 @@ export function createLangfuseCallback(
           });
         } catch {}
         tool?.end?.();
-        if (toolCallId) rec.tools.delete(toolCallId);
+        
+        // 新增：弹出栈 + 恢复上一层 spanId
+        if (toolCallId) {
+          const nodeId = agentContext?.agentChain?.agent?.id || (message as any).nodeId || "unknown";
+          const prevSpanId = popStack(rec, nodeId);
+          
+          if (agentContext) {
+            if (prevSpanId) {
+              agentContext.variables.set('_langfuse_current_span_id', prevSpanId);
+            } else {
+              // 理论上 Tool 结束后应该还在 Agent 内
+              agentContext.variables.delete('_langfuse_current_span_id');
+            }
+          }
+          
+          // 清理
+          rec.tools.delete(toolCallId);
+          const spanId = `tool_${toolCallId}`;
+          rec.allSpans.delete(spanId);
+        }
+        
         return;
       }
       default:
