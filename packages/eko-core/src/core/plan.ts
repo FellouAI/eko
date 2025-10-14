@@ -86,28 +86,7 @@ export class Planner {
   ): Promise<Workflow> {
     const config = this.context.config;
     const rlm = new RetryLanguageModel(config.llms, config.planLlms);
-    
-    
-    // Prepare planning metadata
-    const systemPrompt = messages[0]?.content as string || "";
-    const userPromptContent = messages[1]?.content?.[0];
-    const userPrompt = userPromptContent && typeof userPromptContent === 'object' && 'text' in userPromptContent ? userPromptContent.text : "";
-
-
-    // CALLBACK: send planning-start callbacks
-    const planCbHelper = createCallbackHelper(this.callback, this.taskId, "Planner");
-
-    // CALLBACK: planning start event
-    await planCbHelper.planStart(
-      taskPrompt,
-      {
-        systemPrompt,
-        userPrompt,
-      },
-      this.context.agents
-    );
-
-    const streamId = `plan_${this.taskId}_${Date.now()}`;
+    rlm.setContext(this.context);
     const request: LLMRequest = {
       maxTokens: 4096,
       temperature: 0.7,

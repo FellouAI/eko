@@ -148,6 +148,7 @@ request_help: Request assistance from the user; for instance, when an operation 
         agentContext.context.config.llms,
         agentContext.agent.Llms
       );
+      rlm.setContext(agentContext);
       let image = toImage(imageResult.imageBase64);
       let request: LLMRequest = {
         messages: [

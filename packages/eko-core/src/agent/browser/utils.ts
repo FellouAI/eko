@@ -1,4 +1,4 @@
-export function extract_page_content(max_url_length = 200) {
+export function extract_page_content(max_url_length = 200, max_content_length = 50000) {
   let result = "";
   max_url_length = max_url_length || 200;
   try {
@@ -107,5 +107,9 @@ export function extract_page_content(max_url_length = 200) {
   } catch (e) {
     result = document.body.innerText;
   }
-  return result.replace(/\s*\n/g, "\n").replace(/\n+/g, "\n").trim();
+  result = result.replace(/\s*\n/g, "\n").replace(/\n+/g, "\n").trim();
+  if (result.length > max_content_length) {
+    result = result.slice(0, max_content_length) + "...";
+  }
+  return result;
 }

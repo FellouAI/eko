@@ -180,6 +180,7 @@ async function doCompressAgentMessages(
 ) {
   const ekoConfig = agentContext.context.config;
   const rlm = new RetryLanguageModel(ekoConfig.llms, ekoConfig.compressLlms);
+  rlm.setContext(agentContext);
   // extract used tool
   const usedTools = extractUsedTool(messages, tools);
   const snapshotTool = new TaskSnapshotTool();

@@ -299,8 +299,7 @@ export class Agent {
 
     // Initialize RetryLanguageModel
     const rlm = new RetryLanguageModel(context.config.llms, this.llms);
-
-    // Initialize agent tool set
+    rlm.setContext(agentContext);
     let agentTools = tools;
 
     await agentRunCbHelper.agentStart(

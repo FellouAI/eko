@@ -13,6 +13,7 @@ import {
   LanguageModelV2Usage,
   LanguageModelV2ResponseMetadata,
 } from "@ai-sdk/provider";
+import Context, { AgentContext } from "../core/context";
 
 export type LLMprovider =
   | "openai"
@@ -37,7 +38,7 @@ export type LLMConfig = {
   };
   options?: Record<string, any>;
   fetch?: typeof globalThis.fetch;
-  handler?: (options: LanguageModelV2CallOptions) => Promise<LanguageModelV2CallOptions>;
+  handler?: (options: LanguageModelV2CallOptions, context?: Context, agentContext?: AgentContext) => Promise<LanguageModelV2CallOptions>;
 };
 
 export type LLMs = {

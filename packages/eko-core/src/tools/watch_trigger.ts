@@ -111,10 +111,11 @@ export default class WatchTriggerTool implements Tool {
     const start = new Date().getTime();
     const timeout = ((args.timeout as number) || 5) * 60000;
     const frequency = Math.max(500, (args.frequency as number || 1) * 1000);
-    let rlm = new RetryLanguageModel(
+    const rlm = new RetryLanguageModel(
       agentContext.context.config.llms,
       agentContext.agent.Llms
     );
+    rlm.setContext(agentContext);
     while (new Date().getTime() - start < timeout) {
       await agentContext.context.checkAborted();
       await new Promise((resolve) => setTimeout(resolve, frequency));

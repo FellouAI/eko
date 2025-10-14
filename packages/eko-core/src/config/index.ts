@@ -53,7 +53,7 @@ const config: GlobalConfig = {
   agentParallel: false,
   compressThreshold: 80,
   compressTokensThreshold: 80000,
-  largeTextLength: 5000,
+  largeTextLength: 8000,
   fileTextMaxLength: 20000,
   maxDialogueImgFileNum: 1,
   toolResultMultimodal: true,
