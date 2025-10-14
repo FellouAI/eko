@@ -689,10 +689,12 @@ export function run_build_dom_tree() {
           console.warn('Unable to access iframe:', node);
         }
       } else {
-        const children = Array.from(node.childNodes).map((child) =>
-          buildDomTree(child, parentIframe)
-        );
-        nodeData.children.push(...children);
+        if (nodeData.isVisible != false) {
+          const children = Array.from(node.childNodes).map((child) =>
+            buildDomTree(child, parentIframe)
+          );
+          nodeData.children.push(...children);
+        }
       }
 
       return nodeData;
