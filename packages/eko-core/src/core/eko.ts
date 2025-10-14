@@ -59,6 +59,9 @@ export class Eko {
 
   /** Task map: key=taskId, value=context */
   protected taskMap: Map<string, Context>;
+  
+  /** Tracing initialization flag (lazy init) */
+  private tracingInitialized = false;
 
   /**
    * Constructor
@@ -66,33 +69,43 @@ export class Eko {
    */
   constructor(config: EkoConfig) {
     this.config = config;
-
-    if (this.config.enable_langfuse) {
-
-      // Initialize tracing
-      const { provider } = initTracing({
-        endpoint: this.config.langfuse_options?.endpoint || "https://api.langfuse.com/otel-ingest",
-        serviceName: this.config.langfuse_options?.serviceName || "eko-service",
-        serviceVersion: this.config.langfuse_options?.serviceVersion || "1.0.0",
-        useSendBeacon: true,
-        batchBytesLimit: 800_000,
-      });
-
-      // Compose langfuse callback into existing callback chain
-      setLangfuseTracerProvider(provider);
-      
-      // We have to combine langfuse callback with existing callbacks
-      // to avoid overwriting user-defined callbacks
-      this.config.callback = composeCallbacks(
-        this.config.callback,
-        createLangfuseCallback({
-          enabled: this.config.enable_langfuse,
-          recordStreaming: this.config.langfuse_options?.recordStreaming === true,
-        })
-      );
+    this.taskMap = new Map();
+  }
+  
+  /**
+   * Lazy initialize tracing system (called before first task)
+   * @private
+   */
+  private ensureTracingInitialized(): void {
+    if (this.tracingInitialized || !this.config.enable_langfuse) {
+      return;
     }
 
-    this.taskMap = new Map();
+    // Initialize tracing
+    const { provider } = initTracing({
+      endpoint: this.config.langfuse_options?.endpoint || "https://localhost:8001/api/span-forward/ingest",
+      serviceName: this.config.langfuse_options?.serviceName || "eko-service",
+      serviceVersion: this.config.langfuse_options?.serviceVersion || "1.0.0",
+      useSendBeacon: true,
+      batchBytesLimit: 800_000,
+      autoFlush: this.config.langfuse_options?.autoFlush === true,
+    });
+
+    // Set global tracer provider
+    setLangfuseTracerProvider(provider);
+    
+    // Compose langfuse callback into existing callback chain
+    // Note: The external traceId from contextParams.traceId will be used as sessionId
+    // in Langfuse (see langfuse-integration.ts ensureRoot function)
+    this.config.callback = composeCallbacks(
+      this.config.callback,
+      createLangfuseCallback({
+        enabled: this.config.enable_langfuse,
+        recordStreaming: this.config.langfuse_options?.recordStreaming === true,
+      })
+    );
+    
+    this.tracingInitialized = true;
   }
 
   /**
@@ -109,6 +122,10 @@ export class Eko {
     taskId: string = uuidv4(),
     contextParams?: Record<string, any>
   ): Promise<Workflow> {
+    // Lazy initialize tracing system (only once)
+    // Note: contextParams.traceId will be used as Langfuse sessionId automatically
+    this.ensureTracingInitialized();
+    
     // Fetch agents from config and copy to avoid mutating original
     const agents = [...(this.config.agents || [])];
 

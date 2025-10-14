@@ -1,5 +1,5 @@
 import { BasicTracerProvider, BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
-import { trace, Tracer, TracerProvider, propagation } from "@opentelemetry/api";
+import { trace, TracerProvider, propagation } from "@opentelemetry/api";
 import { W3CTraceContextPropagator, W3CBaggagePropagator, CompositePropagator } from "@opentelemetry/core";
 import { TransparentBrowserExporter } from "./transparet-exporter";
 
@@ -9,6 +9,7 @@ export interface InitTracingOptions {
   serviceVersion?: string;
   useSendBeacon?: boolean;
   batchBytesLimit?: number;
+  autoFlush?: boolean; // 每次导出后自动 flush Langfuse
   /** Batch processor config（可选，保持简单默认值） */
   maxQueueSize?: number;
   scheduledDelayMillis?: number;
@@ -27,6 +28,7 @@ export function initTracing(options: InitTracingOptions): InitTracingResult {
     endpoint: options.endpoint,
     useSendBeacon: options.useSendBeacon,
     batchBytesLimit: options.batchBytesLimit,
+    autoFlush: options.autoFlush,
   });
 
   const processor = new BatchSpanProcessor(exporter, {

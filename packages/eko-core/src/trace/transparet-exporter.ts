@@ -4,20 +4,23 @@ import type { SpanContext } from "@opentelemetry/api";
 import axios from "axios";
 
 interface TransparentBrowserExporterOptions {
-  endpoint: string; // 你的后端 /otel-ingest
+  endpoint: string; // 你的后端 /api/span-forward/ingest
   batchBytesLimit?: number; // 可选：最大 payload
   useSendBeacon?: boolean; // 默认 true
+  autoFlush?: boolean; // 可选：每次导出后自动 flush，默认 false
 }
 
 export class TransparentBrowserExporter implements SpanExporter {
   private endpoint: string;
   private batchBytesLimit: number;
   private useSendBeacon: boolean;
+  private autoFlush: boolean;
 
   constructor(opts: TransparentBrowserExporterOptions) {
     this.endpoint = opts.endpoint;
     this.batchBytesLimit = opts.batchBytesLimit ?? 800_000;
     this.useSendBeacon = opts.useSendBeacon ?? true;
+    this.autoFlush = opts.autoFlush ?? false;
   }
 
   export(
@@ -33,6 +36,11 @@ export class TransparentBrowserExporter implements SpanExporter {
         return;
       }
 
+      // 添加 flush 查询参数（如果启用 autoFlush）
+      const url = this.autoFlush 
+        ? `${this.endpoint}?flush=true`
+        : this.endpoint;
+
       // 优先 sendBeacon（浏览器环境）
       if (
         this.useSendBeacon &&
@@ -40,7 +48,7 @@ export class TransparentBrowserExporter implements SpanExporter {
         typeof navigator.sendBeacon === "function"
       ) {
         const ok = navigator.sendBeacon(
-          this.endpoint,
+          url,
           new Blob([json], { type: "application/json" })
         );
         if (ok) {
@@ -51,13 +59,24 @@ export class TransparentBrowserExporter implements SpanExporter {
 
       // fallback axios（兼容 Node 与浏览器）
       axios
-        .post(this.endpoint, json, {
+        .post(url, json, {
           headers: { "Content-Type": "application/json" },
           // axios 在浏览器下会使用 XHR/fetch 适配器，Node 使用 http 适配器
           // sendBeacon 已覆盖页面卸载时的可靠上报场景
         })
-        .then(() => {
-          resultCallback({ code: ExportResultCode.SUCCESS });
+        .then((response) => {
+          // 处理新服务器返回的详细信息
+          const result = response.data;
+          if (result && result.rejected > 0) {
+            console.warn(
+              `[TransparentExporter] Some spans rejected: accepted=${result.accepted}, rejected=${result.rejected}`,
+              result.errors
+            );
+            // 即使有部分失败，只要有成功的就算成功
+            resultCallback({ code: result.accepted > 0 ? ExportResultCode.SUCCESS : ExportResultCode.FAILED });
+          } else {
+            resultCallback({ code: ExportResultCode.SUCCESS });
+          }
         })
         .catch((e) => {
           console.error("[TransparentExporter] export failed", e);

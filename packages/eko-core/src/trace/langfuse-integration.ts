@@ -19,13 +19,13 @@ type Handles = {
   root: LangfuseSpan;
   plan?: LangfuseSpan;
   workflow?: LangfuseSpan;
-  
+
   // 新增：统一的 span 池
   allSpans: Map<string, any>;  // spanId -> span 对象
-  
+
   // 新增：执行栈（按 nodeId 隔离，支持并行 Agent）
   activeSpanStacks: Map<string, string[]>;  // nodeId -> [spanId1, spanId2, ...]
-  
+
   // 保留原有字段（向后兼容）
   agents: Map<string, LangfuseAgent>;
   genSeq: Map<string, number>;
@@ -46,6 +46,8 @@ export type LangfuseCallbackOptions = {
   batchBytesLimit?: number;
   /** Whether to record streaming events like plan_process, default false */
   recordStreaming?: boolean;
+  /** Whether to auto flush after each export, default true */
+  autoFlush?: boolean;
 };
 
 
@@ -61,25 +63,33 @@ export function createLangfuseCallback(
     let rec = taskMap.get(taskId);
     if (rec) return rec;
 
-    const root = startObservation(`eko-task-${taskId}`, {
-      input: payload?.taskPrompt
-        ? {
+    const traceId =
+      payload?.contextParams?.traceId ??
+      (payload?.context?.variables?.get
+        ? payload.context.variables.get("traceId")
+        : undefined) ??
+      taskId;
+
+    const root = startObservation(
+      `eko-task-${taskId}`, 
+      {
+        input: payload?.taskPrompt
+          ? {
             taskPrompt: payload.taskPrompt,
             contextParams: payload.contextParams,
           }
-        : undefined,
-      metadata: payload?.context ? { context: payload.context } : undefined,
-    });
-    // Prefer sessionId from injected toolCallId, fallback to taskId
-    try {
-      const sessionId =
-        payload?.contextParams?.toolCallId ??
-        (payload?.context?.variables?.get
-          ? payload.context.variables.get("toolCallId")
-          : undefined) ??
-        taskId;
-      root.updateTrace?.({ sessionId: sessionId });
-    } catch {}
+          : undefined,
+        metadata: payload?.context ? { context: payload.context } : undefined,
+      },
+      {
+        parentSpanContext: {
+          traceId: traceId,
+          spanId: traceId.slice(0, 16), // fake spanId
+          traceFlags: 1,
+        }
+      }
+    );
+  
 
     rec = {
       root,
@@ -105,7 +115,7 @@ export function createLangfuseCallback(
     rec.workflow?.end?.();
     rec.plan?.end?.();
     rec.root?.end?.();
-    
+
     // 清理新增的数据结构
     rec.allSpans.clear();
     rec.activeSpanStacks.clear();
@@ -148,7 +158,7 @@ export function createLangfuseCallback(
         return rec.allSpans.get(spanId);
       }
     }
-    
+
     // 2. 从执行流的栈顶获取
     if (nodeId) {
       const stack = rec.activeSpanStacks.get(nodeId);
@@ -159,13 +169,13 @@ export function createLangfuseCallback(
         }
       }
     }
-    
+
     // 3. Plan 阶段特殊处理（仅在 Plan 执行中有效）
     if (rec.plan) return rec.plan;
-    
+
     // 4. Workflow fallback
     if (rec.workflow) return rec.workflow;
-    
+
     // 5. Root fallback
     return rec.root;
   }
@@ -203,7 +213,7 @@ export function createLangfuseCallback(
             },
             level: (message as any).error ? "ERROR" : "DEFAULT",
           });
-        } catch {}
+        } catch { }
         endAll(rec);
         taskMap.delete(taskId);
         return;
@@ -254,17 +264,17 @@ export function createLangfuseCallback(
             metadata: { request: (message as any).planRequest },
             usageDetails: (message as any).usage
               ? {
-                  input: (message as any).usage.promptTokens,
-                  output: (message as any).usage.completionTokens,
-                  total: (message as any).usage.totalTokens,
-                }
+                input: (message as any).usage.promptTokens,
+                output: (message as any).usage.completionTokens,
+                total: (message as any).usage.totalTokens,
+              }
               : undefined,
           },
           { asType: "generation" }
         );
         try {
           gen?.update?.({ output: (message as any).planResult });
-        } catch {}
+        } catch { }
         gen?.end?.();
         try {
           const planLatency = rec.planStartAt ? Date.now() - rec.planStartAt : undefined;
@@ -272,7 +282,7 @@ export function createLangfuseCallback(
             output: { planResult: (message as any).planResult },
             metadata: planLatency !== undefined ? { latencyMs: planLatency } : undefined,
           });
-        } catch {}
+        } catch { }
         rec.plan?.end?.();
         rec.planStartAt = undefined;
         rec.plan = undefined;
@@ -298,7 +308,7 @@ export function createLangfuseCallback(
               finalResult: (message as any).finalResult,
             },
           });
-        } catch {}
+        } catch { }
         rec.workflow.end?.();
         return;
       }
@@ -320,19 +330,19 @@ export function createLangfuseCallback(
           },
           { asType: "agent" }
         );
-        
+
         // 存储到原有 Map（兼容性）
         rec.agents.set(nodeId, agentObs);
-        
+
         // 新增：存储到 allSpans + 推入栈 + 注入到 agentContext
         const spanId = `agent_${nodeId}`;
         rec.allSpans.set(spanId, agentObs);
         pushStack(rec, nodeId, spanId);
-        
+
         if (agentContext) {
           agentContext.variables.set('_langfuse_current_span_id', spanId);
         }
-        
+
         return;
       }
       case "debug_agent_node_finished": {
@@ -351,9 +361,9 @@ export function createLangfuseCallback(
             },
             level: (message as any).error ? "ERROR" : "DEFAULT",
           });
-        } catch {}
+        } catch { }
         agentObs?.end?.();
-        
+
         // 新增：弹出栈 + 恢复上一层 spanId
         const prevSpanId = popStack(rec, nodeId);
         if (agentContext) {
@@ -364,12 +374,12 @@ export function createLangfuseCallback(
             agentContext.variables.delete('_langfuse_current_span_id');
           }
         }
-        
+
         // 清理
         rec.agents.delete(nodeId);
         const spanId = `agent_${nodeId}`;
         rec.allSpans.delete(spanId);
-        
+
         return;
       }
 
@@ -380,21 +390,21 @@ export function createLangfuseCallback(
           agentContext?.agentChain?.agent?.id ||
           (message as any).nodeId ||
           "unknown";
-        
+
         // 核心改动：使用 inferParentSpan 动态推断 parent
         const parent = inferParentSpan(rec, nodeId, agentContext);
-        
+
         // 优先使用 streamId 作为唯一标识，避免并行冲突
         const streamId = (message as any).streamId;
         const key = streamId || nextGenKey(nodeId, rec);
-        
+
         // 获取自定义名称，默认为 "generation"
         const customName = (message as any).name;
         const spanName = customName || (message as any).modelName || "generation";
-        
+
         // DEBUG: Log key generation
         // console.warn('[Langfuse] debug_llm_request_start - key:', key, 'nodeId:', nodeId, 'streamId:', streamId);
-        
+
         const gen = parent.startObservation?.(
           spanName,
           {
@@ -412,10 +422,10 @@ export function createLangfuseCallback(
         );
         rec.gens.set(key, gen);
         rec.genStartAt.set(key, Date.now());
-        
+
         // DEBUG: Log span storage
         // console.warn('[Langfuse] Stored generation span with key:', key, 'total gens:', rec.gens.size);
-        
+
         // Generation 是叶子节点，不推入栈
         return;
       }
@@ -426,29 +436,29 @@ export function createLangfuseCallback(
           agentContext?.agentChain?.agent?.id ||
           (message as any).nodeId ||
           "unknown";
-        
+
         // 优先使用 streamId 匹配，避免并行冲突
         const streamId = (message as any).streamId;
         const lastSeq = rec.genSeq.get(nodeId) || 1;
         const key = streamId || `${nodeId}:${lastSeq}`;
-        
+
         // DEBUG: Log key lookup
         // console.warn('[Langfuse] debug_llm_response_finished - key:', key, 'nodeId:', nodeId, 'streamId:', streamId);
         // console.warn('[Langfuse] Available keys in rec.gens:', Array.from(rec.gens.keys()));
-        
+
         const gen = rec.gens.get(key);
-        
+
         // DEBUG: Log span retrieval
         // if (!gen) {
         //   console.warn('[Langfuse] WARNING: Generation span not found for key:', key);
         // } else {
         //   console.warn('[Langfuse] Found generation span for key:', key);
         // }
-        
+
         try {
           const startAt = rec.genStartAt.get(key);
           const latency = startAt ? Date.now() - startAt : undefined;
-          
+
           // DEBUG: Log response data
           // console.warn('[Langfuse] Response data:', {
           //   hasResponse: !!(message as any).response,
@@ -457,19 +467,19 @@ export function createLangfuseCallback(
           // });
           gen?.update?.({
             output: (message as any).response,
-            usageDetails: (message as any).usage 
+            usageDetails: (message as any).usage
               ? {
-                  input: (message as any).usage.promptTokens,
-                  output: (message as any).usage.completionTokens,
-                  total:
-                    (message as any).usage.totalTokens ??
-                    ((message as any).usage.promptTokens || 0) +
-                      ((message as any).usage.completionTokens || 0),
-                }
+                input: (message as any).usage.promptTokens,
+                output: (message as any).usage.completionTokens,
+                total:
+                  (message as any).usage.totalTokens ??
+                  ((message as any).usage.promptTokens || 0) +
+                  ((message as any).usage.completionTokens || 0),
+              }
               : undefined,
             metadata: latency !== undefined ? { latencyMs: latency } : undefined,
           });
-        } catch {}
+        } catch { }
         gen?.end?.();
         rec.gens.delete(key);
         rec.genStartAt.delete(key);
@@ -483,10 +493,10 @@ export function createLangfuseCallback(
           agentContext?.agentChain?.agent?.id ||
           (message as any).nodeId ||
           "unknown";
-        
+
         // 核心改动：使用 inferParentSpan 替代固定的 agentObs
         const parent = inferParentSpan(rec, nodeId, agentContext);
-        
+
         const tool = parent?.startObservation?.(
           (message as any).toolName,
           {
@@ -495,22 +505,22 @@ export function createLangfuseCallback(
           },
           { asType: "tool" }
         );
-        
+
         const toolCallId = (message as any).toolId;
         if (toolCallId && tool) {
           // 存储到原有 Map（兼容性）
           rec.tools.set(toolCallId, tool);
-          
+
           // 新增：存储到 allSpans + 推入栈 + 注入到 agentContext
           const spanId = `tool_${toolCallId}`;
           rec.allSpans.set(spanId, tool);
           pushStack(rec, nodeId, spanId);
-          
+
           if (agentContext) {
             agentContext.variables.set('_langfuse_current_span_id', spanId);
           }
         }
-        
+
         return;
       }
       case "debug_tool_call_finished": {
@@ -524,14 +534,14 @@ export function createLangfuseCallback(
             metadata: { duration: (message as any).duration },
             level: (message as any).toolResult?.isError ? "ERROR" : "DEFAULT",
           });
-        } catch {}
+        } catch { }
         tool?.end?.();
-        
+
         // 新增：弹出栈 + 恢复上一层 spanId
         if (toolCallId) {
           const nodeId = agentContext?.agentChain?.agent?.id || (message as any).nodeId || "unknown";
           const prevSpanId = popStack(rec, nodeId);
-          
+
           if (agentContext) {
             if (prevSpanId) {
               agentContext.variables.set('_langfuse_current_span_id', prevSpanId);
@@ -540,13 +550,13 @@ export function createLangfuseCallback(
               agentContext.variables.delete('_langfuse_current_span_id');
             }
           }
-          
+
           // 清理
           rec.tools.delete(toolCallId);
           const spanId = `tool_${toolCallId}`;
           rec.allSpans.delete(spanId);
         }
-        
+
         return;
       }
       default:
