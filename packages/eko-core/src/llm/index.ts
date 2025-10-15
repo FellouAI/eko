@@ -21,6 +21,7 @@ import {
 import Context, { AgentContext } from "../core/context";
 import { defaultLLMProviderOptions } from "../agent/llm";
 import { createCallbackHelper } from "../common/callback-helper";
+import { toJSONSchema } from "zod/v4";
 
 /**
  * Retry Language Model manager
@@ -162,6 +163,7 @@ export class RetryLanguageModel {
           toolCount: request.tools?.length || 0,
           hasSystemPrompt: request.messages.some(m => m.role === 'system'),
         },
+        this?.agentContext,
         requestId,  // 传递 streamId/requestId
         request.callbackContext?.name  // 传递自定义名称
       );
@@ -189,7 +191,7 @@ export class RetryLanguageModel {
       try {
         // Trigger llmResponseStart callback
         if (cbHelper && requestId) {
-          await cbHelper.llmResponseStart(requestId);
+          await cbHelper.llmResponseStart(requestId, this?.agentContext);
         }
 
         let result = (await llm.doGenerate(_options)) as GenerateResult;
@@ -211,7 +213,7 @@ export class RetryLanguageModel {
             completionTokens: result.usage?.outputTokens || 0,
             totalTokens: result.usage?.totalTokens || 
               (result.usage?.inputTokens || 0) + (result.usage?.outputTokens || 0),
-          });
+          }, this?.agentContext);
         }
 
         return result;
@@ -297,6 +299,7 @@ export class RetryLanguageModel {
           toolCount: request.tools?.length || 0,
           hasSystemPrompt: request.messages.some(m => m.role === 'system'),
         },
+        this?.agentContext,
         streamId,  // 传递 streamId
         request.callbackContext?.name  // 传递自定义名称
       );
@@ -530,7 +533,7 @@ export class RetryLanguageModel {
     return new ReadableStream<LanguageModelV2StreamPart>({
       start: async (controller) => {
         // Trigger llmResponseStart on first chunk
-        await cbHelper.llmResponseStart(streamId);
+        await cbHelper.llmResponseStart(streamId, this?.agentContext);
         hasStarted = true;
       },
       pull: async (controller) => {
@@ -538,7 +541,7 @@ export class RetryLanguageModel {
           const { done, value } = await reader.read();
           if (done) {
             // Trigger llmResponseFinished
-            await cbHelper.llmResponseFinished(streamId, collectedResponse, usage);
+            await cbHelper.llmResponseFinished(streamId, collectedResponse, usage, this?.agentContext);
             controller.close();
             return;
           }

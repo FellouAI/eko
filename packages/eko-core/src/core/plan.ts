@@ -1,5 +1,5 @@
 import Log from "../common/log";
-import Context from "./context";
+import Context, { AgentContext } from "./context";
 import { RetryLanguageModel } from "../llm";
 import { parseWorkflow } from "../common/xml";
 import { LLMRequest } from "../types/llm.types";
@@ -11,6 +11,28 @@ import {
   LanguageModelV2StreamPart,
   LanguageModelV2TextPart,
 } from "@ai-sdk/provider";
+import { Agent } from "../agent/base";
+import { AgentChain } from "./chain";
+
+function createPlannerAgentContext(context: Context): AgentContext {
+  const stubAgent = new Agent({
+    name: "__planner__",
+    description: "Planner execution context",
+    tools: [],
+  });
+
+  const stubAgentChain = new AgentChain({
+    id: "__planner__",
+    name: "__planner__",
+    task: "Planner",
+    dependsOn: [],
+    nodes: [],
+    status: "init",
+    xml: "",
+  });
+
+  return new AgentContext(context, stubAgent, stubAgentChain);
+}
 
 export class Planner {
   private taskId: string;
@@ -84,9 +106,10 @@ export class Planner {
     messages: LanguageModelV2Prompt,
     saveHistory: boolean
   ): Promise<Workflow> {
-    const config = this.context.config;
-    const rlm = new RetryLanguageModel(config.llms, config.planLlms);
-    rlm.setContext(this.context);
+  const config = this.context.config;
+  const plannerAgentContext = createPlannerAgentContext(this.context);
+  const rlm = new RetryLanguageModel(config.llms, config.planLlms);
+  rlm.setContext(plannerAgentContext);
 
     const streamId = "plan-" + this.context.taskId + "-" + new Date().getTime();
     
@@ -96,6 +119,18 @@ export class Planner {
       this.context.taskId,
       "Planner",
       null,
+    );
+
+    // Send planning started event
+    await planCbHelper.planStart(
+      taskPrompt,
+      {
+        systemPrompt: messages[0].content as string,
+        userPrompt: (messages[1].content as LanguageModelV2TextPart[]).map(
+          (part) => (part.type === "text" ? part.text : "")
+        ).join("\n"),
+      },
+      this.context as any
     );
 
     const request: LLMRequest = {
@@ -114,7 +149,8 @@ export class Planner {
     };
 
     // LLM callbacks are now handled inside rlm.callStream
-    const result = await rlm.callStream(request);
+  const result = await rlm.callStream(request);
+  rlm.setContext(this.context);
     const reader = result.stream.getReader();
     let streamText = "";
     let thinkingText = "";

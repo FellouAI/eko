@@ -12,6 +12,7 @@ export function composeCallbacks(...callbacks: MaybeCallback[]): StreamCallback 
           await cb.onMessage(message, agentContext);
         } catch (e) {
           // Isolate individual callback errors to avoid impacting main flow or others
+          console.log("[composeCallbacks] individual callback error:", e);
         }
       }
     },

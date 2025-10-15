@@ -102,6 +102,7 @@ export class Eko {
       createLangfuseCallback({
         enabled: this.config.enable_langfuse,
         recordStreaming: this.config.langfuse_options?.recordStreaming === true,
+        eventHandler: this.config.langfuse_options?.eventHandler,
       })
     );
     

@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import SimpleChatAgent from "./chat";
 import { TraceSystem } from "@eko-ai/eko-debugger";
 import { FileAgent } from "@eko-ai/eko-nodejs";
-import { Eko, Agent, Log, LLMs } from "@eko-ai/eko";
+import { Eko, Agent, Log, LLMs, LangfuseSpanContext } from "@eko-ai/eko";
 
 
 dotenv.config();
@@ -57,6 +57,8 @@ async function run() {
     new FileAgent(),
   ];
 
+
+
   // 启用 Langfuse 集成（组合到现有回调链，不影响调试器）
   const eko = new Eko({
     llms, agents, enable_langfuse: true,
@@ -71,6 +73,20 @@ async function run() {
       batchBytesLimit: 800_000,
       /** Whether to record streaming events like plan_process, default false */
       recordStreaming: false,
+      eventHandler: {
+        debug_llm_request_start: {
+          bypassDefault: false,
+          handle: async (_message: unknown, agentContext?: any, spanContext?: LangfuseSpanContext) => {
+            const parentSpan = spanContext?.getParentSpan();
+            if (parentSpan) {
+              console.warn("[Langfuse] parent span id:", parentSpan.id);
+              agentContext?.variables.set("traceSpanId", parentSpan.id);
+            } else {
+              console.warn("[Langfuse] parent span id unavailable");
+            }
+          },
+        },
+      },
     }
   });
 

@@ -5,7 +5,8 @@ import { IA2aClient } from "../agent/a2a";
 import { IMcpClient } from "./mcp.types";
 import { ToolResult } from "./tools.types";
 import { AgentContext } from "../core/context";
-import { LangfuseCallbackOptions } from "../trace/langfuse-integration";
+import { LangfuseCallbackOptions } from "./trace.types";
+
 
 export type EkoConfig = {
   llms: LLMs;
@@ -124,10 +125,14 @@ export type StreamCallbackMessage = {
         toolCount: number;
         hasSystemPrompt: boolean;
       };
+      agentContext?: AgentContext;
+      streamId?: string;
+      name?: string;  // 自定义 generation span 名称
     }
   | {
       type: "debug_llm_response_start";
       streamId: string;
+      agentContext?: AgentContext;
     }
   | {
       type: "debug_llm_response_process";
@@ -144,6 +149,7 @@ export type StreamCallbackMessage = {
         completionTokens: number;
         totalTokens: number;
       };
+      agentContext?: AgentContext;
     }
   // ========== Tool-call events ==========
   | {

@@ -13,7 +13,7 @@ import {
 import { LLMRequest } from "../types/llm.types";
 import { ToolResult } from "../types/tools.types";
 import type { Agent } from "../agent/base";
-import type { AgentContext } from "../core/context";
+import { AgentContext } from "../core/context";
 import type Context from "../core/context";
 
 /**
@@ -247,28 +247,35 @@ export class CallbackHelper {
       toolCount: number;
       hasSystemPrompt: boolean;
     },
+    agentContext?: AgentContext,
     streamId?: string,
     name?: string  // 自定义 generation span 名称
   ): Promise<void> {
-    await this.sendMessage({
-      type: "debug_llm_request_start",
-      request,
-      modelName,
-      streamId,
-      name,  // 添加 name
-      context: context || {
-        messageCount: 0,
-        toolCount: 0,
-        hasSystemPrompt: false,
+    await this.sendMessage(
+      {
+        type: "debug_llm_request_start",
+        request,
+        modelName,
+        streamId,
+        name,  // 添加 name
+        context: context || {
+          messageCount: 0,
+          toolCount: 0,
+          hasSystemPrompt: false,
+        },
       },
-    });
+      agentContext
+    );
   }
 
-  async llmResponseStart(streamId: string): Promise<void> {
-    await this.sendMessage({
-      type: "debug_llm_response_start",
-      streamId,
-    });
+  async llmResponseStart(streamId: string, agentContext?: AgentContext): Promise<void> {
+    await this.sendMessage(
+      {
+        type: "debug_llm_response_start",
+        streamId,
+      },
+      agentContext
+    );
   }
 
   async llmResponseProcess(
@@ -302,14 +309,15 @@ export class CallbackHelper {
       promptTokens: number;
       completionTokens: number;
       totalTokens: number;
-    }
+    },
+    agentContext?: AgentContext
   ): Promise<void> {
     await this.sendMessage({
       type: "debug_llm_response_finished",
       streamId,
       response,
       usage,
-    });
+    }, agentContext);
   }
 
   // ========== Tool-call events ==========

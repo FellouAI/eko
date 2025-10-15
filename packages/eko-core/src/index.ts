@@ -79,3 +79,9 @@ export {
 export { buildAgentTree } from "./common/tree";
 export { extract_page_content } from "./agent/browser/utils";
 export { CallbackHelper, createCallbackHelper } from "./common/callback-helper";
+
+export type {
+  DebugEventHandler,
+  DebugEventType,
+  LangfuseSpanContext,
+} from "./types/trace.types";
