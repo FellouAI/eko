@@ -22,6 +22,7 @@ export type LLMprovider =
   | "aws"
   | "openrouter"
   | "openai-compatible"
+  | "modelscope"
   | ProviderV2;
 
 export type LLMConfig = {
