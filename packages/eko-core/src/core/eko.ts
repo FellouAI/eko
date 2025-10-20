@@ -39,6 +39,7 @@ import { composeCallbacks } from "../common/compose-callbacks";
 import { createLangfuseCallback } from "../trace/langfuse-integration";
 import { setLangfuseTracerProvider } from "@langfuse/tracing";
 import { initTracing } from "../trace/init-tracing";
+import { checkTaskReplan, replanWorkflow } from "./replan";
 
 /**
  * Eko main engine class
@@ -397,17 +398,14 @@ export class Eko {
     while (true) {
       // Check abort
       await context.checkAborted();
-
-      if (agentTree.type === "normal" && agentTree.agent.status === "init") {
-        // Single-agent branch
-
-        // Lookup agent by name
+      let lastAgent: Agent | undefined;
+      if (agentTree.type === "normal") {
+        // normal agent
         const agent = agentNameMap[agentTree.agent.name];
         if (!agent) {
           throw new Error("Unknown Agent: " + agentTree.agent.name);
         }
-
-        // Get agent node
+        lastAgent = agent;
         const agentNode = agentTree.agent;
 
         // Create agent chain
@@ -441,8 +439,7 @@ export class Eko {
           if (!agent) {
             throw new Error("Unknown Agent: " + agentNode.agent.name);
           }
-
-          // Create agent chain
+          lastAgent = agent;
           const agentChain = new AgentChain(agentNode.agent);
           context.chain.push(agentChain);
 
@@ -504,8 +501,16 @@ export class Eko {
 
       // Clear conversation for next agent
       context.conversation.splice(0, context.conversation.length);
-
-      // Check if workflow modified
+      if (
+        config.expertMode &&
+        !workflow.modified &&
+        agentTree.nextAgent &&
+        lastAgent?.AgentContext &&
+        (await checkTaskReplan(lastAgent.AgentContext))
+      ) {
+        // replan
+        await replanWorkflow(lastAgent.AgentContext);
+      }
       if (workflow.modified) {
         // Reset flag
         workflow.modified = false;

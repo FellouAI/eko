@@ -2,7 +2,7 @@
 // and transformation into provider-specific prompt formats. Acts as the agent's
 // long-lived short-term memory with configurable retention policies.
 import { LanguageModelV2Message } from "@ai-sdk/provider";
-import { toFile, uuidv4, getMimeType } from "../common/utils";
+import { toFile, uuidv4, getMimeType, sub } from "../common/utils";
 import { EkoMessage, LanguageModelV2Prompt } from "../types";
 import { defaultMessageProviderOptions } from "../agent/llm";
 
@@ -421,7 +421,7 @@ export class EkoMemory {
             ) {
               return {
                 type: "text",
-                text: part.text.slice(0, this.compressionMaxLength) + "...",
+                text: sub(part.text, this.compressionMaxLength, true),
               };
             }
             return part;
@@ -437,7 +437,7 @@ export class EkoMemory {
             ) {
               return {
                 ...part,
-                result: part.result.slice(0, this.compressionMaxLength) + "...",
+                result: sub(part.result, this.compressionMaxLength, true),
               };
             }
             return part;

@@ -109,7 +109,8 @@ export function extract_page_content(max_url_length = 200, max_content_length = 
   }
   result = result.replace(/\s*\n/g, "\n").replace(/\n+/g, "\n").trim();
   if (result.length > max_content_length) {
-    result = result.slice(0, max_content_length) + "...";
+    // result = result.slice(0, max_content_length) + "...";
+    result = Array.from(result).slice(0, max_content_length).join('') + "...";
   }
   return result;
 }

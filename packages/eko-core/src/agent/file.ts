@@ -1,6 +1,6 @@
 import { Agent } from "./base";
-import { mergeTools } from "../common/utils";
 import { AgentContext } from "../core/context";
+import { mergeTools, sub } from "../common/utils";
 import { Tool, ToolResult, IMcpClient } from "../types";
 import config from "../config";
 
@@ -60,7 +60,7 @@ export default abstract class BaseFileAgent extends Agent {
   ): Promise<{ file_context: string; write_variable?: string }> {
     let file_context = await this.file_read(agentContext, path);
     if (file_context && file_context.length > config.fileTextMaxLength) {
-      file_context = file_context.substring(0, config.fileTextMaxLength) + "...";
+      file_context = sub(file_context, config.fileTextMaxLength, true);
     }
     if (write_variable) {
       agentContext.context.variables.set(write_variable, file_context);
