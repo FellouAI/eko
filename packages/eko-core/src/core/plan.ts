@@ -1,6 +1,5 @@
 import Log from "../common/log";
 import Context, { AgentContext } from "./context";
-import Context from "./context";
 import { sleep } from "../common/utils";
 import { RetryLanguageModel } from "../llm";
 import { parseWorkflow } from "../common/xml";
@@ -193,16 +192,17 @@ export class Planner {
           usagePromptTokens = inputTokens;
           usageCompletionTokens = outputTokens;
           usageTotalTokens = totalTokens;
-        }
         
-        // Try to parse partial workflow and send process event
+          // Try to parse partial workflow and send process event
           if (chunk.finishReason == "content-filter") {
             throw new Error("LLM error: trigger content filtering violation");
           }
           if (chunk.finishReason == "other") {
             throw new Error("LLM error: terminated due to other reasons");
           }
+    
         }
+
         if (this.callback) {
           let workflow = parseWorkflow(
             this.taskId,
