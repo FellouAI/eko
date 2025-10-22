@@ -381,15 +381,12 @@ export class Agent {
 
       // Continue if no final result
       if (!finalResult) {
-        // Expert mode: periodic todo management
-        if (config.expertMode && loopNum % config.expertModeTodoLoopNum == 0) {
+        if ((config.mode == "expert" || config.expertMode) && loopNum % config.expertModeTodoLoopNum == 0) {
           await doTodoListManager(agentContext, rlm, messages, llm_tools);
         }
         continue;
       }
-
-      // Expert mode: task result validation
-      if (config.expertMode && checkNum == 0) {
+      if ((config.mode == "expert" || config.expertMode) && checkNum == 0) {
         checkNum++;
         const { completionStatus } = await doTaskResultCheck(
           agentContext,

@@ -502,7 +502,7 @@ export class Eko {
       // Clear conversation for next agent
       context.conversation.splice(0, context.conversation.length);
       if (
-        config.expertMode &&
+        (config.mode == "expert" || config.expertMode) &&
         !workflow.modified &&
         agentTree.nextAgent &&
         lastAgent?.AgentContext &&

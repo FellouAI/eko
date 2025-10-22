@@ -1,4 +1,4 @@
-import { Eko } from "@eko-ai/eko";
+import { config, Eko } from "@eko-ai/eko";
 import { main } from "./main";
 
 var eko: Eko;
@@ -25,6 +25,9 @@ chrome.runtime.onMessage.addListener(async function (
         level: "error",
       });
     }
+  } else if (request.type == "update_mode") {
+    config.mode = request.mode
+    config.markImageMode = request.markImageMode
   } else if (request.type == "stop") {
     eko && eko.getAllTaskId().forEach(taskId => {
       eko.abortTask(taskId);

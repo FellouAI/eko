@@ -87,7 +87,25 @@ const llms: LLMs = {
     provider: "openai",
     model: "gpt-5",
     apiKey: "your-api-key"
+  },
+  // OpenAI-compatible models (Qwen, Doubao, etc.)
+  qwen: {
+    provider: "openai",
+    model: "qwen-plus",
+    apiKey: "your-qwen-api-key",
+    config: {
+      baseURL: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    }
+  },
+  doubao: {
+    provider: "openai",  // Use OpenAI provider for compatibility
+    model: "doubao-seed-1-6-250615",  // or other Doubao model
+    apiKey: "your-volcengine-api-key",
+    config: {
+      baseURL: "https://ark.cn-beijing.volces.com/api/v3"  // Volcengine endpoint
+    }
   }
+
 };
 
 let agents: Agent[] = [new BrowserAgent(), new FileAgent()];
@@ -101,26 +119,36 @@ $ pnpm install @eko-ai/eko
 
 ## Example Projects
 
-The repository ships with three workspace examples under the `example/` folder. After running the
-core install (`pnpm install`) you can launch any of them with the commands below. Each example
-consumes the local 3.0 packages, so rebuilding the main workspace automatically refreshes them.
+The repository ships with three workspace examples under the `example/` folder.
+
+### Prerequisites
+
+Before running any example, install dependencies and build the core packages from the root directory:
+
+```bash
+pnpm install
+pnpm build
+```
 
 ### Browser Extension (`example/extension`)
 
 ```bash
-pnpm --filter @eko-ai/eko-extension build
-pnpm --filter @eko-ai/eko-extension-example run build
+cd example/extension
+pnpm install
+pnpm run build
 ```
 
-Load the generated `example/extension/dist` directory via `chrome://extensions` → Developer Mode →
-Load unpacked. Configure your API key in the extension options before running the automation task.
+Load the generated `dist` directory via `chrome://extensions` → Developer Mode → Load unpacked.
+Configure your API key in the extension options before running the automation task.
 
 ### Node.js Automation (`example/nodejs`)
 
 ```bash
-pnpm --filter @eko-ai/eko-nodejs-example run build
-pnpm --filter @eko-ai/eko-nodejs-example run playwright   # first time only, installs browsers
-OPENAI_API_KEY=... ANTHROPIC_API_KEY=... pnpm --filter @eko-ai/eko-nodejs-example run start
+cd example/nodejs
+pnpm install
+pnpm run playwright   # first time only, installs browsers
+pnpm run build
+OPENAI_API_KEY=... ANTHROPIC_API_KEY=... pnpm run start
 ```
 
 The Node.js demo drives Playwright through Eko; provide at least one model API key before running it.
@@ -128,7 +156,9 @@ The Node.js demo drives Playwright through Eko; provide at least one model API k
 ### Web Login Demo (`example/web`)
 
 ```bash
-pnpm --filter @eko-ai/eko-web-example run start
+cd example/web
+pnpm install
+pnpm run start
 ```
 
 This starts a React dev server on the default port with a simple login flow that you can automate
@@ -173,12 +203,8 @@ Eko can be used in multiple environments:
 - **Career Co-Pilot**: https://github.com/wangwangbobo/career_skill_learnig.git
 - **Slides Agent by Eko**: https://github.com/MICAHFANG/slides-agent-by-eko
 - **Universal Sidebar Assistant**: https://github.com/San12341/eko-broser-extension.git
-- **48 Hour Browser Challenge**: https://github.com/MoonIRL/eko
 - **Orbit X Smart Terminal**: https://github.com/Skywang16/OrbitX/tree/main
-- **EkoMeet Recommender**: https://github.com/JasonRobertDestiny/EkoMeet
-- **Vision-Eko Plugin**: https://github.com/dcpwilliam/vision-eko/tree/main/serviceNowPlugin
-- **IC Cafe Platform**: https://cnb.cool/giggle_giraffe/ic-info-wxapp
-- **AI Monitoring Assistant**: https://github.com/yuhoudecheqiancao/eko-ai-monitoring
+- **48 Hour Browser Challenge**: https://github.com/MoonIRL/eko
 
 ## License
 
