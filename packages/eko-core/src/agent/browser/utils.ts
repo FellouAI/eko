@@ -161,7 +161,7 @@ export function mark_screenshot_highlight_elements(
         .sort((a, b) => {
           const areaA = a[1].width * a[1].height;
           const areaB = b[1].width * b[1].height;
-          return areaA - areaB;
+          return areaB - areaA;
         });
 
       const colors = [
@@ -181,6 +181,12 @@ export function mark_screenshot_highlight_elements(
 
       sortedEntries.forEach(([id, area], index) => {
         const color = colors[index % colors.length];
+
+        if (area.width * area.height < 40000) {
+          // Draw a background color
+          ctx.fillStyle = color + "1A";
+          ctx.fillRect(area.x, area.y, area.width, area.height);
+        }
 
         // Draw a border
         ctx.strokeStyle = color;
