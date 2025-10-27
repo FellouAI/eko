@@ -8,8 +8,8 @@ import {
   LanguageModelV2ToolCallPart,
 } from "@ai-sdk/provider";
 import { Tool, ToolResult, IMcpClient } from "../../types";
-import { mergeTools, sleep, toImage } from "../../common/utils";
-import { compress_image, mark_screenshot_highlight_elements } from "./utils";
+import { mark_screenshot_highlight_elements } from "./utils";
+import { mergeTools, sleep, toImage, compressImageData } from "../../common/utils";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
@@ -250,7 +250,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     if (!client_rect || !screenshot) {
       return screenshot;
     }
-    const compressedImage = await compress_image(
+    const compressedImage = await compressImageData(
       screenshot.imageBase64,
       screenshot.imageType,
       {
