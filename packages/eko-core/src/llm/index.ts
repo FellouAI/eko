@@ -309,6 +309,14 @@ export class RetryLanguageModel {
         headers: llm.config?.headers,
         compatibility: llm.config?.compatibility,
       }).languageModel(llm.model);
+    } else if (llm.provider == "modelscope") {
+      return createOpenAICompatible({
+        name: llm.config?.name || llm.model.split("/")[0],
+        apiKey: apiKey,
+        baseURL: baseURL || "https://api-inference.modelscope.cn/v1",
+        fetch: llm.fetch,
+        headers: llm.config?.headers,
+      }).languageModel(llm.model);
     } else {
       return llm.provider.languageModel(llm.model);
     }
