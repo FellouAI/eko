@@ -1,5 +1,5 @@
 import { fixXmlTag } from "./utils";
-import { DOMParser, XMLSerializer } from "xmldom";
+import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import {
   Workflow,
   WorkflowAgent,

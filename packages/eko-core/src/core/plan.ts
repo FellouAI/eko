@@ -1,5 +1,6 @@
 import Log from "../common/log";
 import Context from "./context";
+import { sleep } from "../common/utils";
 import { RetryLanguageModel } from "../llm";
 import { parseWorkflow } from "../common/xml";
 import { LLMRequest } from "../types/llm.types";
@@ -81,13 +82,14 @@ export class Planner {
   async doPlan(
     taskPrompt: string,
     messages: LanguageModelV2Prompt,
-    saveHistory: boolean
+    saveHistory: boolean,
+    retryNum: number = 0
   ): Promise<Workflow> {
     const config = this.context.config;
     const rlm = new RetryLanguageModel(config.llms, config.planLlms);
     rlm.setContext(this.context);
     const request: LLMRequest = {
-      maxTokens: 4096,
+      maxTokens: 8192,
       temperature: 0.7,
       messages: messages,
       abortSignal: this.context.controller.signal,
@@ -114,6 +116,14 @@ export class Planner {
         if (chunk.type == "text-delta") {
           streamText += chunk.delta || "";
         }
+        if (chunk.type == "finish") {
+          if (chunk.finishReason == "content-filter") {
+            throw new Error("LLM error: trigger content filtering violation");
+          }
+          if (chunk.finishReason == "other") {
+            throw new Error("LLM error: terminated due to other reasons");
+          }
+        }
         if (this.callback) {
           let workflow = parseWorkflow(
             this.taskId,
@@ -132,6 +142,12 @@ export class Planner {
           }
         }
       }
+    } catch (e: any) {
+      if (retryNum < 3) {
+        await sleep(1000);
+        return await this.doPlan(taskPrompt, messages, saveHistory, ++retryNum);
+      }
+      throw e;
     } finally {
       reader.releaseLock();
       if (Log.isEnableInfo()) {
@@ -159,10 +175,11 @@ export class Planner {
       });
     }
     if (workflow.taskPrompt) {
-      workflow.taskPrompt += "\n" + taskPrompt.trim();
+      workflow.taskPrompt += "\n" + taskPrompt;
     } else {
-      workflow.taskPrompt = taskPrompt.trim();
+      workflow.taskPrompt = taskPrompt;
     }
+    workflow.taskPrompt = workflow.taskPrompt.trim();
     return workflow;
   }
 }

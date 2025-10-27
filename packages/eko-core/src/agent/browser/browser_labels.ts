@@ -9,6 +9,7 @@ import {
 } from "@ai-sdk/provider";
 import { Tool, ToolResult, IMcpClient } from "../../types";
 import { mergeTools, sleep, toImage } from "../../common/utils";
+import { compress_image, mark_screenshot_highlight_elements } from "./utils";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
@@ -167,35 +168,63 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   }
 
   protected async screenshot_and_html(agentContext: AgentContext): Promise<{
-    imageBase64: string;
-    imageType: "image/jpeg" | "image/png";
+    imageBase64?: string;
+    imageType?: "image/jpeg" | "image/png";
     pseudoHtml: string;
+    double_screenshots?: {
+      imageBase64: string;
+      imageType: "image/jpeg" | "image/png";
+    };
+    client_rect: { width: number; height: number };
   }> {
     try {
-      let element_result = null;
+      let element_result;
+      let double_screenshots;
       for (let i = 0; i < 5; i++) {
         await sleep(200);
         await this.execute_script(agentContext, run_build_dom_tree, []);
         await sleep(50);
         element_result = (await this.execute_script(
           agentContext,
-          () => {
-            return (window as any).get_clickable_elements(true);
+          (markHighlightElements) => {
+            return (window as any).get_clickable_elements(
+              markHighlightElements
+            );
           },
-          []
+          [config.mode != "fast" && config.markImageMode == "dom"]
         )) as any;
         if (element_result) {
           break;
         }
       }
       await sleep(100);
-      let screenshot = await this.screenshot(agentContext);
-      // agentContext.variables.set("selector_map", element_result.selector_map);
-      let pseudoHtml = element_result?.element_str || "";
+      const screenshot =
+        config.mode == "fast"
+          ? undefined
+          : await this.screenshot_and_compress(
+              agentContext,
+              element_result.client_rect
+            );
+      if (
+        config.markImageMode == "draw" &&
+        screenshot?.imageBase64 &&
+        element_result.area_map
+      ) {
+        double_screenshots = { ...screenshot };
+        const markImageBase64 = await mark_screenshot_highlight_elements(
+          screenshot,
+          element_result.area_map,
+          element_result.client_rect
+        );
+        screenshot.imageBase64 = markImageBase64;
+      }
+      const pseudoHtml = element_result.element_str || "";
       return {
-        imageBase64: screenshot.imageBase64,
-        imageType: screenshot.imageType,
+        double_screenshots: double_screenshots,
+        imageBase64: screenshot?.imageBase64,
+        imageType: screenshot?.imageType,
         pseudoHtml: pseudoHtml,
+        client_rect: element_result.client_rect,
       };
     } finally {
       try {
@@ -210,11 +239,38 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     }
   }
 
+  protected async screenshot_and_compress(
+    agentContext: AgentContext,
+    client_rect?: { width: number; height: number }
+  ): Promise<{
+    imageBase64: string;
+    imageType: "image/jpeg" | "image/png";
+  }> {
+    const screenshot = await this.screenshot(agentContext);
+    if (!client_rect || !screenshot) {
+      return screenshot;
+    }
+    const compressedImage = await compress_image(
+      screenshot.imageBase64,
+      screenshot.imageType,
+      {
+        resizeWidth: client_rect.width,
+        resizeHeight: client_rect.height,
+      }
+    );
+    return {
+      imageBase64: compressedImage.imageBase64,
+      imageType: compressedImage.imageType,
+    };
+  }
+
   protected get_element_script(index: number): string {
     return `window.get_highlight_element(${index});`;
   }
 
-  public canParallelToolCalls(toolCalls?: LanguageModelV2ToolCallPart[]): boolean {
+  public canParallelToolCalls(
+    toolCalls?: LanguageModelV2ToolCallPart[]
+  ): boolean {
     if (toolCalls) {
       for (let i = 0; i < toolCalls.length; i++) {
         const toolCall = toolCalls[i];
@@ -235,7 +291,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     return [
       {
         name: "navigate_to",
-        description: "Navigate to a specific URL in the browser. Use this tool when you need to visit a webpage or change the current page location.",
+        description:
+          "Navigate to a specific URL in the browser. Use this tool when you need to visit a webpage or change the current page location.",
         parameters: {
           type: "object",
           properties: {
@@ -257,7 +314,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "current_page",
-        description: "Get the currently active webpage information, return tabId, URL and title",
+        description:
+          "Get the currently active webpage information, return tabId, URL and title",
         parameters: {
           type: "object",
           properties: {},
@@ -287,7 +345,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "input_text",
-        description: "Inputs text into a element by first clicking to focus the element, then clearing any existing text and typing the new text. Optionally presses Enter after input completion.",
+        description:
+          "Inputs text into a element by first clicking to focus the element, then clearing any existing text and typing the new text. Optionally presses Enter after input completion.",
         parameters: {
           type: "object",
           properties: {
@@ -400,7 +459,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "hover_to_element",
-        description: "Hover the mouse over an element, use it when you need to hover to display more interactive information",
+        description:
+          "Hover the mouse over an element, use it when you need to hover to display more interactive information",
         parameters: {
           type: "object",
           properties: {
@@ -493,7 +553,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "get_all_tabs",
-        description: "Get all tabs of the current browser, returns the tabId, URL, and title of all tab pages",
+        description:
+          "Get all tabs of the current browser, returns the tabId, URL, and title of all tab pages",
         parameters: {
           type: "object",
           properties: {},
@@ -532,7 +593,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       {
         name: "wait",
         noPlan: true,
-        description: "Wait/pause execution for a specified duration. Use this tool when you need to wait for data loading, page rendering, or introduce delays between operations.",
+        description:
+          "Wait/pause execution for a specified duration. Use this tool when you need to wait for data loading, page rendering, or introduce delays between operations.",
         parameters: {
           type: "object",
           properties: {
@@ -563,7 +625,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     messages: LanguageModelV2Prompt,
     tools: Tool[]
   ): Promise<boolean> {
-    return true;
+    return config.mode == "expert";
   }
 
   protected async handleMessages(
@@ -581,30 +643,38 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       lastTool.toolName !== "variable_storage"
     ) {
       await sleep(300);
-      let image_contents: LanguageModelV2FilePart[] = [];
+      const image_contents: LanguageModelV2FilePart[] = [];
+      const result = await this.screenshot_and_html(agentContext);
       if (await this.double_screenshots(agentContext, messages, tools)) {
-        let imageResult = await this.screenshot(agentContext);
-        let image = toImage(imageResult.imageBase64);
+        const imageResult = result.double_screenshots
+          ? result.double_screenshots
+          : await this.screenshot_and_compress(
+              agentContext,
+              result.client_rect
+            );
+        const image = toImage(imageResult.imageBase64);
         image_contents.push({
           type: "file",
           data: image,
           mediaType: imageResult.imageType,
         });
       }
-      let result = await this.screenshot_and_html(agentContext);
-      let image = toImage(result.imageBase64);
-      image_contents.push({
-        type: "file",
-        data: image,
-        mediaType: result.imageType,
-      });
+      if (result.imageBase64) {
+        const image = toImage(result.imageBase64);
+        image_contents.push({
+          type: "file",
+          data: image,
+          mediaType: result.imageType || "image/png",
+        });
+      }
       messages.push({
         role: "user",
         content: [
           ...image_contents,
           {
             type: "text",
-            text: pseudoHtmlDescription + "```html\n" + result.pseudoHtml + "\n```",
+            text:
+              pseudoHtmlDescription + "```html\n" + result.pseudoHtml + "\n```",
           },
         ],
       });
@@ -775,7 +845,7 @@ function do_click(params: {
           button, // 0 left; 1 middle; 2 right
         });
 
-        if (eventType === 'click' && element.click) {
+        if (eventType === "click" && element.click) {
           // support shadow dom element
           element.click();
         } else {

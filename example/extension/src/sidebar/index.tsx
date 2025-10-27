@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import React, { useState, useRef, useEffect } from "react";
 import { Button, Input } from "antd";
+import { config } from "@eko-ai/eko";
 
 interface LogMessage {
   time: string;
@@ -12,6 +13,10 @@ const AppRun = () => {
   const [running, setRunning] = useState(false);
   const [logs, setLogs] = useState<LogMessage[]>([]);
   const [streamLog, setStreamLog] = useState<LogMessage | null>();
+  const [mode, setMode] = useState<"fast" | "normal" | "expert">(config.mode);
+  const [markImageMode, setMarkImageMode] = useState<"dom" | "draw">(
+    config.markImageMode
+  );
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [prompt, setPrompt] = useState(
     'Open Twitter, search for "Fellou AI" and follow'
@@ -57,9 +62,13 @@ const AppRun = () => {
   useEffect(() => {
     window.scrollTo({
       behavior: "smooth",
-      top: document.body.scrollHeight,
+      top: document.body.scrollHeight + 10,
     });
   }, [logs, streamLog]);
+
+  useEffect(() => {
+    chrome.runtime.sendMessage({ type: "update_mode", mode, markImageMode });
+  }, [mode, markImageMode]);
 
   const handleClick = () => {
     if (running) {
@@ -94,7 +103,30 @@ const AppRun = () => {
         minHeight: "80px",
       }}
     >
-      <div>Prompt:</div>
+      <div style={{ marginBottom: "2px" }}>
+        <span>Prompt:</span>
+        <select
+          title="Mark Image Mode"
+          value={markImageMode}
+          onChange={(e) => setMarkImageMode(e.target.value as "dom" | "draw")}
+          style={{ float: "right" }}
+        >
+          <option value="dom">dom</option>
+          <option value="draw">draw</option>
+        </select>
+        <select
+          title="Mode"
+          value={mode}
+          onChange={(e) =>
+            setMode(e.target.value as "fast" | "normal" | "expert")
+          }
+          style={{ float: "right", marginRight: "6px" }}
+        >
+          <option value="fast">fast</option>
+          <option value="normal">normal</option>
+          <option value="expert">expert</option>
+        </select>
+      </div>
       <div
         style={{
           textAlign: "center",
@@ -162,6 +194,19 @@ const AppRun = () => {
               <span>{streamLog.log}</span>
             </pre>
           )}
+        </div>
+      )}
+      {running && (
+        <div>
+          <Button
+            type="default"
+            onClick={handleClick}
+            style={{
+              marginTop: "4px",
+            }}
+          >
+            Stop
+          </Button>
         </div>
       )}
     </div>

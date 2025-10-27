@@ -166,12 +166,12 @@ export class Agent {
       );
       loopNum++;
       if (!finalResult) {
-        if (config.expertMode && loopNum % config.expertModeTodoLoopNum == 0) {
+        if ((config.mode == "expert" || config.expertMode) && loopNum % config.expertModeTodoLoopNum == 0) {
           await doTodoListManager(agentContext, rlm, messages, llm_tools);
         }
         continue;
       }
-      if (config.expertMode && checkNum == 0) {
+      if ((config.mode == "expert" || config.expertMode) && checkNum == 0) {
         checkNum++;
         const { completionStatus } = await doTaskResultCheck(
           agentContext,

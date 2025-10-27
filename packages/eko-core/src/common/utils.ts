@@ -195,9 +195,51 @@ export function sub(
     return "";
   }
   if (str.length > maxLength) {
-    return str.substring(0, maxLength) + (appendPoint ? "..." : "");
+    // return str.substring(0, maxLength) + (appendPoint ? "..." : "");
+    return Array.from(str).slice(0, maxLength).join('') + (appendPoint ? "..." : "");
   }
   return str;
+}
+
+export function fixJson(code: string) {
+  if (!code) {
+    return {};
+  }
+  try {
+    return JSON.parse(code);
+  } catch (e) {}
+  try {
+    return JSON.parse(code + "\"}");
+  } catch (e) {}
+  const stack: string[] = [];
+  for (let i = 0; i < code.length; i++) {
+    let s = code[i];
+    if (s === "{") {
+      stack.push("}");
+    } else if (s === "}") {
+      stack.pop();
+    } else if (s === "[") {
+      stack.push("]");
+    } else if (s === "]") {
+      stack.pop();
+    } else if (s === '"') {
+      if (stack[stack.length - 1] === '"') {
+        stack.pop();
+      } else {
+        stack.push('"');
+      }
+    }
+  }
+  const missingParts = [];
+  while (stack.length > 0) {
+    missingParts.push(stack.pop());
+  }
+  let json = code + missingParts.join("");
+  try {
+    return JSON.parse(json);
+  } catch (e) {
+    return {};
+  }
 }
 
 export function fixXmlTag(code: string) {

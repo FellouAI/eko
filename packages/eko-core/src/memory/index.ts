@@ -10,7 +10,7 @@ import Log from "../common/log";
 import TaskSnapshotTool from "./snapshot";
 import { callAgentLLM } from "../agent/llm";
 import { RetryLanguageModel } from "../llm";
-import { mergeTools } from "../common/utils";
+import { fixJson, mergeTools, sub } from "../common/utils";
 import { AgentContext } from "../core/context";
 
 export function extractUsedTool<T extends Tool | LanguageModelV2FunctionTool>(
@@ -178,7 +178,7 @@ function compressLargeContextMessages(messages: LanguageModelV2Prompt) {
         if (c.type == "text" && c.text.length > config.largeTextLength) {
           return {
             ...c,
-            text: c.text.substring(0, config.largeTextLength) + "...",
+            text: sub(c.text, config.largeTextLength, true),
           };
         }
         return c;
@@ -188,7 +188,7 @@ function compressLargeContextMessages(messages: LanguageModelV2Prompt) {
         if (c.type == "text" && c.text.length > config.largeTextLength) {
           return {
             ...c,
-            text: c.text.substring(0, config.largeTextLength) + "...",
+            text: sub(c.text, config.largeTextLength, true),
           };
         }
         return c;
@@ -205,10 +205,37 @@ function compressLargeContextMessages(messages: LanguageModelV2Prompt) {
               ...c,
               output: {
                 ...output,
-                value:
-                  output.value.substring(0, config.largeTextLength) + "...",
+                value: sub(output.value, config.largeTextLength, true),
               },
             };
+          } else if (
+            (output.type == "json" || output.type == "error-json") &&
+            JSON.stringify(output.value).length > config.largeTextLength
+          ) {
+            const json_str = sub(
+              JSON.stringify(output.value),
+              config.largeTextLength,
+              false
+            );
+            const json_obj = fixJson(json_str);
+            if (JSON.stringify(json_obj).length < 10) {
+              return {
+                ...c,
+                output: {
+                  ...output,
+                  value: json_str,
+                  type: output.type == "error-json" ? "error-text" : "text",
+                },
+              };
+            } else {
+              return {
+                ...c,
+                output: {
+                  ...output,
+                  value: json_obj,
+                },
+              };
+            }
           } else if (output.type == "content") {
             for (let i = 0; i < output.value.length; i++) {
               const content = output.value[i];
@@ -216,8 +243,7 @@ function compressLargeContextMessages(messages: LanguageModelV2Prompt) {
                 content.type == "text" &&
                 content.text.length > config.largeTextLength
               ) {
-                content.text =
-                  content.text.substring(0, config.largeTextLength) + "...";
+                content.text = sub(content.text, config.largeTextLength, true);
               }
             }
           }
@@ -295,7 +321,7 @@ export function handleLargeContextMessages(messages: LanguageModelV2Prompt) {
             }
             _content = {
               type: "text",
-              text: _content.text.substring(0, config.largeTextLength) + "...",
+              text: sub(_content.text, config.largeTextLength, true),
             };
             toolContent.value[r] = _content;
           }

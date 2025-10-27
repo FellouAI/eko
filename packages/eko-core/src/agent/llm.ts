@@ -451,6 +451,32 @@ export async function callAgentLLM(
               agentContext
             );
           }
+          if (chunk.finishReason === "content-filter") {
+            throw new Error("LLM error: trigger content filtering violation");
+          } else if (chunk.finishReason === "other") {
+            throw new Error("LLM error: terminated due to other reasons");
+          } else if (
+            chunk.finishReason === "length" &&
+            messages.length >= 3 &&
+            !noCompress &&
+            retryNum < config.maxRetryNum
+          ) {
+            await memory.compressAgentMessages(
+              agentContext,
+              messages,
+              tools
+            );
+            return callAgentLLM(
+              agentContext,
+              rlm,
+              messages,
+              tools,
+              noCompress,
+              toolChoice,
+              ++retryNum,
+              streamCallback
+            );
+          }
           if (toolPart) {
             await streamCallback.onMessage(
               {
@@ -484,28 +510,6 @@ export async function callAgentLLM(
             },
             agentContext
           );
-          if (
-            chunk.finishReason === "length" &&
-            messages.length >= 5 &&
-            !noCompress &&
-            retryNum < config.maxRetryNum
-          ) {
-            await memory.compressAgentMessages(
-              agentContext,
-              messages,
-              tools
-            );
-            return callAgentLLM(
-              agentContext,
-              rlm,
-              messages,
-              tools,
-              noCompress,
-              toolChoice,
-              ++retryNum,
-              streamCallback
-            );
-          }
           break;
         }
       }

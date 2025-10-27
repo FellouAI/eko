@@ -12,6 +12,7 @@ import {
   Workflow,
   NormalAgentNode,
 } from "../types/core.types";
+import { checkTaskReplan, replanWorkflow } from "./replan";
 
 export class Eko {
   protected config: EkoConfig;
@@ -139,12 +140,14 @@ export class Eko {
     const results: string[] = [];
     while (true) {
       await context.checkAborted();
+      let lastAgent: Agent | undefined;
       if (agentTree.type === "normal") {
         // normal agent
         const agent = agentNameMap[agentTree.agent.name];
         if (!agent) {
           throw new Error("Unknown Agent: " + agentTree.agent.name);
         }
+        lastAgent = agent;
         const agentNode = agentTree.agent;
         const agentChain = new AgentChain(agentNode);
         context.chain.push(agentChain);
@@ -166,6 +169,7 @@ export class Eko {
           if (!agent) {
             throw new Error("Unknown Agent: " + agentNode.agent.name);
           }
+          lastAgent = agent;
           const agentChain = new AgentChain(agentNode.agent);
           context.chain.push(agentChain);
           const result = await this.runAgent(
@@ -205,6 +209,16 @@ export class Eko {
         results.push(agent_results.join("\n\n"));
       }
       context.conversation.splice(0, context.conversation.length);
+      if (
+        (config.mode == "expert" || config.expertMode) &&
+        !workflow.modified &&
+        agentTree.nextAgent &&
+        lastAgent?.AgentContext &&
+        (await checkTaskReplan(lastAgent.AgentContext))
+      ) {
+        // replan
+        await replanWorkflow(lastAgent.AgentContext);
+      }
       if (workflow.modified) {
         workflow.modified = false;
         agentTree = buildAgentTree(
