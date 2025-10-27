@@ -134,6 +134,72 @@ export function getMimeType(data: string): string {
   return mediaType;
 }
 
+export async function compressImageData(
+  imageBase64: string,
+  imageType: "image/jpeg" | "image/png",
+  compress:
+    | { scale: number }
+    | {
+        resizeWidth: number;
+        resizeHeight: number;
+      },
+  quality?: number
+): Promise<{
+  imageBase64: string;
+  imageType: "image/jpeg" | "image/png";
+}> {
+  const base64Data = imageBase64;
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  if (!quality) {
+    if (bytes.length >= 1024 * 1024 * 3) {
+      quality = 0.6;
+    } else if (bytes.length >= 1024 * 1024 * 1.5) {
+      quality = 0.8;
+    } else {
+      quality = 1;
+    }
+  }
+  const blob = new Blob([bytes], { type: imageType });
+  const bitmap = await createImageBitmap(blob);
+  const width = (compress as any).scale
+    ? bitmap.width * (compress as any).scale
+    : (compress as any).resizeWidth;
+  const height = (compress as any).scale
+    ? bitmap.height * (compress as any).scale
+    : (compress as any).resizeHeight;
+  if (bitmap.width == width && bitmap.height == height && quality == 1) {
+    return {
+      imageBase64: imageBase64,
+      imageType: imageType,
+    };
+  }
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext("2d") as any;
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  const resultBlob = await canvas.convertToBlob({
+    type: "image/jpeg",
+    quality: quality,
+  });
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      let imageDataUrl = reader.result as string;
+      let imageBase64 = imageDataUrl.substring(
+        imageDataUrl.indexOf("base64,") + 7
+      );
+      resolve({
+        imageBase64: imageBase64,
+        imageType: "image/jpeg",
+      });
+    };
+    reader.readAsDataURL(resultBlob);
+  });
+}
+
 export function mergeTools<T extends Tool | LanguageModelV2FunctionTool>(tools1: T[], tools2: T[]): T[] {
   let tools: T[] = [];
   let toolMap2 = tools2.reduce((map, tool) => {
