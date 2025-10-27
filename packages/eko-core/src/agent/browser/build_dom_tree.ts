@@ -261,6 +261,7 @@ export function run_build_dom_tree() {
 
   function build_dom_tree(markHighlightElements) {
     let highlightIndex = 0; // Reset highlight index
+    let duplicates = new Set();
 
     function highlightElement(element, index, parentIframe = null) {
       // Create or get highlight container
@@ -679,7 +680,10 @@ export function run_build_dom_tree() {
 
     // Function to traverse the DOM and create nested JSON
     function buildDomTree(node, parentIframe = null) {
-      if (!node) return null;
+      if (!node || duplicates.has(node)) {
+        return null;
+      }
+      duplicates.add(node);
 
       // Special case for text nodes
       if (node.nodeType === Node.TEXT_NODE) {
@@ -750,9 +754,9 @@ export function run_build_dom_tree() {
 
       // Handle shadow DOM
       if (node.shadowRoot) {
-        const shadowChildren = Array.from(node.shadowRoot.childNodes).map((child) =>
+        const shadowChildren = Array.from(node.shadowRoot.children).map((child) =>
           buildDomTree(child, parentIframe)
-        );
+        ).filter(child => child !== null);
         nodeData.children.push(...shadowChildren);
       }
 
@@ -761,9 +765,9 @@ export function run_build_dom_tree() {
         try {
           const iframeDoc = node.contentDocument || node.contentWindow.document;
           if (iframeDoc) {
-            const iframeChildren = Array.from(iframeDoc.body.childNodes).map((child) =>
+            const iframeChildren = Array.from(iframeDoc.body.children).map((child) =>
               buildDomTree(child, node)
-            );
+            ).filter(child => child !== null);
             nodeData.children.push(...iframeChildren);
           }
         } catch (e) {
@@ -771,9 +775,9 @@ export function run_build_dom_tree() {
         }
       } else {
         if (isElementExist(node)) {
-          const children = Array.from(node.childNodes).map((child) =>
+          const children = Array.from(node.children).map((child) =>
             buildDomTree(child, parentIframe)
-          );
+          ).filter(child => child !== null);
           nodeData.children.push(...children);
         }
       }
