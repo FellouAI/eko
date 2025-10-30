@@ -6,7 +6,7 @@ export async function auto_test_case() {
   const llms: LLMs = {
     default: {
       provider: "anthropic",
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       apiKey: "your_api_key",
       config: {
         baseURL: "https://api.anthropic.com/v1",
