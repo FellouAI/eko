@@ -12,7 +12,7 @@ const claudeApiKey = process.env.ANTHROPIC_API_KEY;
 const llms: LLMs = {
   default: {
     provider: "anthropic",
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-5-20250929",
     apiKey: claudeApiKey || "",
     config: {
       baseURL: claudeBaseURL,
@@ -20,7 +20,7 @@ const llms: LLMs = {
   },
   openai: {
     provider: "openai",
-    model: "gpt-5-mini",
+    model: "gpt-5",
     apiKey: openaiApiKey || "",
     config: {
       baseURL: openaiBaseURL,

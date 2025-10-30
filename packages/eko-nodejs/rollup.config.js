@@ -14,7 +14,7 @@ export default [
         sourcemap: true
       }
     ],
-    external: ["dotenv", "@eko-ai/eko", "playwright"],
+    external: ["dotenv", "@eko-ai/eko", "canvas", "playwright"],
     plugins: [
       json(),
       commonjs(),
@@ -38,7 +38,7 @@ export default [
         sourcemap: true
       }
     ],
-    external: ["dotenv", "@eko-ai/eko", "playwright"],
+    external: ["dotenv", "@eko-ai/eko", "canvas", "playwright"],
     plugins: [
       json(),
       commonjs(),

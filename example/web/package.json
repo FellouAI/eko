@@ -17,8 +17,8 @@
     "react-dom": "^19.1.0",
     "react-scripts": "^5.0.1",
     "@react-login-page/base": "^1.0.4",
-    "@eko-ai/eko": "file:../../packages/eko-core",
-    "@eko-ai/eko-web": "file:../../packages/eko-web"
+    "@eko-ai/eko": "workspace:*",
+    "@eko-ai/eko-web": "workspace:*"
   },
   "browserslist": {
     "production": [

@@ -1,3 +1,5 @@
+import { loadPackage } from "../../common/utils";
+
 export function extract_page_content(
   max_url_length = 200,
   max_content_length = 50000
@@ -131,22 +133,94 @@ export function mark_screenshot_highlight_elements(
 ): Promise<string> {
   return new Promise<string>(async (resolve, reject) => {
     try {
-      // Convert base64 to Blob
-      const base64Data = screenshot.imageBase64;
-      const binaryString = atob(base64Data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: screenshot.imageType });
-      const imageBitmap = await createImageBitmap(blob, {
-        resizeQuality: "high",
-        resizeWidth: client_rect.width,
-        resizeHeight: client_rect.height,
-      });
-      const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
+      const hasOffscreen = typeof OffscreenCanvas !== "undefined";
+      const hasCreateImageBitmap = typeof createImageBitmap !== "undefined";
+      const hasDOM = typeof document !== "undefined" && typeof Image !== "undefined";
+      // @ts-ignore
+      const isNode = typeof window === "undefined" && typeof process !== "undefined" && !!process.versions && !!process.versions.node;
 
-      const ctx = canvas.getContext("2d");
+      const loadImageAny = async () => {
+        if (hasCreateImageBitmap) {
+          const base64Data = screenshot.imageBase64;
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: screenshot.imageType });
+          const imageBitmap = await createImageBitmap(blob, {
+            resizeQuality: "high",
+            resizeWidth: client_rect.width,
+            resizeHeight: client_rect.height,
+          } as any);
+          return { img: imageBitmap };
+        }
+        if (hasDOM) {
+          const img = await new Promise<HTMLImageElement>(
+            (resolveImg, rejectImg) => {
+              const image = new Image();
+              image.onload = () => resolveImg(image);
+              image.onerror = (e) => rejectImg(e);
+              image.src = `data:${screenshot.imageType};base64,${screenshot.imageBase64}`;
+            }
+          );
+          return { img };
+        }
+        if (isNode) {
+          const canvasMod = await loadPackage("canvas");
+          const { loadImage } = canvasMod as any;
+          const dataUrl = `data:${screenshot.imageType};base64,${screenshot.imageBase64}`;
+          const img = await loadImage(dataUrl);
+          return { img };
+        }
+        throw new Error("No image environment available");
+      };
+
+      const createCanvasAny = async (width: number, height: number) => {
+        if (hasOffscreen) {
+          const canvas = new OffscreenCanvas(width, height) as any;
+          return {
+            ctx: canvas.getContext("2d") as any,
+            exportDataUrl: async (mime: string) => {
+              const blob = await canvas.convertToBlob({ type: mime });
+              return await new Promise<string>((res, rej) => {
+                const reader = new FileReader();
+                reader.onloadend = () => res(reader.result as string);
+                reader.onerror = () =>
+                  rej(new Error("Failed to convert blob to base64"));
+                reader.readAsDataURL(blob);
+              });
+            },
+          };
+        }
+        if (hasDOM) {
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          return {
+            ctx: canvas.getContext("2d") as any,
+            exportDataUrl: async (mime: string) => canvas.toDataURL(mime),
+          };
+        }
+        if (isNode) {
+          const canvasMod = await loadPackage("canvas");
+          const { createCanvas } = canvasMod as any;
+          const canvas = createCanvas(width, height);
+          return {
+            ctx: canvas.getContext("2d"),
+            exportDataUrl: async (mime: string) => canvas.toDataURL(mime),
+          };
+        }
+        throw new Error("No canvas environment available");
+      };
+
+      const loaded = await loadImageAny();
+      const targetWidth = client_rect.width;
+      const targetHeight = client_rect.height;
+      const { ctx, exportDataUrl } = await createCanvasAny(
+        targetWidth,
+        targetHeight
+      );
       if (!ctx) {
         reject(new Error("Failed to get canvas context"));
         return;
@@ -154,7 +228,7 @@ export function mark_screenshot_highlight_elements(
 
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(imageBitmap, 0, 0);
+      ctx.drawImage(loaded.img, 0, 0, targetWidth, targetHeight);
 
       const sortedEntries = Object.entries(area_map)
         .filter(([id, area]) => area.width > 0 && area.height > 0)
@@ -163,7 +237,7 @@ export function mark_screenshot_highlight_elements(
           const areaB = b[1].width * b[1].height;
           return areaB - areaA;
         });
-
+      
       const colors = [
         "#FF0000",
         "#00FF00",
@@ -178,10 +252,8 @@ export function mark_screenshot_highlight_elements(
         "#DC143C",
         "#4682B4",
       ];
-
       sortedEntries.forEach(([id, area], index) => {
         const color = colors[index % colors.length];
-
         if (area.width * area.height < 40000) {
           // Draw a background color
           ctx.fillStyle = color + "1A";
@@ -196,9 +268,10 @@ export function mark_screenshot_highlight_elements(
         // Draw ID tag background
         const fontSize = Math.min(12, Math.max(8, area.height / 2));
         ctx.font = `${fontSize}px sans-serif`;
-        const textMetrics = ctx.measureText(id);
+        const metrics: any = ctx.measureText(id) as any;
+        const textWidth = metrics && metrics.width ? metrics.width : 0;
         const padding = 4;
-        const labelWidth = textMetrics.width + padding * 2;
+        const labelWidth = textWidth + padding * 2;
         const labelHeight = fontSize + padding * 2;
 
         // The tag position is in the upper right corner.
@@ -221,20 +294,9 @@ export function mark_screenshot_highlight_elements(
         ctx.fillText(id, labelX + padding, labelY + padding);
       });
 
-      // Convert OffscreenCanvas to Blob, then to base64
-      const resultBlob = await canvas.convertToBlob({
-        type: screenshot.imageType,
-      });
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const resultBase64 = reader.result as string;
-        resolve(resultBase64);
-      };
-      reader.onerror = () => {
-        reject(new Error("Failed to convert blob to base64"));
-      };
-      reader.readAsDataURL(resultBlob);
+      // Export the image
+      const out = await exportDataUrl(screenshot.imageType);
+      resolve(out);
     } catch (error) {
       reject(error);
     }
