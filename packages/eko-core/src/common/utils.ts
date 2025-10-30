@@ -149,7 +149,10 @@ export async function compressImageData(
   imageType: "image/jpeg" | "image/png";
 }> {
   const base64Data = imageBase64;
-  const binaryString = atob(base64Data);
+  const binaryString = typeof atob !== "undefined"
+    ? atob(base64Data)
+    // @ts-ignore
+    : Buffer.from(base64Data, "base64").toString("binary");
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
@@ -163,41 +166,114 @@ export async function compressImageData(
       quality = 1;
     }
   }
-  const blob = new Blob([bytes], { type: imageType });
-  const bitmap = await createImageBitmap(blob);
-  const width = (compress as any).scale
-    ? bitmap.width * (compress as any).scale
-    : (compress as any).resizeWidth;
-  const height = (compress as any).scale
-    ? bitmap.height * (compress as any).scale
-    : (compress as any).resizeHeight;
-  if (bitmap.width == width && bitmap.height == height && quality == 1) {
+  const targetByScale = (bitmapWidth: number, bitmapHeight: number) => ({
+    width: (compress as any).scale
+      ? bitmapWidth * (compress as any).scale
+      : (compress as any).resizeWidth,
+    height: (compress as any).scale
+      ? bitmapHeight * (compress as any).scale
+      : (compress as any).resizeHeight,
+  });
+  
+  const hasOffscreen = typeof OffscreenCanvas !== "undefined";
+  const hasCreateImageBitmap = typeof createImageBitmap !== "undefined";
+  const hasDOM = typeof document !== "undefined" && typeof Image !== "undefined";
+  // @ts-ignore
+  const isNode = typeof window === "undefined" && typeof process !== "undefined" && !!process.versions && !!process.versions.node;
+
+  const loadImageAny = async () => {
+    if (hasCreateImageBitmap) {
+      const blob = new Blob([bytes], { type: imageType });
+      const bitmap = await createImageBitmap(blob);
+      return { img: bitmap, width: bitmap.width, height: bitmap.height };
+    }
+    if (hasDOM) {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = (e) => reject(e);
+        image.src = `data:${imageType};base64,${imageBase64}`;
+      });
+      return { img, width: img.width, height: img.height };
+    }
+    if (isNode) {
+      const canvasMod = await loadPackage("canvas");
+      const { loadImage } = canvasMod as any;
+      const dataUrl = `data:${imageType};base64,${imageBase64}`;
+      const img = await loadImage(dataUrl);
+      return { img, width: img.width, height: img.height };
+    }
+    throw new Error("No image environment available");
+  };
+
+  const createCanvasAny = async (width: number, height: number) => {
+    if (hasOffscreen) {
+      const canvas = new OffscreenCanvas(width, height) as any;
+      return {
+        ctx: canvas.getContext("2d") as any,
+        exportBase64: async (mime: string, q?: number) => {
+          const blob = await canvas.convertToBlob({ type: mime, quality: q });
+          return await new Promise<string>((res, rej) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const url = reader.result as string;
+              res(url.substring(url.indexOf("base64,") + 7));
+            };
+            reader.onerror = () => rej(new Error("Failed to convert blob to base64"));
+            reader.readAsDataURL(blob);
+          });
+        },
+      };
+    }
+    if (hasDOM) {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      return {
+        ctx: canvas.getContext("2d") as any,
+        exportBase64: async (mime: string, q?: number) => {
+          const dataUrl = canvas.toDataURL(mime, q);
+          return dataUrl.substring(dataUrl.indexOf("base64,") + 7);
+        },
+      };
+    }
+    if (isNode) {
+      const canvasMod = await loadPackage("canvas");
+      const { createCanvas } = canvasMod as any;
+      const canvas = createCanvas(width, height);
+      return {
+        ctx: canvas.getContext("2d"),
+        exportBase64: async (mime: string, q?: number) => {
+          const buffer: any = canvas.toBuffer(mime, { quality: q });
+          // @ts-ignore
+          return (typeof Buffer !== "undefined" ? Buffer.from(buffer) : buffer).toString("base64");
+        },
+      };
+    }
+    throw new Error("No canvas environment available");
+  };
+
+  const loaded = await loadImageAny();
+  const { width, height } = targetByScale(loaded.width, loaded.height);
+  if (loaded.width == width && loaded.height == height && quality == 1) {
     return {
       imageBase64: imageBase64,
       imageType: imageType,
     };
   }
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext("2d") as any;
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  const resultBlob = await canvas.convertToBlob({
-    type: "image/jpeg",
-    quality: quality,
-  });
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      let imageDataUrl = reader.result as string;
-      let imageBase64 = imageDataUrl.substring(
-        imageDataUrl.indexOf("base64,") + 7
-      );
-      resolve({
-        imageBase64: imageBase64,
-        imageType: "image/jpeg",
-      });
+  const { ctx, exportBase64 } = await createCanvasAny(width, height);
+  if (!ctx) {
+    return {
+      imageBase64: imageBase64,
+      imageType: imageType,
     };
-    reader.readAsDataURL(resultBlob);
-  });
+  }
+  ctx.drawImage(loaded.img, 0, 0, width, height);
+  const outBase64 = await exportBase64("image/jpeg", quality);
+  return {
+    imageBase64: outBase64,
+    imageType: "image/jpeg",
+  };
 }
 
 export function mergeTools<T extends Tool | LanguageModelV2FunctionTool>(tools1: T[], tools2: T[]): T[] {
@@ -398,4 +474,17 @@ export function fixXmlTag(code: string) {
   }
   let completedCode = code + missingParts.join("");
   return completedCode;
+}
+
+export async function loadPackage(packageName: string): Promise<any> {
+  // @ts-ignore
+  if (typeof require !== 'undefined') {
+    try {
+      return await import(packageName);
+    } catch {
+      // @ts-ignore
+      return require(packageName);
+    }
+  }
+  return await import(packageName);
 }

@@ -1,10 +1,10 @@
 import { Log, uuidv4 } from "@eko-ai/eko";
 import {
   IMcpClient,
+  ToolResult,
   McpCallToolParam,
   McpListToolParam,
   McpListToolResult,
-  ToolResult,
 } from "@eko-ai/eko/types";
 import {
   spawn,

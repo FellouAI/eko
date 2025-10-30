@@ -75,7 +75,7 @@ Follow these steps when moving an existing Eko 2.x project to 3.0:
 const llms: LLMs = {
   default: {
     provider: "anthropic",
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-5-20250929",
     apiKey: "your-api-key"
   },
   gemini: {

@@ -13,7 +13,7 @@ export default [
         sourcemap: true
       }
     ],
-    external: ['dotenv'],
+    external: ['dotenv', 'buffer', 'canvas'],
     plugins: [
       commonjs(),
       resolve({
@@ -36,7 +36,7 @@ export default [
         sourcemap: true
       }
     ],
-    external: ['dotenv', 'buffer'],
+    external: ['dotenv', 'buffer', 'canvas'],
     plugins: [
       commonjs(),
       resolve({
