@@ -10,8 +10,10 @@ root.render(
   </React.StrictMode>
 );
 
-// Login automation testing
-import { auto_test_case } from "./main.ts";
-setTimeout(async () => {
-  await auto_test_case();
-}, 500);
+// Login automation testing - lazy load to avoid build-time execution
+if (typeof window !== "undefined") {
+  setTimeout(async () => {
+    const { auto_test_case } = await import("./main.ts");
+    await auto_test_case();
+  }, 500);
+}
