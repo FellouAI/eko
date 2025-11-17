@@ -39,7 +39,7 @@ import {
 } from "./llm";
 import { doTaskResultCheck } from "../tools/task_result_check";
 import { doTodoListManager } from "../tools/todo_list_manager";
-import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
+import { getAgentSystemPrompt, getAgentUserPrompt, appendDynamicContentToSystemPrompt } from "../prompt/agent";
 
 export type AgentParams = {
   name: string;
@@ -49,6 +49,12 @@ export type AgentParams = {
   mcpClient?: IMcpClient;
   planDescription?: string;
   requestHandler?: (request: LLMRequest) => void;
+};
+
+export type AgentSerializedData = {
+  agent_name: string;
+  description: string;
+  system_prompt: string;
 };
 
 export class Agent {
@@ -61,6 +67,7 @@ export class Agent {
   protected requestHandler?: (request: LLMRequest) => void;
   protected callback?: StreamCallback & HumanCallback;
   protected agentContext?: AgentContext;
+  protected serializedSystemPrompt?: string;
 
   constructor(params: AgentParams) {
     this.name = params.name;
@@ -70,6 +77,44 @@ export class Agent {
     this.mcpClient = params.mcpClient;
     this.planDescription = params.planDescription;
     this.requestHandler = params.requestHandler;
+  }
+
+  /**
+   * Build Agent instance from JSON data
+   * 
+   * Deserializes an Agent from JSON containing agent_name, description, and system_prompt.
+   * The serialized system prompt will be used as a base, with dynamic content appended at runtime.
+   * 
+   * @param jsonData Serialized Agent data (object or JSON string)
+   * @returns Agent instance
+   * @static
+   */
+  public static build_from_json(
+    jsonData: AgentSerializedData | string
+  ): Agent {
+    // Parse JSON if string
+    const data: AgentSerializedData = typeof jsonData === 'string' 
+      ? JSON.parse(jsonData) 
+      : jsonData;
+
+    // Validate required fields
+    if (!data.agent_name || !data.description) {
+      throw new Error('Agent serialized data must contain agent_name and description');
+    }
+
+    // Create Agent instance
+    const agent = new Agent({
+      name: data.agent_name,
+      description: data.description,
+      tools: [], // Empty tools array for now
+    });
+
+    // Store serialized system prompt if provided
+    if (data.system_prompt) {
+      agent.serializedSystemPrompt = data.system_prompt;
+    }
+
+    return agent;
   }
 
   public async run(context: Context, agentChain: AgentChain): Promise<string> {
@@ -336,6 +381,18 @@ export class Agent {
     agentContext: AgentContext,
     tools: Tool[]
   ): Promise<string> {
+    // If serialized system prompt exists, append dynamic content to it
+    if (this.serializedSystemPrompt) {
+      return appendDynamicContentToSystemPrompt(
+        this.serializedSystemPrompt,
+        this,
+        agentContext.agentChain.agent,
+        agentContext.context,
+        tools
+      );
+    }
+    
+    // Otherwise use existing dynamic building logic
     return getAgentSystemPrompt(
       this,
       agentContext.agentChain.agent,

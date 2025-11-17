@@ -159,3 +159,40 @@ export function getAgentUserPrompt(
     }
   );
 }
+
+export function appendDynamicContentToSystemPrompt(
+  basePrompt: string,
+  agent: Agent,
+  agentNode: WorkflowAgent,
+  context: Context,
+  tools?: Tool[]
+): string {
+  let prompt = basePrompt;
+  
+  // Append datetime (always needed)
+  prompt += "\nCurrent datetime: " + new Date().toLocaleString();
+  
+  // Append main task and pre-task results if multiple agents exist
+  if (context.chain.agents.length > 1) {
+    prompt += "\n Main task: " + context.chain.taskPrompt;
+    prompt += "\n\n# Pre-task execution results";
+    for (let i = 0; i < context.chain.agents.length; i++) {
+      const agentChain = context.chain.agents[i];
+      if (agentChain.agentResult) {
+        prompt += `\n## ${
+          agentChain.agent.task || agentChain.agent.name
+        }\n<taskResult>\n${sub(agentChain.agentResult, 600, true)}\n</taskResult>`;
+      }
+    }
+  }
+  
+  // Append parallel tool calls hint if supported
+  if (agent.canParallelToolCalls()) {
+    prompt += "\nFor maximum efficiency, when executing multiple independent operations that do not depend on each other or conflict with one another, these tools can be called in parallel simultaneously.";
+  }
+  
+  // Append language output hint
+  prompt += "\nThe output language should follow the language corresponding to the user's task.";
+  
+  return prompt;
+}

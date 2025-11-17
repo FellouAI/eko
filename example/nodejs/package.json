@@ -7,7 +7,8 @@
     "build": "rollup -c",
     "start": "node dist/index.cjs",
     "dev": "pnpm run build && pnpm run start",
-    "playwright": "pnpm playwright install"
+    "playwright": "pnpm playwright install",
+    "test:deserialize": "rollup -c rollup.test.config.js && node dist/test-deserialize-agent.cjs"
   },
   "author": "FellouAI",
   "license": "MIT",

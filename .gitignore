@@ -56,3 +56,9 @@ coverage/
 
 # Test generated files
 /test/fixtures/generated/
+
+.codemap
+.codemap/*
+
+# Node.js localStorage file
+.localstorage
