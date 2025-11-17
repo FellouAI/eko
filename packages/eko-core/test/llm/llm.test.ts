@@ -37,7 +37,7 @@ const llms: LLMs = {
   },
   test1: {
     provider: "anthropic",
-    model: "claude-3-7-sonnet-20250219",
+    model: "claude-sonnet-4-20250514",
     apiKey: "xxx",
     config: {
       baseURL: claudeBaseURL,
@@ -53,7 +53,7 @@ const llms: LLMs = {
   },
   openai: {
     provider: "openai",
-    model: "gpt-5-mini",
+    model: "gpt-5",
     apiKey: openaiApiKey || "",
     config: {
       baseURL: openaiBaseURL,
@@ -61,7 +61,7 @@ const llms: LLMs = {
   },
   claude: {
     provider: "anthropic",
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-5-20250929",
     apiKey: claudeApiKey || "",
     config: {
       baseURL: claudeBaseURL,

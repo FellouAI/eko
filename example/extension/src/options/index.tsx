@@ -52,6 +52,7 @@ const OptionsPage = () => {
     { value: "openai", label: "OpenAI" },
     { value: "openrouter", label: "OpenRouter" },
     { value: "openai-compatible", label: "OpenAI Compatible" },
+    { value: "modelscope", label: "ModelScope"},
   ];
 
   const modelOptions = {
@@ -83,6 +84,13 @@ const OptionsPage = () => {
     "openai-compatible": [
       { value: "doubao-seed-1-6-250615", label: "doubao-seed-1-6-250615" },
     ],
+    "modelscope": [
+      { value: "Qwen/Qwen3-VL-8B-Instruct", label: "Qwen/Qwen3-VL-8B-Instruct" },
+      { value: "Qwen/Qwen3-VL-30B-A3B-Instruct", label: "Qwen/Qwen3-VL-30B-A3B-Instruct" },
+      { value: "Qwen/Qwen3-VL-235B-A22B-Instruct", label: "Qwen/Qwen3-VL-235B-A22B-Instruct" },
+      { value: "Qwen/Qwen3-VL-8B-Thinking", label: "Qwen/Qwen3-VL-8B-Thinking" },
+      { value: "Qwen/Qwen3-VL-30B-A3B-Thinking", label: "Qwen/Qwen3-VL-30B-A3B-Thinking" },
+    ],
   };
 
   const handleLLMChange = (value: string) => {
@@ -91,6 +99,7 @@ const OptionsPage = () => {
       anthropic: "https://api.anthropic.com/v1",
       openrouter: "https://openrouter.ai/api/v1",
       "openai-compatible": "https://openrouter.ai/api/v1",
+      "modelscope": "https://api-inference.modelscope.cn/v1"
     };
     const newConfig = {
       llm: value,

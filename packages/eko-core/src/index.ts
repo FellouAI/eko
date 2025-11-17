@@ -61,6 +61,7 @@ export {
   mergeTools,
   toImage,
   toFile,
+  compressImageData,
   convertToolSchema,
   uuidv4,
   call_timeout,

@@ -1,6 +1,6 @@
 {
   "name": "@eko-ai/eko-nodejs",
-  "version": "3.1.2",
+  "version": "3.1.4",
   "description": "Empowering language to transform human words into action.",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@eko-ai/eko": "workspace:*",
+    "canvas": "^3.2.0",
     "chromium-bidi": "^0.12.0",
     "glob": "^11.0.2",
     "playwright": "^1.52.0"
