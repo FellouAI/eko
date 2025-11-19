@@ -169,6 +169,44 @@ export function appendDynamicContentToSystemPrompt(
 ): string {
   let prompt = basePrompt;
   
+  // Use provided tools or fallback to agent's tools
+  tools = tools || agent.Tools;
+  
+  // Check for built-in tools and append corresponding prompts
+  const agentNodeXml = agentNode.xml;
+  const hasWatchNode = agentNodeXml.indexOf("</watch>") > -1;
+  const hasForEachNode = agentNodeXml.indexOf("</forEach>") > -1;
+  const hasHumanTool =
+    tools.filter((tool) => tool.name == human_interact).length > 0;
+  const hasVariable =
+    agentNodeXml.indexOf("input=") > -1 ||
+    agentNodeXml.indexOf("output=") > -1 ||
+    tools.filter((tool) => tool.name == variable_storage).length > 0;
+  
+  // Append HumanInteract tool prompt if available
+  if (hasHumanTool) {
+    prompt += "\n" + HUMAN_PROMPT;
+  }
+  
+  // Append VariableStorage tool prompt if available
+  if (hasVariable) {
+    prompt += "\n" + VARIABLE_PROMPT;
+  }
+  
+  // Append ForeachTask tool prompt if available
+  if (hasForEachNode) {
+    if (tools.filter((tool) => tool.name == foreach_task).length > 0) {
+      prompt += "\n" + FOR_EACH_PROMPT;
+    }
+  }
+  
+  // Append WatchTrigger tool prompt if available
+  if (hasWatchNode) {
+    if (tools.filter((tool) => tool.name == watch_trigger).length > 0) {
+      prompt += "\n" + WATCH_PROMPT;
+    }
+  }
+  
   // Append datetime (always needed)
   prompt += "\nCurrent datetime: " + new Date().toLocaleString();
   

@@ -49,12 +49,16 @@ export type AgentParams = {
   mcpClient?: IMcpClient;
   planDescription?: string;
   requestHandler?: (request: LLMRequest) => void;
+
+  /** Optional callback handler for status and user interaction */
+  callback?: StreamCallback & HumanCallback;
 };
 
 export type AgentSerializedData = {
   agent_name: string;
   description: string;
   system_prompt: string;
+  tool_ids?: string[];
 };
 
 export class Agent {
@@ -68,6 +72,9 @@ export class Agent {
   protected callback?: StreamCallback & HumanCallback;
   protected agentContext?: AgentContext;
   protected serializedSystemPrompt?: string;
+  
+  /** Optional tool IDs for MCP tools to load */
+  protected toolIds?: string[];
 
   constructor(params: AgentParams) {
     this.name = params.name;
@@ -77,6 +84,7 @@ export class Agent {
     this.mcpClient = params.mcpClient;
     this.planDescription = params.planDescription;
     this.requestHandler = params.requestHandler;
+    this.callback = params.callback;
   }
 
   /**
@@ -93,10 +101,9 @@ export class Agent {
     jsonData: AgentSerializedData | string
   ): Agent {
     // Parse JSON if string
-    const data: AgentSerializedData = typeof jsonData === 'string' 
-      ? JSON.parse(jsonData) 
+    const data: AgentSerializedData = typeof jsonData === 'string'
+      ? JSON.parse(jsonData)
       : jsonData;
-
     // Validate required fields
     if (!data.agent_name || !data.description) {
       throw new Error('Agent serialized data must contain agent_name and description');
@@ -112,6 +119,11 @@ export class Agent {
     // Store serialized system prompt if provided
     if (data.system_prompt) {
       agent.serializedSystemPrompt = data.system_prompt;
+    }
+
+    // Store tool IDs if provided
+    if (data.tool_ids) {
+      agent.toolIds = data.tool_ids;
     }
 
     return agent;
@@ -166,6 +178,13 @@ export class Agent {
     const rlm = new RetryLanguageModel(context.config.llms, this.llms);
     rlm.setContext(agentContext);
     let agentTools = tools;
+
+    await agentRunCbHelper.agentStart(
+      this,
+      agentContext
+    )
+
+    // Main reasoning loop
     while (loopNum < maxReactNum) {
       await context.checkAborted();
       if (mcpClient) {
@@ -391,7 +410,7 @@ export class Agent {
         tools
       );
     }
-    
+
     // Otherwise use existing dynamic building logic
     return getAgentSystemPrompt(
       this,
@@ -436,16 +455,31 @@ export class Agent {
       if (!mcpClient.isConnected()) {
         await mcpClient.connect(context.controller.signal);
       }
+
+      // Get tool list
+      // Merge mcpParams into params if tool_ids is present, otherwise spread at root level
+      const baseParams: any = {
+        taskId: context.taskId,
+        nodeId: agentNode?.id,
+        environment: config.platform,
+        agent_name: agentNode?.name || this.name,
+        params: {},
+        prompt: agentNode?.task || context.chain.taskPrompt,
+      };
+      
+      // If tool_ids is in mcpParams, put it in params.params (nested) for MCP endpoint compatibility
+      if (mcpParams?.tool_ids) {
+        baseParams.params.tool_ids = mcpParams.tool_ids;
+        // Also spread other mcpParams at root level
+        const { tool_ids, ...otherParams } = mcpParams;
+        Object.assign(baseParams, otherParams);
+      } else {
+        // Otherwise spread all mcpParams at root level
+        Object.assign(baseParams, mcpParams || {});
+      }
+      
       let list = await mcpClient.listTools(
-        {
-          taskId: context.taskId,
-          nodeId: agentNode?.id,
-          environment: config.platform,
-          agent_name: agentNode?.name || this.name,
-          params: {},
-          prompt: agentNode?.task || context.chain.taskPrompt,
-          ...(mcpParams || {}),
-        },
+        baseParams,
         context.controller.signal
       );
       let mcpTools: Tool[] = [];
@@ -470,8 +504,20 @@ export class Agent {
     mcpTools: boolean;
     mcpParams?: Record<string, unknown>;
   }> {
+    // Default: only load MCP tools in the first loop
+    // For custom-tools MCP endpoint, only load if tool_ids are provided
+    // (since the endpoint requires tool_ids parameter)
+    if (this.toolIds && this.toolIds.length > 0) {
+      return {
+        mcpTools: loopNum == 0,
+        mcpParams: { tool_ids: this.toolIds },
+      };
+    }
+    
+    // If no tool_ids, don't load MCP tools for custom-tools endpoint
+    // (other MCP endpoints may work without tool_ids)
     return {
-      mcpTools: loopNum == 0,
+      mcpTools: false,
     };
   }
 

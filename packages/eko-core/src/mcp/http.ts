@@ -72,6 +72,11 @@ export class SimpleHttpMcpClient implements IMcpClient {
       },
       signal
     );
+    // Safety check: ensure result exists
+    if (!message || !message.result) {
+      Log.error("MCP listTools: invalid response", message);
+      return [];
+    }
     return message.result.tools || [];
   }
 
@@ -117,6 +122,18 @@ export class SimpleHttpMcpClient implements IMcpClient {
       if (this.mcpSessionId && method !== "initialize") {
         extHeaders["Mcp-Session-Id"] = this.mcpSessionId;
       }
+      
+      // Log request for debugging
+      const requestBody = {
+        jsonrpc: "2.0",
+        id: id,
+        method: method,
+        params: {
+          ...params,
+        },
+      };
+      Log.debug(`MCP Client request: ${this.httpUrl}`, JSON.stringify(requestBody, null, 2));
+      
       const response = await fetch(this.httpUrl, {
         method: "POST",
         headers: {
@@ -138,6 +155,14 @@ export class SimpleHttpMcpClient implements IMcpClient {
         keepalive: true,
         signal: signal,
       });
+
+      // Check HTTP response status
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(
+          `MCP ${method} HTTP error: ${response.status} ${response.statusText} - ${errorText}`
+        );
+      }
 
       if (method.startsWith("notifications/")){
           return;
