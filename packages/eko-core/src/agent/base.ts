@@ -75,7 +75,7 @@ export class Agent {
   protected callback?: StreamCallback & HumanCallback;
   protected agentContext?: AgentContext;
   protected serializedSystemPrompt?: string;
-  
+
   /** Optional tool IDs for MCP tools to load */
   protected toolIds?: string[];
 
@@ -446,14 +446,14 @@ export class Agent {
       .map((cap) => cap.getGuide())
       .filter((guide) => guide.length > 0)
       .join("\n\n");
-    
+
     const capabilityGuideSection = capabilityGuides
       ? `Capability Guide：\n${capabilityGuides}`
       : "";
 
     // Build prompt first (with capability tools already included in tools parameter)
     let prompt: string;
-    
+
     // If serialized system prompt exists, first append Capability Guide, then do dynamic injection
     if (this.serializedSystemPrompt) {
       // Step 1: Append Capability Guide to serializedSystemPrompt first
@@ -484,7 +484,7 @@ export class Agent {
         prompt = prompt + "\n\n" + capabilityGuideSection;
       }
     }
-    
+
     return prompt;
   }
 
@@ -533,7 +533,7 @@ export class Agent {
         params: {},
         prompt: agentNode?.task || context.chain.taskPrompt,
       };
-      
+
       // If tool_ids is in mcpParams, put it in params.params (nested) for MCP endpoint compatibility
       if (mcpParams?.tool_ids) {
         baseParams.params.tool_ids = mcpParams.tool_ids;
@@ -544,7 +544,7 @@ export class Agent {
         // Otherwise spread all mcpParams at root level
         Object.assign(baseParams, mcpParams || {});
       }
-      
+
       let list = await mcpClient.listTools(
         baseParams,
         context.controller.signal
@@ -580,7 +580,7 @@ export class Agent {
         mcpParams: { tool_ids: this.toolIds },
       };
     }
-    
+
     // If no tool_ids, don't load MCP tools for custom-tools endpoint
     // (other MCP endpoints may work without tool_ids)
     return {
