@@ -5,30 +5,32 @@ import {
 } from "@ai-sdk/provider";
 import {
   LLMRequest,
-  DialogueCallback,
+  ChatStreamMessage,
+  ChatStreamCallback,
   EkoMessageToolPart,
   EkoMessageUserPart,
   LanguageModelV2Prompt,
   EkoMessageAssistantPart,
   LanguageModelV2TextPart,
   LanguageModelV2ToolChoice,
-  ChatStreamCallbackMessage,
   LanguageModelV2ToolCallPart,
   LanguageModelV2FunctionTool,
-} from "../../types";
-import config from "../../config";
-import Log from "../../common/log";
-import { RetryLanguageModel } from "../../llm";
-import { sleep, uuidv4 } from "../../common/utils";
+} from "../types";
+import config from "../config";
+import Log from "../common/log";
+import { RetryLanguageModel } from "../llm";
+import { ChatContext } from "./chat-context";
+import { sleep, uuidv4 } from "../common/utils";
 
 export async function callChatLLM(
   messageId: string,
+  chatContext: ChatContext,
   rlm: RetryLanguageModel,
   messages: LanguageModelV2Prompt,
   tools: LanguageModelV2FunctionTool[],
   toolChoice?: LanguageModelV2ToolChoice,
   retryNum: number = 0,
-  callback?: DialogueCallback,
+  callback?: ChatStreamCallback,
   signal?: AbortSignal
 ): Promise<Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>> {
   const streamCallback = callback?.chatCallback || {
@@ -70,6 +72,8 @@ export async function callChatLLM(
           }
           streamText += chunk.delta || "";
           await streamCallback.onMessage({
+            streamType: "chat",
+            chatId: chatContext.getChatId(),
             type: "text",
             streamId: textStreamId,
             streamDone: false,
@@ -77,6 +81,8 @@ export async function callChatLLM(
           });
           if (toolPart) {
             await streamCallback.onMessage({
+              streamType: "chat",
+              chatId: chatContext.getChatId(),
               type: "tool_use",
               toolId: toolPart.toolCallId,
               toolName: toolPart.toolName,
@@ -90,6 +96,8 @@ export async function callChatLLM(
           textStreamDone = true;
           if (streamText) {
             await streamCallback.onMessage({
+              streamType: "chat",
+              chatId: chatContext.getChatId(),
               type: "text",
               streamId: textStreamId,
               streamDone: true,
@@ -105,6 +113,8 @@ export async function callChatLLM(
         case "reasoning-delta": {
           thinkText += chunk.delta || "";
           await streamCallback.onMessage({
+            streamType: "chat",
+            chatId: chatContext.getChatId(),
             type: "thinking",
             streamId: thinkStreamId,
             streamDone: false,
@@ -115,6 +125,8 @@ export async function callChatLLM(
         case "reasoning-end": {
           if (thinkText) {
             await streamCallback.onMessage({
+              streamType: "chat",
+              chatId: chatContext.getChatId(),
               type: "thinking",
               streamId: thinkStreamId,
               streamDone: true,
@@ -141,6 +153,8 @@ export async function callChatLLM(
           if (!textStreamDone) {
             textStreamDone = true;
             await streamCallback.onMessage({
+              streamType: "chat",
+              chatId: chatContext.getChatId(),
               type: "text",
               streamId: textStreamId,
               streamDone: true,
@@ -149,6 +163,8 @@ export async function callChatLLM(
           }
           toolArgsText += chunk.delta || "";
           await streamCallback.onMessage({
+            streamType: "chat",
+            chatId: chatContext.getChatId(),
             type: "tool_streaming",
             toolId: chunk.id,
             toolName: toolPart?.toolName || "",
@@ -159,7 +175,9 @@ export async function callChatLLM(
         case "tool-call": {
           toolArgsText = "";
           const args = chunk.input ? JSON.parse(chunk.input) : {};
-          const message: ChatStreamCallbackMessage = {
+          const message: ChatStreamMessage = {
+            streamType: "chat",
+            chatId: chatContext.getChatId(),
             type: "tool_use",
             toolId: chunk.toolCallId,
             toolName: chunk.toolName,
@@ -182,6 +200,8 @@ export async function callChatLLM(
         case "error": {
           Log.error(`chatLLM error: `, chunk);
           await streamCallback.onMessage({
+            streamType: "chat",
+            chatId: chatContext.getChatId(),
             type: "error",
             error: chunk.error,
           });
@@ -191,6 +211,8 @@ export async function callChatLLM(
           if (!textStreamDone) {
             textStreamDone = true;
             await streamCallback.onMessage({
+              streamType: "chat",
+              chatId: chatContext.getChatId(),
               type: "text",
               streamId: textStreamId,
               streamDone: true,
@@ -199,6 +221,8 @@ export async function callChatLLM(
           }
           if (toolPart) {
             await streamCallback.onMessage({
+              streamType: "chat",
+              chatId: chatContext.getChatId(),
               type: "tool_use",
               toolId: toolPart.toolCallId,
               toolName: toolPart.toolName,
@@ -207,6 +231,8 @@ export async function callChatLLM(
             toolPart = null;
           }
           await streamCallback.onMessage({
+            streamType: "chat",
+            chatId: chatContext.getChatId(),
             type: "finish",
             finishReason: chunk.finishReason,
             usage: {
@@ -227,6 +253,7 @@ export async function callChatLLM(
       await sleep(200 * (retryNum + 1) * (retryNum + 1));
       return callChatLLM(
         messageId,
+        chatContext,
         rlm,
         messages,
         tools,

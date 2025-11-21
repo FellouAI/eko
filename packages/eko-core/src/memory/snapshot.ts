@@ -1,5 +1,5 @@
 import { JSONSchema7 } from "json-schema";
-import { AgentContext } from "../core/context";
+import { AgentContext } from "../agent/agent-context";
 import { buildAgentRootXml } from "../common/xml";
 import { Tool, ToolResult } from "../types/tools.types";
 

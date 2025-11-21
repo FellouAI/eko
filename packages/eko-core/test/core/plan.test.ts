@@ -1,8 +1,8 @@
 import {
   Eko,
-  Agent,
   Log,
   LLMs,
+  Agent,
   uuidv4,
   StreamCallbackMessage,
 } from "../../src/index";

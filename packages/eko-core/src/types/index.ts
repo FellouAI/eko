@@ -1,8 +1,9 @@
-export * from "./core.types";
-export * from "./dialogue.types";
+export * from "./agent.types";
+export * from "./chat.types";
 export * from "./llm.types";
 export * from "./tools.types";
 export * from "./mcp.types";
+export * from "./config.types";
 
 export type {
   JSONSchema7,
@@ -16,3 +17,8 @@ export type {
   LanguageModelV2ToolResultPart,
   LanguageModelV2ToolResultOutput,
 } from "@ai-sdk/provider";
+
+export {
+  type AgentStreamCallback as StreamCallback,
+  type AgentStreamMessage as StreamCallbackMessage,
+} from "./agent.types";

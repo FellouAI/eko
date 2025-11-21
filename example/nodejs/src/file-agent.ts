@@ -1,12 +1,12 @@
-import { Agent } from "./base";
-import { AgentContext } from "../core/context";
-import { mergeTools, sub } from "../common/utils";
-import { Tool, ToolResult, IMcpClient } from "../types";
-import config from "../config";
+import { glob } from "glob";
+import * as path from "path";
+import * as fs from "fs/promises";
+import { Tool, ToolResult, IMcpClient } from "@eko-ai/eko/types";
+import { config, Agent, AgentContext, mergeTools, sub } from "@eko-ai/eko";
 
 export const AGENT_NAME = "File";
 
-export default abstract class BaseFileAgent extends Agent {
+export default class FileAgent extends Agent {
   constructor(
     work_path?: string,
     llms?: string[],
@@ -35,24 +35,6 @@ export default abstract class BaseFileAgent extends Agent {
     init_tools.forEach((tool) => _tools_.push(tool));
   }
 
-  protected abstract file_list(
-    agentContext: AgentContext,
-    path: string
-  ): Promise<
-    Array<{
-      path: string;
-      name?: string;
-      isDirectory?: boolean;
-      size?: string;
-      modified?: string;
-    }>
-  >;
-
-  protected abstract file_read(
-    agentContext: AgentContext,
-    path: string
-  ): Promise<string>;
-
   protected async do_file_read(
     agentContext: AgentContext,
     path: string,
@@ -70,13 +52,6 @@ export default abstract class BaseFileAgent extends Agent {
       write_variable: write_variable,
     };
   }
-
-  protected abstract file_write(
-    agentContext: AgentContext,
-    path: string,
-    content: string,
-    append: boolean
-  ): Promise<any>;
 
   protected async do_file_write(
     agentContext: AgentContext,
@@ -108,17 +83,9 @@ export default abstract class BaseFileAgent extends Agent {
     return await this.file_write(agentContext, path, content || "", append);
   }
 
-  protected abstract file_str_replace(
+  protected async file_list(
     agentContext: AgentContext,
-    path: string,
-    old_str: string,
-    new_str: string
-  ): Promise<any>;
-
-  protected abstract file_find_by_name(
-    agentContext: AgentContext,
-    path: string,
-    glob: string
+    directoryPath: string
   ): Promise<
     Array<{
       path: string;
@@ -127,7 +94,100 @@ export default abstract class BaseFileAgent extends Agent {
       size?: string;
       modified?: string;
     }>
-  >;
+  > {
+    const files = await fs.readdir(directoryPath);
+    const fileDetails = await Promise.all(
+      files.map(async (file) => {
+        const filePath = path.join(directoryPath, file);
+        const stats = await fs.stat(filePath);
+        return {
+          name: file,
+          path: filePath,
+          isDirectory: stats.isDirectory(),
+          size: this.formatFileSize(stats.size),
+          modified: stats.mtime.toLocaleString(),
+        };
+      })
+    );
+    return fileDetails;
+  }
+
+  protected async file_read(
+    agentContext: AgentContext,
+    filePath: string
+  ): Promise<string> {
+    return await fs.readFile(filePath, "utf-8");
+  }
+
+  protected async file_write(
+    agentContext: AgentContext,
+    filePath: string,
+    content: string,
+    append: boolean
+  ): Promise<any> {
+    const directory = path.dirname(filePath);
+    await fs.mkdir(directory, { recursive: true });
+    if (append) {
+      await fs.appendFile(filePath, content, "utf-8");
+    } else {
+      await fs.writeFile(filePath, content, "utf-8");
+    }
+  }
+
+  protected async file_str_replace(
+    agentContext: AgentContext,
+    filePath: string,
+    oldStr: string,
+    newStr: string
+  ): Promise<any> {
+    let content = await fs.readFile(filePath, "utf-8");
+    const originalContent = content;
+    content = content.replace(new RegExp(oldStr, "g"), newStr);
+    if (content === originalContent) {
+      return;
+    }
+    await fs.writeFile(filePath, content, "utf-8");
+  }
+
+  protected async file_find_by_name(
+    agentContext: AgentContext,
+    directoryPath: string,
+    globPattern: string
+  ): Promise<
+    Array<{
+      path: string;
+      name?: string;
+      isDirectory?: boolean;
+      size?: string;
+      modified?: string;
+    }>
+  > {
+    const pattern = path.join(directoryPath, globPattern);
+    const files = await glob.glob(pattern);
+    const fileDetails = await Promise.all(
+      files.map(async (file: string) => {
+        const stats = await fs.stat(file);
+        return {
+          name: path.basename(file),
+          path: file,
+          isDirectory: stats.isDirectory(),
+          size: this.formatFileSize(stats.size),
+          modified: stats.mtime.toLocaleString(),
+        };
+      })
+    );
+    return fileDetails;
+  }
+
+  protected formatFileSize(size: number): string {
+    if (size < 1024) {
+      return size + " B";
+    }
+    if (size < 1024 * 1024) {
+      return (size / 1024).toFixed(1) + " KB";
+    }
+    return (size / 1024 / 1024).toFixed(1) + " MB";
+  }
 
   private buildInitTools(): Tool[] {
     return [
@@ -277,7 +337,8 @@ export default abstract class BaseFileAgent extends Agent {
             },
             glob: {
               type: "string",
-              description: "Filename pattern using glob syntax wildcards, Example: **/*.txt",
+              description:
+                "Filename pattern using glob syntax wildcards, Example: **/*.txt",
             },
           },
           required: ["path", "glob"],
@@ -299,4 +360,4 @@ export default abstract class BaseFileAgent extends Agent {
   }
 }
 
-export { BaseFileAgent };
+export { FileAgent };

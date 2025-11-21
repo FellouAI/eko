@@ -1,9 +1,9 @@
 import { JSONSchema7 } from "json-schema";
-import { AgentContext } from "../core/context";
-import { Tool, ToolResult } from "../types/tools.types";
-import { RetryLanguageModel } from "../llm";
 import { LLMRequest } from "../types";
 import { toImage } from "../common/utils";
+import { RetryLanguageModel } from "../llm";
+import { AgentContext } from "../agent/agent-context";
+import { Tool, ToolResult } from "../types/tools.types";
 
 export const TOOL_NAME = "human_interact";
 

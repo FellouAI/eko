@@ -4,8 +4,8 @@ import * as memory from "../memory";
 import { RetryLanguageModel } from "../llm";
 import { mergeTools } from "../common/utils";
 import { ToolWrapper } from "../tools/wrapper";
-import { AgentChain, ToolChain } from "../core/chain";
-import Context, { AgentContext } from "../core/context";
+import { AgentChain, ToolChain } from "./chain";
+import TaskContext, { AgentContext } from "./agent-context";
 import {
   McpTool,
   ForeachTaskTool,
@@ -21,7 +21,7 @@ import {
   ToolExecuter,
   WorkflowAgent,
   HumanCallback,
-  StreamCallback,
+  AgentStreamCallback,
 } from "../types";
 import {
   LanguageModelV2Prompt,
@@ -37,8 +37,8 @@ import {
   convertToolResult,
   defaultMessageProviderOptions,
 } from "./llm";
-import { doTaskResultCheck } from "../tools/task_result_check";
-import { doTodoListManager } from "../tools/todo_list_manager";
+import { doTaskResultCheck } from "../tools/task-result-check";
+import { doTodoListManager } from "../tools/todo-list-manager";
 import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
 
 export type AgentParams = {
@@ -59,7 +59,7 @@ export class Agent {
   protected mcpClient?: IMcpClient;
   protected planDescription?: string;
   protected requestHandler?: (request: LLMRequest) => void;
-  protected callback?: StreamCallback & HumanCallback;
+  protected callback?: AgentStreamCallback & HumanCallback;
   protected agentContext?: AgentContext;
 
   constructor(params: AgentParams) {
@@ -72,7 +72,7 @@ export class Agent {
     this.requestHandler = params.requestHandler;
   }
 
-  public async run(context: Context, agentChain: AgentChain): Promise<string> {
+  public async run(context: TaskContext, agentChain: AgentChain): Promise<string> {
     const mcpClient = this.mcpClient || context.config.defaultMcpClient;
     const agentContext = new AgentContext(context, this, agentChain);
     try {
@@ -166,12 +166,12 @@ export class Agent {
       );
       loopNum++;
       if (!finalResult) {
-        if ((config.mode == "expert" || config.expertMode) && loopNum % config.expertModeTodoLoopNum == 0) {
+        if (config.mode == "expert" && loopNum % config.expertModeTodoLoopNum == 0) {
           await doTodoListManager(agentContext, rlm, messages, llm_tools);
         }
         continue;
       }
-      if ((config.mode == "expert" || config.expertMode) && checkNum == 0) {
+      if (config.mode == "expert" && checkNum == 0) {
         checkNum++;
         const { completionStatus } = await doTaskResultCheck(
           agentContext,
@@ -296,6 +296,8 @@ export class Agent {
     if (callback) {
       await callback.onMessage(
         {
+          streamType: "agent",
+          chatId: context.chatId,
           taskId: context.taskId,
           agentName: agentContext.agent.Name,
           nodeId: agentContext.agentChain.agent.id,
@@ -370,7 +372,7 @@ export class Agent {
   }
 
   private async listTools(
-    context: Context,
+    context: TaskContext,
     mcpClient: IMcpClient,
     agentNode?: WorkflowAgent,
     mcpParams?: Record<string, unknown>
@@ -463,7 +465,7 @@ export class Agent {
     };
   }
 
-  public async loadTools(context: Context): Promise<Tool[]> {
+  public async loadTools(context: TaskContext): Promise<Tool[]> {
     if (this.mcpClient) {
       let mcpTools = await this.listTools(context, this.mcpClient);
       if (mcpTools && mcpTools.length > 0) {

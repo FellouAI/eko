@@ -1,14 +1,15 @@
 import config from "../config";
 import { Agent } from "../agent";
-import Context from "../core/context";
+import global from "../config/global";
 import { sub } from "../common/utils";
-import { WorkflowAgent, Tool } from "../types";
+import TaskContext from "../agent/agent-context";
 import { buildAgentRootXml } from "../common/xml";
-import { TOOL_NAME as foreach_task } from "../tools/foreach_task";
-import { TOOL_NAME as watch_trigger } from "../tools/watch_trigger";
-import { TOOL_NAME as human_interact } from "../tools/human_interact";
-import { TOOL_NAME as variable_storage } from "../tools/variable_storage";
-import { TOOL_NAME as task_node_status } from "../tools/task_node_status";
+import { WorkflowAgent, Tool, GlobalPromptKey } from "../types";
+import { TOOL_NAME as foreach_task } from "../tools/foreach-task";
+import { TOOL_NAME as watch_trigger } from "../tools/watch-trigger";
+import { TOOL_NAME as human_interact } from "../tools/human-interact";
+import { TOOL_NAME as variable_storage } from "../tools/variable-storage";
+import { TOOL_NAME as task_node_status } from "../tools/task-node-status";
 
 const AGENT_SYSTEM_TEMPLATE = `
 You are {name}, an autonomous AI agent for {agent} agent.
@@ -75,7 +76,7 @@ monitor changes in webpage DOM elements, when executing to the watch node, requi
 export function getAgentSystemPrompt(
   agent: Agent,
   agentNode: WorkflowAgent,
-  context: Context,
+  context: TaskContext,
   tools?: Tool[],
   extSysPrompt?: string
 ): string {
@@ -121,29 +122,38 @@ export function getAgentSystemPrompt(
       if (agentChain.agentResult) {
         prompt += `\n## ${
           agentChain.agent.task || agentChain.agent.name
-        }\n<taskResult>\n${sub(agentChain.agentResult, 600, true)}\n</taskResult>`;
+        }\n<taskResult>\n${sub(
+          agentChain.agentResult,
+          600,
+          true
+        )}\n</taskResult>`;
       }
     }
   }
-  let sysPrompt = AGENT_SYSTEM_TEMPLATE.replace("{name}", config.name)
+  const agentSysPrompt =
+    global.prompts.get(GlobalPromptKey.agent_system) || AGENT_SYSTEM_TEMPLATE;
+  let sysPrompt = agentSysPrompt
+    .replace("{name}", config.name)
     .replace("{agent}", agent.Name)
     .replace("{description}", agent.Description)
     .replace("{prompt}", "\n" + prompt.trim())
     .replace("{nodePrompt}", nodePrompt)
     .replace("{datetime}", new Date().toLocaleString())
     .trim();
-  sysPrompt += "\n"
+  sysPrompt += "\n";
   if (agent.canParallelToolCalls()) {
-    sysPrompt += "\nFor maximum efficiency, when executing multiple independent operations that do not depend on each other or conflict with one another, these tools can be called in parallel simultaneously."
+    sysPrompt +=
+      "\nFor maximum efficiency, when executing multiple independent operations that do not depend on each other or conflict with one another, these tools can be called in parallel simultaneously.";
   }
-  sysPrompt += "\nThe output language should follow the language corresponding to the user's task."
+  sysPrompt +=
+    "\nThe output language should follow the language corresponding to the user's task.";
   return sysPrompt;
 }
 
 export function getAgentUserPrompt(
   agent: Agent,
   agentNode: WorkflowAgent,
-  context: Context,
+  context: TaskContext,
   tools?: Tool[]
 ): string {
   const hasTaskNodeStatusTool =

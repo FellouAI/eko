@@ -1,10 +1,10 @@
 import Log from "../common/log";
-import Context from "./context";
 import { sleep } from "../common/utils";
+import TaskContext from "./agent-context";
 import { RetryLanguageModel } from "../llm";
 import { parseWorkflow } from "../common/xml";
 import { LLMRequest } from "../types/llm.types";
-import { StreamCallback, Workflow } from "../types/core.types";
+import { AgentStreamCallback, Workflow } from "../types/agent.types";
 import { getPlanSystemPrompt, getPlanUserPrompt } from "../prompt/plan";
 import {
   LanguageModelV2Prompt,
@@ -14,10 +14,10 @@ import {
 
 export class Planner {
   private taskId: string;
-  private context: Context;
-  private callback?: StreamCallback;
+  private context: TaskContext;
+  private callback?: AgentStreamCallback;
 
-  constructor(context: Context, callback?: StreamCallback) {
+  constructor(context: TaskContext, callback?: AgentStreamCallback) {
     this.context = context;
     this.taskId = context.taskId;
     this.callback = callback || context.config.callback;
@@ -133,6 +133,8 @@ export class Planner {
           );
           if (workflow) {
             await this.callback.onMessage({
+              streamType: "agent",
+              chatId: this.context.chatId,
               taskId: this.taskId,
               agentName: "Planer",
               type: "workflow",
@@ -167,6 +169,8 @@ export class Planner {
     ) as Workflow;
     if (this.callback) {
       await this.callback.onMessage({
+        streamType: "agent",
+        chatId: this.context.chatId,
         taskId: this.taskId,
         agentName: "Planer",
         type: "workflow",

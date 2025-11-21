@@ -18,7 +18,7 @@ import {
   StreamResult,
   GenerateResult,
 } from "../types/llm.types";
-import Context, { AgentContext } from "../core/context";
+import TaskContext, { AgentContext } from "../agent/agent-context";
 import { defaultLLMProviderOptions } from "../agent/llm";
 
 export class RetryLanguageModel {
@@ -26,7 +26,7 @@ export class RetryLanguageModel {
   private names: string[];
   private stream_first_timeout: number;
   private stream_token_timeout: number;
-  private context?: Context;
+  private context?: TaskContext;
   private agentContext?: AgentContext;
 
   constructor(
@@ -34,7 +34,7 @@ export class RetryLanguageModel {
     names?: string[],
     stream_first_timeout?: number,
     stream_token_timeout?: number,
-    context?: Context | AgentContext,
+    context?: TaskContext | AgentContext,
   ) {
     this.llms = llms;
     this.names = names || [];
@@ -46,13 +46,13 @@ export class RetryLanguageModel {
     }
   }
 
-  setContext(context?: Context | AgentContext) {
+  setContext(context?: TaskContext | AgentContext) {
     if (!context) {
       this.context = undefined;
       this.agentContext = undefined;
       return;
     }
-    this.context = context instanceof Context ? context : context.context;
+    this.context = context instanceof TaskContext ? context : context.context;
     this.agentContext = context instanceof AgentContext ? context : undefined;
   }
 

@@ -1,10 +1,9 @@
-import Log from "../common/log";
 import {
   EkoMessage,
   ToolResult,
   DialogueTool,
   DialogueParams,
-  DialogueCallback,
+  ChatStreamCallback,
   EkoDialogueConfig,
   EkoMessageUserPart,
   LanguageModelV2Prompt,
@@ -17,83 +16,54 @@ import {
   convertToolResults,
   convertUserContent,
   convertAssistantToolResults,
-} from "./dialogue/llm";
-import { Eko } from "./eko";
-import TaskPlannerTool, {
-  TOOL_NAME as task_planner,
-} from "./dialogue/task_planner";
+} from "./llm";
+import Log from "../common/log";
+import global from "../config/global";
+import { uuidv4 } from "../common/utils";
+import DeepActionTool from "./deep-action";
 import { RetryLanguageModel } from "../llm";
 import { EkoMemory } from "../memory/memory";
-import ExecuteTaskTool from "./dialogue/execute_task";
-import { getDialogueSystemPrompt } from "../prompt/dialogue";
-import TaskVariableStorageTool from "./dialogue/variable_storage";
+import { ChatContext } from "./chat-context";
+import WebpageQaTool from "./webpage-qa";
+import WebSearchTool from "./web-search";
+import { getChatSystemPrompt } from "../prompt/chat";
+import TaskVariableStorageTool from "./variable-storage";
 import { convertTools, getTool, convertToolResult } from "../agent/llm";
 
-export class EkoDialogue {
+export class ChatAgent {
+  protected chatContext: ChatContext;
   protected memory: EkoMemory;
   protected tools: DialogueTool[];
-  protected config: EkoDialogueConfig;
-  protected ekoMap: Map<string, Eko>;
-  protected globalContext: Map<string, any>;
 
   constructor(
     config: EkoDialogueConfig,
+    chatId: string = uuidv4(),
     memory?: EkoMemory,
     tools?: DialogueTool[]
   ) {
-    this.config = config;
     this.tools = tools ?? [];
-    this.ekoMap = new Map<string, Eko>();
-    this.globalContext = new Map<string, any>();
-    this.memory = memory ?? new EkoMemory(getDialogueSystemPrompt());
+    const systemPrompt = getChatSystemPrompt();
+    this.memory = memory ?? new EkoMemory(systemPrompt);
+    this.chatContext = new ChatContext(chatId, config);
+    global.chatMap.set(chatId, this.chatContext);
   }
 
   public async chat(params: DialogueParams): Promise<string> {
     return this.doChat(params, false);
   }
 
-  public async segmentedExecution(
-    params: Omit<DialogueParams, "user">
-  ): Promise<string> {
-    const messages = this.memory.getMessages();
-    const lastMessage = messages[messages.length - 1];
-    if (
-      lastMessage.role !== "tool" ||
-      !lastMessage.content.some((part) => part.toolName === task_planner)
-    ) {
-      throw new Error("No task planner tool call found");
-    }
-    const userMessages = messages.filter((message) => message.role === "user");
-    const lastUserMessage = userMessages[userMessages.length - 1];
-    if (!lastUserMessage) {
-      throw new Error("No user message found");
-    }
-    return this.doChat(
-      {
-        ...params,
-        user: lastUserMessage.content as string | EkoMessageUserPart[],
-        callback: params.callback,
-        messageId: params.messageId || lastUserMessage.id,
-        signal: params.signal,
-      },
-      true
-    );
-  }
-
   private async doChat(
     params: DialogueParams,
     segmentedExecution: boolean
   ): Promise<string> {
-    if (!segmentedExecution) {
-      params.messageId = params.messageId ?? this.memory.genMessageId();
-      await this.addUserMessage(params.user, params.messageId);
-    }
-    const rlm = new RetryLanguageModel(this.config.llms, this.config.chatLlms);
+    const config = this.chatContext.getConfig();
+    const rlm = new RetryLanguageModel(config.llms, config.chatLlms);
     for (let i = 0; i < 15; i++) {
       const messages = this.memory.buildMessages();
       const chatTools = [...this.buildInnerTools(params), ...this.tools];
       const results = await callChatLLM(
         params.messageId as string,
+        this.chatContext,
         rlm,
         messages,
         convertTools(chatTools),
@@ -109,12 +79,6 @@ export class EkoDialogue {
       );
       if (finalResult) {
         return finalResult;
-      }
-      if (
-        this.config.segmentedExecution &&
-        results.some((r) => r.type == "tool-call" && r.toolName == task_planner)
-      ) {
-        return "segmentedExecution";
       }
     }
     return "Unfinished";
@@ -136,32 +100,21 @@ export class EkoDialogue {
 
   protected buildInnerTools(params: DialogueParams): DialogueTool[] {
     return [
-      new TaskPlannerTool(this, params),
-      new ExecuteTaskTool(this),
-      new TaskVariableStorageTool(this),
+      new DeepActionTool(this.chatContext, params),
+      new WebpageQaTool(this.chatContext, params),
+      new WebSearchTool(this.chatContext, params),
+      new TaskVariableStorageTool(this.chatContext, params),
     ];
   }
 
-  public addEko(taskId: string, eko: Eko): void {
-    this.ekoMap.set(taskId, eko);
-  }
-
-  public getEko(taskId: string): Eko | undefined {
-    return this.ekoMap.get(taskId);
-  }
-
-  public getGlobalContext(): Map<string, any> {
-    return this.globalContext;
-  }
-
-  public getConfig(): EkoDialogueConfig {
-    return this.config;
+  public getChatContext(): ChatContext {
+    return this.chatContext;
   }
 
   protected async handleCallResult(
     chatTools: DialogueTool[],
     results: Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>,
-    dialogueCallback?: DialogueCallback
+    chatStreamCallback?: ChatStreamCallback
   ): Promise<string | null> {
     let text: string | null = null;
     const user_messages: LanguageModelV2Prompt = [];
@@ -198,9 +151,11 @@ export class EkoDialogue {
           isError: true,
         };
       }
-      const callback = dialogueCallback?.chatCallback;
+      const callback = chatStreamCallback?.chatCallback;
       if (callback) {
         await callback.onMessage({
+          streamType: "chat",
+          chatId: this.chatContext.getChatId(),
           type: "tool_result",
           toolId: result.toolCallId,
           toolName: result.toolName,

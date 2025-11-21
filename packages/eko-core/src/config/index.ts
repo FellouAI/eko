@@ -1,25 +1,6 @@
-type GlobalConfig = {
-  name: string; // product name
-  mode: "fast" | "normal" | "expert";
-  platform: "windows" | "mac" | "linux";
-  maxReactNum: number;
-  maxTokens: number;
-  maxRetryNum: number;
-  agentParallel: boolean;
-  compressThreshold: number; // Dialogue context compression threshold (message count)
-  compressTokensThreshold: number; // Dialogue context compression threshold (token count)
-  largeTextLength: number;
-  fileTextMaxLength: number;
-  maxDialogueImgFileNum: number;
-  toolResultMultimodal: boolean;
-  parallelToolCalls: boolean;
-  markImageMode: "dom" | "draw";
-  /** @deprecated please use mode set to expert */
-  expertMode: boolean;
-  expertModeTodoLoopNum: number;
-}
+import { Config } from "../types";
 
-const config: GlobalConfig = {
+const config: Config = {
   name: "Eko",
   mode: "normal",
   platform: "mac",
@@ -35,7 +16,6 @@ const config: GlobalConfig = {
   toolResultMultimodal: true,
   parallelToolCalls: true,
   markImageMode: "draw",
-  expertMode: false,
   expertModeTodoLoopNum: 10,
 };
 

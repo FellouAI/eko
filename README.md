@@ -198,14 +198,6 @@ Eko can be used in multiple environments:
 [![Star History Chart](https://api.star-history.com/svg?repos=FellouAI/eko&type=Date)](https://star-history.com/#FellouAI/eko&Date)
 
 
-## Community Spotlight
-
-- **Career Co-Pilot**: https://github.com/wangwangbobo/career_skill_learnig.git
-- **Slides Agent by Eko**: https://github.com/MICAHFANG/slides-agent-by-eko
-- **Universal Sidebar Assistant**: https://github.com/San12341/eko-broser-extension.git
-- **Orbit X Smart Terminal**: https://github.com/Skywang16/OrbitX/tree/main
-- **48 Hour Browser Challenge**: https://github.com/MoonIRL/eko
-
 ## License
 
 Eko is released under the MIT License. See the [LICENSE](LICENSE) file for details.

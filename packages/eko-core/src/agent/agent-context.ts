@@ -1,14 +1,15 @@
 import { Agent } from "../agent";
 import { sleep } from "../common/utils";
-import Chain, { AgentChain } from "./chain";
+import Chain, { AgentChain } from "../agent/chain";
 import {
-  EkoConfig,
-  LanguageModelV2Prompt,
   Workflow,
+  EkoConfig,
   WorkflowAgent,
+  LanguageModelV2Prompt,
 } from "../types";
 
-export default class Context {
+export default class TaskContext {
+  chatId: string;
   taskId: string;
   config: EkoConfig;
   chain: Chain;
@@ -21,11 +22,13 @@ export default class Context {
   readonly currentStepControllers: Set<AbortController> = new Set();
 
   constructor(
+    chatId: string,
     taskId: string,
     config: EkoConfig,
     agents: Agent[],
     chain: Chain
   ) {
+    this.chatId = chatId;
     this.taskId = taskId;
     this.config = config;
     this.agents = agents;
@@ -100,13 +103,13 @@ export default class Context {
 
 export class AgentContext {
   agent: Agent;
-  context: Context;
+  context: TaskContext;
   agentChain: AgentChain;
   variables: Map<string, any>;
   consecutiveErrorNum: number;
   messages?: LanguageModelV2Prompt;
 
-  constructor(context: Context, agent: Agent, agentChain: AgentChain) {
+  constructor(context: TaskContext, agent: Agent, agentChain: AgentChain) {
     this.context = context;
     this.agent = agent;
     this.agentChain = agentChain;

@@ -1,8 +1,8 @@
 import { Planner } from "./plan";
 import { AgentChain } from "./chain";
 import { sub } from "../common/utils";
-import { AgentContext } from "./context";
 import { RetryLanguageModel } from "../llm";
+import { AgentContext } from "./agent-context";
 import {
   Workflow,
   LLMRequest,

@@ -1,19 +1,19 @@
 import {
   ProviderV2,
+  SharedV2Headers,
+  LanguageModelV2Usage,
+  LanguageModelV2Prompt,
+  LanguageModelV2Content,
+  SharedV2ProviderMetadata,
+  LanguageModelV2ToolChoice,
+  LanguageModelV2StreamPart,
   LanguageModelV2CallWarning,
   LanguageModelV2FinishReason,
-  LanguageModelV2StreamPart,
   LanguageModelV2FunctionTool,
-  LanguageModelV2ToolChoice,
-  LanguageModelV2Prompt,
   LanguageModelV2CallOptions,
-  LanguageModelV2Content,
-  SharedV2Headers,
-  SharedV2ProviderMetadata,
-  LanguageModelV2Usage,
   LanguageModelV2ResponseMetadata,
 } from "@ai-sdk/provider";
-import Context, { AgentContext } from "../core/context";
+import TaskContext, { AgentContext } from "../agent/agent-context";
 
 export type LLMprovider =
   | "openai"
@@ -39,7 +39,7 @@ export type LLMConfig = {
   };
   options?: Record<string, any>;
   fetch?: typeof globalThis.fetch;
-  handler?: (options: LanguageModelV2CallOptions, context?: Context, agentContext?: AgentContext) => Promise<LanguageModelV2CallOptions>;
+  handler?: (options: LanguageModelV2CallOptions, context?: TaskContext, agentContext?: AgentContext) => Promise<LanguageModelV2CallOptions>;
 };
 
 export type LLMs = {

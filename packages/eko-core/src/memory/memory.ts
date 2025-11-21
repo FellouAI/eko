@@ -1,7 +1,7 @@
 import { LanguageModelV2Message } from "@ai-sdk/provider";
-import { toFile, uuidv4, getMimeType, sub } from "../common/utils";
-import { EkoMessage, LanguageModelV2Prompt } from "../types";
 import { defaultMessageProviderOptions } from "../agent/llm";
+import { EkoMessage, LanguageModelV2Prompt } from "../types";
+import { toFile, uuidv4, getMimeType, sub } from "../common/utils";
 
 export interface MemoryConfig {
   maxMessages?: number;

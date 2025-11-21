@@ -1,7 +1,7 @@
 import config from "../../config";
-import { AgentContext } from "../../core/context";
-import { run_build_dom_tree } from "./build_dom_tree";
-import { BaseBrowserAgent, AGENT_NAME } from "./browser_base";
+import { AgentContext } from "../agent-context";
+import { run_build_dom_tree } from "./build-dom-tree";
+import { BaseBrowserAgent, AGENT_NAME } from "./browser-base";
 import {
   LanguageModelV2Prompt,
   LanguageModelV2FilePart,

@@ -1,11 +1,11 @@
 import { JSONSchema7 } from "json-schema";
 import { ToolWrapper } from "./wrapper";
-import { AgentContext } from "../core/context";
-import ForeachTaskTool from "./foreach_task";
-import HumanInteractTool from "./human_interact";
-import TaskNodeStatusTool from "./task_node_status";
-import VariableStorageTool from "./variable_storage";
-import WatchTriggerTool from "./watch_trigger";
+import ForeachTaskTool from "./foreach-task";
+import WatchTriggerTool from "./watch-trigger";
+import HumanInteractTool from "./human-interact";
+import TaskNodeStatusTool from "./task-node-status";
+import VariableStorageTool from "./variable-storage";
+import { AgentContext } from "../agent/agent-context";
 import { Tool, ToolResult } from "../types/tools.types";
 import { LanguageModelV2ToolCallPart } from "@ai-sdk/provider";
 

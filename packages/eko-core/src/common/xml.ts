@@ -7,7 +7,7 @@ import {
   WorkflowNode,
   WorkflowTextNode,
   WorkflowWatchNode,
-} from "../types/core.types";
+} from "../types/agent.types";
 import { buildAgentTree } from "./tree";
 
 export function parseWorkflow(

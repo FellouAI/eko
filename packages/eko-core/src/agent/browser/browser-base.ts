@@ -3,10 +3,10 @@ import {
   LanguageModelV2ToolCallPart,
 } from "@ai-sdk/provider";
 import { Agent } from "../base";
-import { sleep } from "../../common/utils";
-import { AgentContext } from "../../core/context";
-import { ToolExecuter, ToolResult, IMcpClient } from "../../types";
 import * as utils from "./utils";
+import { sleep } from "../../common/utils";
+import { AgentContext } from "../agent-context";
+import { ToolExecuter, ToolResult, IMcpClient } from "../../types";
 
 export const AGENT_NAME = "Browser";
 

@@ -1,7 +1,7 @@
 import { JSONSchema7 } from "json-schema";
-import { AgentContext } from "../core/context";
-import { Tool, ToolResult } from "../types/tools.types";
 import { extractAgentXmlNode } from "../common/xml";
+import { AgentContext } from "../agent/agent-context";
+import { Tool, ToolResult } from "../types/tools.types";
 
 export const TOOL_NAME = "foreach_task";
 

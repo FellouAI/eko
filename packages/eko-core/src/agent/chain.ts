@@ -1,6 +1,6 @@
 import { ToolResult } from "../types/tools.types";
 import { LLMRequest } from "../types/llm.types";
-import { WorkflowAgent } from "../types/core.types";
+import { WorkflowAgent } from "../types/agent.types";
 import { LanguageModelV2ToolCallPart } from "@ai-sdk/provider";
 
 type ChainEvent = {

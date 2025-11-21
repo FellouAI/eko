@@ -3,11 +3,11 @@ import { RetryLanguageModel } from "../llm";
 import { extractUsedTool } from "../memory";
 import { mergeTools } from "../common/utils";
 import { callAgentLLM } from "../agent/llm";
-import { AgentContext } from "../core/context";
+import { AgentContext } from "../agent/agent-context";
 import { Tool, ToolResult } from "../types/tools.types";
 import {
-  LanguageModelV2FunctionTool,
   LanguageModelV2Prompt,
+  LanguageModelV2FunctionTool,
 } from "@ai-sdk/provider";
 import Log from "../common/log";
 
@@ -109,6 +109,8 @@ async function doTaskResultCheck(
     if (callback) {
       await callback.onMessage(
         {
+          streamType: "agent",
+          chatId: agentContext.context.chatId,
           taskId: agentContext.context.taskId,
           agentName: agentContext.agent.Name,
           nodeId: agentContext.agentChain.agent.id,

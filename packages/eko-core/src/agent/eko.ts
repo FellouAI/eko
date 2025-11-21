@@ -1,8 +1,8 @@
 import config from "../config";
-import Context from "./context";
 import { Agent } from "../agent";
 import { Planner } from "./plan";
 import Log from "../common/log";
+import TaskContext from "./agent-context";
 import Chain, { AgentChain } from "./chain";
 import { buildAgentTree } from "../common/tree";
 import { mergeAgents, uuidv4 } from "../common/utils";
@@ -11,16 +11,17 @@ import {
   EkoResult,
   Workflow,
   NormalAgentNode,
-} from "../types/core.types";
+} from "../types/agent.types";
+import global from "../config/global";
 import { checkTaskReplan, replanWorkflow } from "./replan";
 
 export class Eko {
+  protected chatId: string;
   protected config: EkoConfig;
-  protected taskMap: Map<string, Context>;
 
-  constructor(config: EkoConfig) {
+  constructor(config: EkoConfig, chatId: string = uuidv4()) {
     this.config = config;
-    this.taskMap = new Map();
+    this.chatId = chatId;
   }
 
   public async generate(
@@ -30,14 +31,20 @@ export class Eko {
   ): Promise<Workflow> {
     const agents = [...(this.config.agents || [])];
     const chain: Chain = new Chain(taskPrompt);
-    const context = new Context(taskId, this.config, agents, chain);
+    const context = new TaskContext(
+      this.chatId,
+      taskId,
+      this.config,
+      agents,
+      chain
+    );
     if (contextParams) {
       Object.keys(contextParams).forEach((key) =>
         context.variables.set(key, contextParams[key])
       );
     }
     try {
-      this.taskMap.set(taskId, context);
+      global.taskMap.set(taskId, context);
       if (this.config.a2aClient) {
         const a2aList = await this.config.a2aClient.listAgents(taskPrompt);
         context.agents = mergeAgents(context.agents, a2aList);
@@ -55,7 +62,7 @@ export class Eko {
     taskId: string,
     modifyTaskPrompt: string
   ): Promise<Workflow> {
-    const context = this.taskMap.get(taskId);
+    const context = global.taskMap.get(taskId);
     if (!context) {
       return await this.generate(modifyTaskPrompt, taskId);
     }
@@ -106,10 +113,16 @@ export class Eko {
   public async initContext(
     workflow: Workflow,
     contextParams?: Record<string, any>
-  ): Promise<Context> {
+  ): Promise<TaskContext> {
     const agents = this.config.agents || [];
     const chain: Chain = new Chain(workflow.taskPrompt || workflow.name);
-    const context = new Context(workflow.taskId, this.config, agents, chain);
+    const context = new TaskContext(
+      this.chatId,
+      workflow.taskId,
+      this.config,
+      agents,
+      chain
+    );
     if (this.config.a2aClient) {
       const a2aList = await this.config.a2aClient.listAgents(
         workflow.taskPrompt || workflow.name
@@ -122,11 +135,11 @@ export class Eko {
       );
     }
     context.workflow = workflow;
-    this.taskMap.set(workflow.taskId, context);
+    global.taskMap.set(workflow.taskId, context);
     return context;
   }
 
-  private async doRunWorkflow(context: Context): Promise<EkoResult> {
+  private async doRunWorkflow(context: TaskContext): Promise<EkoResult> {
     const agents = context.agents as Agent[];
     const workflow = context.workflow as Workflow;
     if (!workflow || workflow.agents.length == 0) {
@@ -210,7 +223,7 @@ export class Eko {
       }
       context.conversation.splice(0, context.conversation.length);
       if (
-        (config.mode == "expert" || config.expertMode) &&
+        config.mode == "expert" &&
         !workflow.modified &&
         agentTree.nextAgent &&
         lastAgent?.AgentContext &&
@@ -240,7 +253,7 @@ export class Eko {
   }
 
   protected async runAgent(
-    context: Context,
+    context: TaskContext,
     agent: Agent,
     agentNode: NormalAgentNode,
     agentChain: AgentChain
@@ -248,18 +261,25 @@ export class Eko {
     try {
       agentNode.agent.status = "running";
       this.config.callback &&
-        (await this.config.callback.onMessage({
-          taskId: context.taskId,
-          agentName: agentNode.agent.name,
-          nodeId: agentNode.agent.id,
-          type: "agent_start",
-          agentNode: agentNode.agent,
-        }));
+        (await this.config.callback.onMessage(
+          {
+            streamType: "agent",
+            chatId: context.chatId,
+            taskId: context.taskId,
+            agentName: agentNode.agent.name,
+            nodeId: agentNode.agent.id,
+            type: "agent_start",
+            agentNode: agentNode.agent,
+          },
+          agent.AgentContext
+        ));
       agentNode.result = await agent.run(context, agentChain);
       agentNode.agent.status = "done";
       this.config.callback &&
         (await this.config.callback.onMessage(
           {
+            streamType: "agent",
+            chatId: context.chatId,
             taskId: context.taskId,
             agentName: agentNode.agent.name,
             nodeId: agentNode.agent.id,
@@ -275,6 +295,8 @@ export class Eko {
       this.config.callback &&
         (await this.config.callback.onMessage(
           {
+            streamType: "agent",
+            chatId: context.chatId,
             taskId: context.taskId,
             agentName: agentNode.agent.name,
             nodeId: agentNode.agent.id,
@@ -288,25 +310,25 @@ export class Eko {
     }
   }
 
-  public getTask(taskId: string): Context | undefined {
-    return this.taskMap.get(taskId);
+  public getTask(taskId: string): TaskContext | undefined {
+    return global.taskMap.get(taskId);
   }
 
   public getAllTaskId(): string[] {
-    return [...this.taskMap.keys()];
+    return [...global.taskMap.keys()];
   }
 
   public deleteTask(taskId: string): boolean {
     this.abortTask(taskId);
-    const context = this.taskMap.get(taskId);
+    const context = global.taskMap.get(taskId);
     if (context) {
       context.variables.clear();
     }
-    return this.taskMap.delete(taskId);
+    return global.taskMap.delete(taskId);
   }
 
   public abortTask(taskId: string, reason?: string): boolean {
-    let context = this.taskMap.get(taskId);
+    let context = global.taskMap.get(taskId);
     if (context) {
       context.setPause(false);
       this.onTaskStatus(context, "abort", reason);
@@ -323,7 +345,7 @@ export class Eko {
     abortCurrentStep?: boolean,
     reason?: string
   ): boolean {
-    const context = this.taskMap.get(taskId);
+    const context = global.taskMap.get(taskId);
     if (context) {
       this.onTaskStatus(context, pause ? "pause" : "resume-pause", reason);
       context.setPause(pause, abortCurrentStep);
@@ -334,7 +356,7 @@ export class Eko {
   }
 
   public chatTask(taskId: string, userPrompt: string): string[] | undefined {
-    const context = this.taskMap.get(taskId);
+    const context = global.taskMap.get(taskId);
     if (context) {
       context.conversation.push(userPrompt);
       return context.conversation;
@@ -347,7 +369,7 @@ export class Eko {
   }
 
   private async onTaskStatus(
-    context: Context,
+    context: TaskContext,
     status: string,
     reason?: string
   ) {

@@ -1,22 +1,25 @@
-import { LanguageModelV2FinishReason } from "@ai-sdk/provider";
 import { Agent } from "../agent";
 import { LLMs } from "./llm.types";
-import { IA2aClient } from "../agent/a2a";
 import { IMcpClient } from "./mcp.types";
+import { IA2aClient } from "../agent/a2a";
 import { ToolResult } from "./tools.types";
-import { AgentContext } from "../core/context";
+import { AgentContext } from "../agent/agent-context";
+import { LanguageModelV2FinishReason } from "@ai-sdk/provider";
+
 
 export type EkoConfig = {
   llms: LLMs;
   agents?: Agent[];
   planLlms?: string[];
   compressLlms?: string[];
-  callback?: StreamCallback & HumanCallback;
+  callback?: AgentStreamCallback & HumanCallback;
   defaultMcpClient?: IMcpClient;
   a2aClient?: IA2aClient;
 };
 
-export type StreamCallbackMessage = {
+export type AgentStreamMessage = {
+  streamType: "agent";
+  chatId: string;
   taskId: string;
   agentName: string;
   nodeId?: string | null; // agent nodeId
@@ -89,11 +92,8 @@ export type StreamCallbackMessage = {
     }
 );
 
-export interface StreamCallback {
-  onMessage: (
-    message: StreamCallbackMessage,
-    agentContext?: AgentContext
-  ) => Promise<void>;
+export interface AgentStreamCallback {
+  onMessage: (message: AgentStreamMessage, agentContext?: AgentContext | undefined) => Promise<void>;
 }
 
 export type WorkflowTextNode = {

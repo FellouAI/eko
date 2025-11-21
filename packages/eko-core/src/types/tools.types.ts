@@ -1,5 +1,5 @@
 import { JSONSchema7 } from "json-schema";
-import { AgentContext } from "../core/context";
+import { AgentContext } from "../agent/agent-context";
 import { LanguageModelV2ToolCallPart } from "@ai-sdk/provider";
 
 export type ToolSchema =

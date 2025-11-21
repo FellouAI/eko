@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
-import { BrowserAgent, FileAgent } from "@eko-ai/eko-nodejs";
+import FileAgent from "./file-agent";
+import { BrowserAgent } from "@eko-ai/eko-nodejs";
 import { Eko, Agent, Log, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
 
 dotenv.config();

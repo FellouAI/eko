@@ -2,7 +2,7 @@ import config from "../config";
 import Log from "../common/log";
 import * as memory from "../memory";
 import { RetryLanguageModel } from "../llm";
-import { AgentContext } from "../core/context";
+import { AgentContext } from "./agent-context";
 import { uuidv4, sleep, toFile, getMimeType } from "../common/utils";
 import {
   Tool,
@@ -11,8 +11,8 @@ import {
   DialogueTool,
   StreamResult,
   HumanCallback,
-  StreamCallback,
-  StreamCallbackMessage,
+  AgentStreamCallback,
+  AgentStreamMessage,
 } from "../types";
 import {
   LanguageModelV2Prompt,
@@ -187,13 +187,16 @@ export async function callAgentLLM(
   noCompress?: boolean,
   toolChoice?: LanguageModelV2ToolChoice,
   retryNum: number = 0,
-  callback?: StreamCallback & HumanCallback,
+  callback?: AgentStreamCallback & HumanCallback,
   requestHandler?: (request: LLMRequest) => void
 ): Promise<Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>> {
   await agentContext.context.checkAborted();
   if (
     !noCompress &&
-    (messages.length >= config.compressThreshold || (messages.length >= 10 && estimatePromptTokens(messages, tools) >= config.compressTokensThreshold))
+    (messages.length >= config.compressThreshold ||
+      (messages.length >= 10 &&
+        estimatePromptTokens(messages, tools) >=
+          config.compressTokensThreshold))
   ) {
     // Compress messages
     await memory.compressAgentMessages(agentContext, messages, tools);
@@ -228,7 +231,8 @@ export async function callAgentLLM(
   let thinkStreamId = uuidv4();
   let textStreamDone = false;
   const toolParts: LanguageModelV2ToolCallPart[] = [];
-  let reader: ReadableStreamDefaultReader<LanguageModelV2StreamPart> | null = null;
+  let reader: ReadableStreamDefaultReader<LanguageModelV2StreamPart> | null =
+    null;
   try {
     agentChain.agentRequest = request;
     context.currentStepControllers.add(stepController);
@@ -254,6 +258,8 @@ export async function callAgentLLM(
           streamText += chunk.delta || "";
           await streamCallback.onMessage(
             {
+              streamType: "agent",
+              chatId: context.chatId,
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
@@ -267,6 +273,8 @@ export async function callAgentLLM(
           if (toolPart) {
             await streamCallback.onMessage(
               {
+                streamType: "agent",
+                chatId: context.chatId,
                 taskId: context.taskId,
                 agentName: agentNode.name,
                 nodeId: agentNode.id,
@@ -286,6 +294,8 @@ export async function callAgentLLM(
           if (streamText) {
             await streamCallback.onMessage(
               {
+                streamType: "agent",
+                chatId: context.chatId,
                 taskId: context.taskId,
                 agentName: agentNode.name,
                 nodeId: agentNode.id,
@@ -307,6 +317,8 @@ export async function callAgentLLM(
           thinkText += chunk.delta || "";
           await streamCallback.onMessage(
             {
+              streamType: "agent",
+              chatId: context.chatId,
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
@@ -323,6 +335,8 @@ export async function callAgentLLM(
           if (thinkText) {
             await streamCallback.onMessage(
               {
+                streamType: "agent",
+                chatId: context.chatId,
                 taskId: context.taskId,
                 agentName: agentNode.name,
                 nodeId: agentNode.id,
@@ -355,6 +369,8 @@ export async function callAgentLLM(
             textStreamDone = true;
             await streamCallback.onMessage(
               {
+                streamType: "agent",
+                chatId: context.chatId,
                 taskId: context.taskId,
                 agentName: agentNode.name,
                 nodeId: agentNode.id,
@@ -369,6 +385,8 @@ export async function callAgentLLM(
           toolArgsText += chunk.delta || "";
           await streamCallback.onMessage(
             {
+              streamType: "agent",
+              chatId: context.chatId,
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
@@ -384,7 +402,9 @@ export async function callAgentLLM(
         case "tool-call": {
           toolArgsText = "";
           const args = chunk.input ? JSON.parse(chunk.input) : {};
-          const message: StreamCallbackMessage = {
+          const message: AgentStreamMessage = {
+            streamType: "agent",
+            chatId: context.chatId,
             taskId: context.taskId,
             agentName: agentNode.name,
             nodeId: agentNode.id,
@@ -410,6 +430,8 @@ export async function callAgentLLM(
         case "file": {
           await streamCallback.onMessage(
             {
+              streamType: "agent",
+              chatId: context.chatId,
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
@@ -425,6 +447,8 @@ export async function callAgentLLM(
           Log.error(`${agentNode.name} agent error: `, chunk);
           await streamCallback.onMessage(
             {
+              streamType: "agent",
+              chatId: context.chatId,
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
@@ -440,6 +464,8 @@ export async function callAgentLLM(
             textStreamDone = true;
             await streamCallback.onMessage(
               {
+                streamType: "agent",
+                chatId: context.chatId,
                 taskId: context.taskId,
                 agentName: agentNode.name,
                 nodeId: agentNode.id,
@@ -461,11 +487,7 @@ export async function callAgentLLM(
             !noCompress &&
             retryNum < config.maxRetryNum
           ) {
-            await memory.compressAgentMessages(
-              agentContext,
-              messages,
-              tools
-            );
+            await memory.compressAgentMessages(agentContext, messages, tools);
             return callAgentLLM(
               agentContext,
               rlm,
@@ -480,6 +502,8 @@ export async function callAgentLLM(
           if (toolPart) {
             await streamCallback.onMessage(
               {
+                streamType: "agent",
+                chatId: context.chatId,
                 taskId: context.taskId,
                 agentName: agentNode.name,
                 nodeId: agentNode.id,
@@ -494,6 +518,8 @@ export async function callAgentLLM(
           }
           await streamCallback.onMessage(
             {
+              streamType: "agent",
+              chatId: context.chatId,
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,

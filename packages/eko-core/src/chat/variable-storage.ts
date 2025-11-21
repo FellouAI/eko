@@ -1,6 +1,6 @@
 import { JSONSchema7 } from "json-schema";
-import { EkoDialogue } from "../dialogue";
-import { DialogueTool, ToolResult } from "../../types";
+import { ChatContext } from "./chat-context";
+import { DialogueParams, DialogueTool, ToolResult } from "../types";
 
 export const TOOL_NAME = "taskVariableStorage";
 
@@ -8,9 +8,12 @@ export default class TaskVariableStorageTool implements DialogueTool {
   readonly name: string = TOOL_NAME;
   readonly description: string;
   readonly parameters: JSONSchema7;
-  private ekoDialogue: EkoDialogue;
+  private chatContext: ChatContext;
+  private params: DialogueParams;
 
-  constructor(ekoDialogue: EkoDialogue) {
+  constructor(chatContext: ChatContext, params: DialogueParams) {
+    this.params = params;
+    this.chatContext = chatContext;
     this.description = `Used for storing, reading, and retrieving variable data, and maintaining input/output variables in task nodes.`;
     this.parameters = {
       type: "object",
@@ -32,7 +35,6 @@ export default class TaskVariableStorageTool implements DialogueTool {
       },
       required: ["operation"],
     };
-    this.ekoDialogue = ekoDialogue;
   }
 
   async execute(args: Record<string, unknown>): Promise<ToolResult> {
@@ -48,7 +50,7 @@ export default class TaskVariableStorageTool implements DialogueTool {
           let keys = name.split(",");
           for (let i = 0; i < keys.length; i++) {
             let key = keys[i].trim();
-            let value = this.ekoDialogue.getGlobalContext().get(key);
+            let value = this.chatContext.getGlobalVariables().get(key);
             result[key] = value;
           }
           resultText = JSON.stringify(result);
@@ -65,12 +67,14 @@ export default class TaskVariableStorageTool implements DialogueTool {
           break;
         }
         let key = args.name as string;
-        this.ekoDialogue.getGlobalContext().set(key.trim(), args.value);
+        this.chatContext.getGlobalVariables().set(key.trim(), args.value);
         resultText = "success";
         break;
       }
       case "list_all_variable": {
-        resultText = JSON.stringify([...this.ekoDialogue.getGlobalContext().keys()]);
+        resultText = JSON.stringify([
+          ...this.chatContext.getGlobalVariables().keys(),
+        ]);
         break;
       }
     }
@@ -84,5 +88,3 @@ export default class TaskVariableStorageTool implements DialogueTool {
     };
   }
 }
-
-export { TaskVariableStorageTool as ActionVariableStorageTool };

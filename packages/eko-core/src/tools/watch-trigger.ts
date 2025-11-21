@@ -3,7 +3,7 @@ import { LLMRequest } from "../types";
 import { JSONSchema7 } from "json-schema";
 import { toImage } from "../common/utils";
 import { RetryLanguageModel } from "../llm";
-import { AgentContext } from "../core/context";
+import { AgentContext } from "../agent/agent-context";
 import { extractAgentXmlNode } from "../common/xml";
 import { Tool, ToolResult } from "../types/tools.types";
 
