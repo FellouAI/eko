@@ -586,21 +586,17 @@ export function run_build_dom_tree() {
       return false;
     }
 
-    // Helper function to check if element exists
-    function isElementExist(element) {
-      const style = getCachedComputedStyle(element);
-      return (
-        style?.visibility !== 'hidden' &&
-        style?.display !== 'none'
-      );
-    }
-
     // Helper function to check if element is visible
     function isElementVisible(element) {
       if (element.offsetWidth === 0 && element.offsetHeight === 0) {
         return false;
       }
-      return isElementExist(element);
+
+      const style = getCachedComputedStyle(element);
+      return (
+        style?.visibility !== 'hidden' &&
+        style?.display !== 'none'
+      );
     }
 
     // Helper function to check if element is the top element at its position
@@ -770,8 +766,9 @@ export function run_build_dom_tree() {
           console.warn('Unable to access iframe:', node);
         }
       } else {
-        if (isElementExist(node)) {
-          const children = Array.from(node.childNodes).map((child) =>
+        const style = getCachedComputedStyle(node);
+        if (style && style.display !== 'none') {
+          const children = Array.from(node.children).map((child) =>
             buildDomTree(child, parentIframe)
           );
           nodeData.children.push(...children);
