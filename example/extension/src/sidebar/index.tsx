@@ -59,42 +59,47 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
 // 消息类型定义
 type MessageRole = "user" | "assistant";
 
-interface StreamText {
-  streamId: string;
-  text: string;
-  streamDone: boolean;
-}
-
-interface ToolCall {
-  toolCallId: string;
-  toolName: string;
-  params?: Record<string, any>;
-  paramsText?: string;
-  result?: ToolResult;
-  running?: boolean;
-  runningText?: string;
-}
+type ChatContentItem =
+  | { type: "thinking"; streamId: string; text: string; streamDone: boolean }
+  | { type: "text"; streamId: string; text: string; streamDone: boolean }
+  | { type: "file"; mimeType: string; data: string }
+  | { 
+      type: "tool"; 
+      toolCallId: string; 
+      toolName: string; 
+      params?: Record<string, any>; 
+      paramsText?: string; 
+      result?: ToolResult; 
+      running?: boolean; 
+      runningText?: string;
+    }
+  | { type: "task"; taskId: string; task: TaskData };
 
 interface TaskData {
   taskId: string;
   workflow?: Workflow;
   workflowStreamDone?: boolean;
-  agents: Map<string, AgentExecution>;
+  agents: AgentExecution[]; // 按执行顺序排列
 }
 
-type ContentItem = 
-  | { type: "thinking"; id: string }
-  | { type: "text"; id: string }
-  | { type: "tool"; id: string }
-  | { type: "file"; id: number };
+type AgentContentItem =
+  | { type: "thinking"; streamId: string; text: string; streamDone: boolean }
+  | { type: "text"; streamId: string; text: string; streamDone: boolean }
+  | { type: "file"; mimeType: string; data: string }
+  | { 
+      type: "tool"; 
+      toolCallId: string; 
+      toolName: string; 
+      params?: Record<string, any>; 
+      paramsText?: string; 
+      result?: ToolResult; 
+      running?: boolean; 
+      runningText?: string;
+    };
 
 interface AgentExecution {
   agentNode: WorkflowAgent;
-  texts: Map<string, StreamText>;
-  thinking: Map<string, StreamText>;
-  toolCalls: Map<string, ToolCall>;
-  files: Array<{ mimeType: string; data: string }>;
-  contentOrder: ContentItem[]; // 内容出现顺序
+  contentItems: AgentContentItem[]; // 所有内容按顺序
   status: "init" | "running" | "done" | "error";
   result?: string;
   error?: any;
@@ -105,19 +110,13 @@ interface ChatMessage {
   role: MessageRole;
   content: string;
   timestamp: number;
-  // AI 消息相关
-  texts?: Map<string, StreamText>;
-  thinking?: Map<string, StreamText>;
-  toolCalls?: Map<string, ToolCall>;
-  files?: Array<{ mimeType: string; data: string }>;
+  contentItems: ChatContentItem[]; // 所有内容按顺序
   error?: any;
   usage?: {
     promptTokens: number;
     completionTokens: number;
     totalTokens: number;
   };
-  // Task 相关（deepAction 工具调用）
-  task?: TaskData;
 }
 
 const AppRun = () => {
@@ -157,93 +156,149 @@ const AppRun = () => {
           role: "assistant",
           content: "",
           timestamp: Date.now(),
-          texts: new Map(),
-          thinking: new Map(),
-          toolCalls: new Map(),
-          files: [],
+          contentItems: [],
         };
         newMessages.push(aiMessage);
         message = aiMessage;
       }
 
+      if (!message.contentItems) {
+        message.contentItems = [];
+      }
+
       // 处理不同类型的回调
       if (data.type === "text" || data.type === "thinking") {
-        const map = data.type === "text" ? message.texts! : message.thinking!;
-        map.set(data.streamId, {
-          streamId: data.streamId,
-          text: data.text,
-          streamDone: data.streamDone,
-        });
+        // 查找是否已存在相同的 streamId
+        const existingIndex = message.contentItems.findIndex(
+          (item) => 
+            (item.type === "text" || item.type === "thinking") && 
+            item.streamId === data.streamId
+        );
+        
+        if (existingIndex >= 0) {
+          // 更新已存在的项
+          (message.contentItems[existingIndex] as any).text = data.text;
+          (message.contentItems[existingIndex] as any).streamDone = data.streamDone;
+        } else {
+          // 添加新项
+          message.contentItems.push({
+            type: data.type,
+            streamId: data.streamId,
+            text: data.text,
+            streamDone: data.streamDone,
+          });
+        }
+        
         // 更新 content 为最新的文本
         if (data.type === "text" && data.streamDone) {
           message.content = data.text;
         }
       } else if (data.type === "file") {
-        if (!message.files) message.files = [];
-        message.files.push({ mimeType: data.mimeType, data: data.data });
+        message.contentItems.push({
+          type: "file",
+          mimeType: data.mimeType,
+          data: data.data,
+        });
       } else if (data.type === "tool_streaming") {
-        if (!message.toolCalls) message.toolCalls = new Map();
-        let toolCall = message.toolCalls.get(data.toolCallId);
-        if (!toolCall) {
-          toolCall = {
+        // 查找是否已存在相同的 toolCallId
+        const existingIndex = message.contentItems.findIndex(
+          (item) => item.type === "tool" && item.toolCallId === data.toolCallId
+        );
+        
+        if (existingIndex >= 0) {
+          // 更新已存在的工具调用
+          (message.contentItems[existingIndex] as any).paramsText = data.paramsText;
+        } else {
+          // 添加新工具调用
+          message.contentItems.push({
+            type: "tool",
             toolCallId: data.toolCallId,
             toolName: data.toolName,
             paramsText: data.paramsText,
-          };
-          message.toolCalls.set(data.toolCallId, toolCall);
-        } else {
-          toolCall.paramsText = data.paramsText;
+          });
         }
       } else if (data.type === "tool_use") {
-        if (!message.toolCalls) message.toolCalls = new Map();
-        let toolCall = message.toolCalls.get(data.toolCallId);
-        if (!toolCall) {
-          toolCall = {
+        // 查找是否已存在相同的 toolCallId
+        const existingIndex = message.contentItems.findIndex(
+          (item) => item.type === "tool" && item.toolCallId === data.toolCallId
+        );
+        
+        if (existingIndex >= 0) {
+          // 更新已存在的工具调用
+          (message.contentItems[existingIndex] as any).params = data.params;
+        } else {
+          // 添加新工具调用
+          message.contentItems.push({
+            type: "tool",
             toolCallId: data.toolCallId,
             toolName: data.toolName,
             params: data.params,
-          };
-          message.toolCalls.set(data.toolCallId, toolCall);
-        } else {
-          toolCall.params = data.params;
+          });
         }
       } else if (data.type === "tool_running") {
-        if (!message.toolCalls) message.toolCalls = new Map();
-        let toolCall = message.toolCalls.get(data.toolCallId);
-        if (!toolCall) {
-          toolCall = {
+        // 查找是否已存在相同的 toolCallId
+        const existingIndex = message.contentItems.findIndex(
+          (item) => item.type === "tool" && item.toolCallId === data.toolCallId
+        );
+        
+        if (existingIndex >= 0) {
+          // 更新已存在的工具调用
+          (message.contentItems[existingIndex] as any).running = !data.streamDone;
+          (message.contentItems[existingIndex] as any).runningText = data.text;
+        } else {
+          // 添加新工具调用
+          message.contentItems.push({
+            type: "tool",
             toolCallId: data.toolCallId,
             toolName: data.toolName,
             running: true,
             runningText: data.text,
-          };
-          message.toolCalls.set(data.toolCallId, toolCall);
-        } else {
-          toolCall.running = !data.streamDone;
-          toolCall.runningText = data.text;
+          });
         }
       } else if (data.type === "tool_result") {
-        if (!message.toolCalls) message.toolCalls = new Map();
-        let toolCall = message.toolCalls.get(data.toolCallId);
-        if (!toolCall) {
-          toolCall = {
+        // 查找是否已存在相同的 toolCallId
+        const existingIndex = message.contentItems.findIndex(
+          (item) => item.type === "tool" && item.toolCallId === data.toolCallId
+        );
+        
+        if (existingIndex >= 0) {
+          // 更新已存在的工具调用
+          (message.contentItems[existingIndex] as any).result = data.toolResult;
+          (message.contentItems[existingIndex] as any).running = false;
+        } else {
+          // 添加新工具调用
+          message.contentItems.push({
+            type: "tool",
             toolCallId: data.toolCallId,
             toolName: data.toolName,
             params: data.params,
             result: data.toolResult,
-          };
-          message.toolCalls.set(data.toolCallId, toolCall);
-        } else {
-          toolCall.result = data.toolResult;
-          toolCall.running = false;
+          });
         }
 
-        // 如果是 deepAction 工具，初始化 task 数据
-        if (data.toolName === "deepAction" && !message.task) {
-          message.task = {
-            taskId: (data.params as any)?.taskId || uuidv4(),
-            agents: new Map(),
-          };
+        // 如果是 deepAction 工具，在工具项之后添加 task 项
+        if (data.toolName === "deepAction") {
+          const taskId = (data.params as any)?.taskId || uuidv4();
+          // 检查是否已经存在 task 项
+          const taskIndex = message.contentItems.findIndex(
+            (item) => item.type === "task" && item.taskId === taskId
+          );
+          
+          if (taskIndex < 0) {
+            // 在工具项之后添加 task 项
+            const toolIndex = message.contentItems.findIndex(
+              (item) => item.type === "tool" && item.toolCallId === data.toolCallId
+            );
+            const insertIndex = toolIndex >= 0 ? toolIndex + 1 : message.contentItems.length;
+            message.contentItems.splice(insertIndex, 0, {
+              type: "task",
+              taskId: taskId,
+              task: {
+                taskId: taskId,
+                agents: [],
+              },
+            });
+          }
         }
       } else if (data.type === "error") {
         message.error = data.error;
@@ -263,149 +318,201 @@ const AppRun = () => {
 
       if (!message) return prev;
 
-      // 如果 task 不存在，创建它
-      if (!message.task) {
-        message.task = {
+      // 查找对应的 task 项
+      const taskItemIndex = message.contentItems.findIndex(
+        (item) => item.type === "task" && item.taskId === data.taskId
+      );
+
+      if (taskItemIndex < 0) {
+        // 如果不存在，创建一个新的 task 项
+        message.contentItems.push({
+          type: "task",
           taskId: data.taskId,
-          agents: new Map(),
-        };
+          task: {
+            taskId: data.taskId,
+            agents: [],
+          },
+        });
       }
 
+      const taskItem = message.contentItems.find(
+        (item) => item.type === "task" && item.taskId === data.taskId
+      ) as { type: "task"; taskId: string; task: TaskData } | undefined;
+
+      if (!taskItem) return prev;
+
       if (data.type === "workflow") {
-        message.task.workflow = data.workflow;
-        message.task.workflowStreamDone = data.streamDone;
+        taskItem.task.workflow = data.workflow;
+        taskItem.task.workflowStreamDone = data.streamDone;
       } else if (data.type === "agent_start") {
-        const agentExecution: AgentExecution = {
-          agentNode: data.agentNode,
-          texts: new Map(),
-          thinking: new Map(),
-          toolCalls: new Map(),
-          files: [],
-          contentOrder: [],
-          status: "running",
-        };
-        message.task.agents.set(data.nodeId || data.agentName, agentExecution);
+        // 检查是否已存在该 agent
+        const existingAgent = taskItem.task.agents.find(
+          (a) => a.agentNode.id === (data.nodeId || data.agentName) || 
+                 a.agentNode.name === data.agentName
+        );
+        
+        if (!existingAgent) {
+          const agentExecution: AgentExecution = {
+            agentNode: data.agentNode,
+            contentItems: [],
+            status: "running",
+          };
+          taskItem.task.agents.push(agentExecution);
+        }
       } else if (data.type === "text" || data.type === "thinking") {
-        const agent = message.task.agents.get(data.nodeId || data.agentName);
+        const agent = taskItem.task.agents.find(
+          (a) => a.agentNode.id === (data.nodeId || data.agentName) || 
+                 a.agentNode.name === data.agentName
+        );
         if (agent) {
-          const map = data.type === "text" ? agent.texts : agent.thinking;
-          const isNew = !map.has(data.streamId);
-          map.set(data.streamId, {
-            streamId: data.streamId,
-            text: data.text,
-            streamDone: data.streamDone,
-          });
-          // 如果是新的 streamId，添加到内容顺序列表
-          if (isNew) {
-            agent.contentOrder.push({
+          // 查找是否已存在相同的 streamId
+          const existingIndex = agent.contentItems.findIndex(
+            (item) => 
+              (item.type === "text" || item.type === "thinking") && 
+              item.streamId === data.streamId
+          );
+          
+          if (existingIndex >= 0) {
+            // 更新已存在的项
+            (agent.contentItems[existingIndex] as any).text = data.text;
+            (agent.contentItems[existingIndex] as any).streamDone = data.streamDone;
+          } else {
+            // 添加新项
+            agent.contentItems.push({
               type: data.type,
-              id: data.streamId,
+              streamId: data.streamId,
+              text: data.text,
+              streamDone: data.streamDone,
             });
           }
         }
       } else if (data.type === "file") {
-        const agent = message.task.agents.get(data.nodeId || data.agentName);
+        const agent = taskItem.task.agents.find(
+          (a) => a.agentNode.id === (data.nodeId || data.agentName) || 
+                 a.agentNode.name === data.agentName
+        );
         if (agent) {
-          const fileIndex = agent.files.length;
-          agent.files.push({ mimeType: data.mimeType, data: data.data });
-          agent.contentOrder.push({
+          agent.contentItems.push({
             type: "file",
-            id: fileIndex,
+            mimeType: data.mimeType,
+            data: data.data,
           });
         }
       } else if (data.type === "tool_streaming") {
-        const agent = message.task.agents.get(data.nodeId || data.agentName);
+        const agent = taskItem.task.agents.find(
+          (a) => a.agentNode.id === (data.nodeId || data.agentName) || 
+                 a.agentNode.name === data.agentName
+        );
         if (agent) {
-          let toolCall = agent.toolCalls.get(data.toolCallId);
-          if (!toolCall) {
-            toolCall = {
+          // 查找是否已存在相同的 toolCallId
+          const existingIndex = agent.contentItems.findIndex(
+            (item) => item.type === "tool" && item.toolCallId === data.toolCallId
+          );
+          
+          if (existingIndex >= 0) {
+            // 更新已存在的工具调用
+            (agent.contentItems[existingIndex] as any).paramsText = data.paramsText;
+          } else {
+            // 添加新工具调用
+            agent.contentItems.push({
+              type: "tool",
               toolCallId: data.toolCallId,
               toolName: data.toolName,
               paramsText: data.paramsText,
-            };
-            agent.toolCalls.set(data.toolCallId, toolCall);
-            // 新的工具调用，添加到内容顺序列表
-            agent.contentOrder.push({
-              type: "tool",
-              id: data.toolCallId,
             });
-          } else {
-            toolCall.paramsText = data.paramsText;
           }
         }
       } else if (data.type === "tool_use") {
-        const agent = message.task.agents.get(data.nodeId || data.agentName);
+        const agent = taskItem.task.agents.find(
+          (a) => a.agentNode.id === (data.nodeId || data.agentName) || 
+                 a.agentNode.name === data.agentName
+        );
         if (agent) {
-          let toolCall = agent.toolCalls.get(data.toolCallId);
-          if (!toolCall) {
-            toolCall = {
+          // 查找是否已存在相同的 toolCallId
+          const existingIndex = agent.contentItems.findIndex(
+            (item) => item.type === "tool" && item.toolCallId === data.toolCallId
+          );
+          
+          if (existingIndex >= 0) {
+            // 更新已存在的工具调用
+            (agent.contentItems[existingIndex] as any).params = data.params;
+          } else {
+            // 添加新工具调用
+            agent.contentItems.push({
+              type: "tool",
               toolCallId: data.toolCallId,
               toolName: data.toolName,
               params: data.params,
-            };
-            agent.toolCalls.set(data.toolCallId, toolCall);
-            // 新的工具调用，添加到内容顺序列表
-            agent.contentOrder.push({
-              type: "tool",
-              id: data.toolCallId,
             });
-          } else {
-            toolCall.params = data.params;
           }
         }
       } else if (data.type === "tool_running") {
-        const agent = message.task.agents.get(data.nodeId || data.agentName);
+        const agent = taskItem.task.agents.find(
+          (a) => a.agentNode.id === (data.nodeId || data.agentName) || 
+                 a.agentNode.name === data.agentName
+        );
         if (agent) {
-          let toolCall = agent.toolCalls.get(data.toolCallId);
-          if (!toolCall) {
-            toolCall = {
+          // 查找是否已存在相同的 toolCallId
+          const existingIndex = agent.contentItems.findIndex(
+            (item) => item.type === "tool" && item.toolCallId === data.toolCallId
+          );
+          
+          if (existingIndex >= 0) {
+            // 更新已存在的工具调用
+            (agent.contentItems[existingIndex] as any).running = !data.streamDone;
+            (agent.contentItems[existingIndex] as any).runningText = data.text;
+          } else {
+            // 添加新工具调用
+            agent.contentItems.push({
+              type: "tool",
               toolCallId: data.toolCallId,
               toolName: data.toolName,
               running: true,
               runningText: data.text,
-            };
-            agent.toolCalls.set(data.toolCallId, toolCall);
-            // 新的工具调用，添加到内容顺序列表
-            agent.contentOrder.push({
-              type: "tool",
-              id: data.toolCallId,
             });
-          } else {
-            toolCall.running = !data.streamDone;
-            toolCall.runningText = data.text;
           }
         }
       } else if (data.type === "tool_result") {
-        const agent = message.task.agents.get(data.nodeId || data.agentName);
+        const agent = taskItem.task.agents.find(
+          (a) => a.agentNode.id === (data.nodeId || data.agentName) || 
+                 a.agentNode.name === data.agentName
+        );
         if (agent) {
-          let toolCall = agent.toolCalls.get(data.toolCallId);
-          if (!toolCall) {
-            toolCall = {
+          // 查找是否已存在相同的 toolCallId
+          const existingIndex = agent.contentItems.findIndex(
+            (item) => item.type === "tool" && item.toolCallId === data.toolCallId
+          );
+          
+          if (existingIndex >= 0) {
+            // 更新已存在的工具调用
+            (agent.contentItems[existingIndex] as any).result = data.toolResult;
+            (agent.contentItems[existingIndex] as any).running = false;
+          } else {
+            // 添加新工具调用
+            agent.contentItems.push({
+              type: "tool",
               toolCallId: data.toolCallId,
               toolName: data.toolName,
               params: data.params,
               result: data.toolResult,
-            };
-            agent.toolCalls.set(data.toolCallId, toolCall);
-            // 新的工具调用，添加到内容顺序列表
-            agent.contentOrder.push({
-              type: "tool",
-              id: data.toolCallId,
             });
-          } else {
-            toolCall.result = data.toolResult;
-            toolCall.running = false;
           }
         }
       } else if (data.type === "agent_result") {
-        const agent = message.task.agents.get(data.nodeId || data.agentName);
+        const agent = taskItem.task.agents.find(
+          (a) => a.agentNode.id === (data.nodeId || data.agentName) || 
+                 a.agentNode.name === data.agentName
+        );
         if (agent) {
           agent.status = data.error ? "error" : "done";
           agent.result = data.result;
           agent.error = data.error;
         }
       } else if (data.type === "error") {
-        const agent = message.task.agents.get(data.nodeId || data.agentName);
+        const agent = taskItem.task.agents.find(
+          (a) => a.agentNode.id === (data.nodeId || data.agentName) || 
+                 a.agentNode.name === data.agentName
+        );
         if (agent) {
           agent.status = "error";
           agent.error = data.error;
@@ -447,6 +554,7 @@ const AppRun = () => {
       role: "user",
       content: inputValue,
       timestamp: Date.now(),
+      contentItems: [],
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -485,34 +593,20 @@ const AppRun = () => {
     });
   };
 
-  // 渲染流式文本
-  const renderStreamText = (texts: Map<string, StreamText>) => {
-    const textArray = Array.from(texts.entries());
-    if (textArray.length === 0) return null;
-    
-    // 显示所有文本流，每个 streamId 一个段落
+  // 渲染单个文本项
+  const renderTextItem = (item: { type: "text"; streamId: string; text: string; streamDone: boolean }) => {
     return (
-      <div>
-        {textArray.map(([streamId, streamText], index) => (
-          <div
-            key={streamId}
-            style={{ margin: index === 0 ? 0 : "8px 0 0 0" }}
-          >
-            <MarkdownRenderer content={streamText.text} />
-            {!streamText.streamDone && (
-              <span className="streaming-cursor">▊</span>
-            )}
-          </div>
-        ))}
+      <div style={{ marginBottom: 8 }}>
+        <MarkdownRenderer content={item.text} />
+        {!item.streamDone && (
+          <span className="streaming-cursor">▊</span>
+        )}
       </div>
     );
   };
 
-  // 渲染思考内容
-  const renderThinking = (thinking: Map<string, StreamText>) => {
-    const thinkingArray = Array.from(thinking.values());
-    if (thinkingArray.length === 0) return null;
-    const latestThinking = thinkingArray[thinkingArray.length - 1];
+  // 渲染单个思考项
+  const renderThinkingItem = (item: { type: "thinking"; streamId: string; text: string; streamDone: boolean }) => {
     return (
       <Collapse
         size="small"
@@ -531,8 +625,8 @@ const AppRun = () => {
                 style={{ margin: 0, whiteSpace: "pre-wrap" }}
                 type="secondary"
               >
-                {latestThinking.text}
-                {!latestThinking.streamDone && (
+                {item.text}
+                {!item.streamDone && (
                   <span className="streaming-cursor">▊</span>
                 )}
               </Paragraph>
@@ -544,7 +638,7 @@ const AppRun = () => {
   };
 
   // 渲染工具调用
-  const renderToolCall = (toolCall: ToolCall) => {
+  const renderToolCallItem = (item: ChatContentItem & { type: "tool" }) => {
     return (
       <Card
         size="small"
@@ -552,32 +646,32 @@ const AppRun = () => {
         title={
           <Space>
             <ToolOutlined />
-            <Text strong>{toolCall.toolName}</Text>
-            {toolCall.running && <Spin size="small" />}
-            {toolCall.result && (
+            <Text strong>{item.toolName}</Text>
+            {item.running && <Spin size="small" />}
+            {item.result && (
               <Tag
-                color={toolCall.result.isError ? "red" : "green"}
+                color={item.result.isError ? "red" : "green"}
                 icon={
-                  toolCall.result.isError ? (
+                  item.result.isError ? (
                     <CloseCircleOutlined />
                   ) : (
                     <CheckCircleOutlined />
                   )
                 }
               >
-                {toolCall.result.isError ? "失败" : "完成"}
+                {item.result.isError ? "失败" : "完成"}
               </Tag>
             )}
           </Space>
         }
       >
-        {toolCall.paramsText && !toolCall.params && (
+        {item.paramsText && !item.params && (
           <Text type="secondary" code>
-            {toolCall.paramsText}
+            {item.paramsText}
             <span className="streaming-cursor">▊</span>
           </Text>
         )}
-        {toolCall.params && (
+        {item.params && (
           <Collapse
             size="small"
             items={[
@@ -586,22 +680,22 @@ const AppRun = () => {
                 label: "参数",
                 children: (
                   <pre style={{ margin: 0, fontSize: 12 }}>
-                    {JSON.stringify(toolCall.params, null, 2)}
+                    {JSON.stringify(item.params, null, 2)}
                   </pre>
                 ),
               },
             ]}
           />
         )}
-        {toolCall.running && toolCall.runningText && (
+        {item.running && item.runningText && (
           <Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-            {toolCall.runningText}
-            {!toolCall.running && <span className="streaming-cursor">▊</span>}
+            {item.runningText}
+            {!item.running && <span className="streaming-cursor">▊</span>}
           </Paragraph>
         )}
-        {toolCall.result && (
+        {item.result && (
           <div style={{ marginTop: 8 }}>
-            {toolCall.result.content.map((part, index) => {
+            {item.result.content.map((part, index) => {
               if (part.type === "text") {
                 return (
                   <Paragraph key={index} style={{ margin: 0 }}>
@@ -705,7 +799,9 @@ const AppRun = () => {
 
   // 渲染 agent 执行
   const renderAgentExecution = (agentNode: WorkflowAgent, task: TaskData) => {
-    const agent = task.agents.get(agentNode.id);
+    const agent = task.agents.find(
+      (a) => a.agentNode.id === agentNode.id || a.agentNode.name === agentNode.name
+    );
     const status = agent?.status || agentNode.status;
 
     return (
@@ -749,38 +845,30 @@ const AppRun = () => {
         {agent && (
           <>
             {/* 按照内容出现顺序渲染 */}
-            {agent.contentOrder.map((item, index) => {
+            {agent.contentItems.map((item, index) => {
               if (item.type === "thinking") {
-                const thinking = agent.thinking?.get(item.id);
-                if (!thinking) return null;
                 return (
-                  <div key={`thinking-${item.id}`} style={{ marginBottom: 8 }}>
-                    {renderThinking(new Map([[item.id, thinking]]))}
+                  <div key={`thinking-${item.streamId}-${index}`}>
+                    {renderThinkingItem(item)}
                   </div>
                 );
               } else if (item.type === "text") {
-                const text = agent.texts?.get(item.id);
-                if (!text) return null;
                 return (
-                  <div key={`text-${item.id}`} style={{ marginBottom: 8 }}>
-                    {renderStreamText(new Map([[item.id, text]]))}
+                  <div key={`text-${item.streamId}-${index}`}>
+                    {renderTextItem(item)}
                   </div>
                 );
               } else if (item.type === "tool") {
-                const toolCall = agent.toolCalls?.get(item.id);
-                if (!toolCall) return null;
                 return (
-                  <div key={`tool-${item.id}`} style={{ marginBottom: 8 }}>
-                    {renderToolCall(toolCall)}
+                  <div key={`tool-${item.toolCallId}-${index}`} style={{ marginBottom: 8 }}>
+                    {renderToolCallItem(item)}
                   </div>
                 );
               } else if (item.type === "file") {
-                const file = agent.files?.[item.id];
-                if (!file) return null;
                 return (
                   <Image
-                    key={`file-${item.id}`}
-                    src={`data:${file.mimeType};base64,${file.data}`}
+                    key={`file-${index}`}
+                    src={`data:${item.mimeType};base64,${item.data}`}
                     alt="Agent file"
                     style={{ maxWidth: "100%", marginTop: 8, marginBottom: 8 }}
                   />
@@ -854,39 +942,51 @@ const AppRun = () => {
             </Space>
           }
         >
-          {message.thinking && message.thinking.size > 0 && (
-            <div style={{ marginBottom: 8 }}>{renderThinking(message.thinking)}</div>
+          {message.contentItems && message.contentItems.length > 0 ? (
+            message.contentItems.map((item, index) => {
+              if (item.type === "thinking") {
+                return (
+                  <div key={`chat-thinking-${item.streamId}-${index}`}>
+                    {renderThinkingItem(item)}
+                  </div>
+                );
+              } else if (item.type === "text") {
+                return (
+                  <div key={`chat-text-${item.streamId}-${index}`}>
+                    {renderTextItem(item)}
+                  </div>
+                );
+              } else if (item.type === "tool") {
+                return (
+                  <div key={`chat-tool-${item.toolCallId}-${index}`} style={{ marginBottom: 8 }}>
+                    {renderToolCallItem(item)}
+                  </div>
+                );
+              } else if (item.type === "file") {
+                return (
+                  <Image
+                    key={`chat-file-${index}`}
+                    src={`data:${item.mimeType};base64,${item.data}`}
+                    alt="Message file"
+                    style={{ maxWidth: "100%", marginTop: 8, marginBottom: 8 }}
+                  />
+                );
+              } else if (item.type === "task") {
+                return (
+                  <div key={`chat-task-${item.taskId}-${index}`} style={{ marginBottom: 8 }}>
+                    {renderWorkflow(item.task)}
+                  </div>
+                );
+              }
+              return null;
+            })
+          ) : (
+            message.content && (
+              <div style={{ marginBottom: 8 }}>
+                <MarkdownRenderer content={message.content} />
+              </div>
+            )
           )}
-          {message.texts && message.texts.size > 0 && (
-            <div style={{ marginBottom: 8 }}>{renderStreamText(message.texts)}</div>
-          )}
-          {!message.texts && message.content && (
-            <div style={{ marginBottom: 8 }}>
-              <MarkdownRenderer content={message.content} />
-            </div>
-          )}
-          {message.files && message.files.length > 0 && (
-            <div style={{ marginBottom: 8 }}>
-              {message.files.map((file, index) => (
-                <Image
-                  key={index}
-                  src={`data:${file.mimeType};base64,${file.data}`}
-                  alt="Message file"
-                  style={{ maxWidth: "100%", marginTop: 8 }}
-                />
-              ))}
-            </div>
-          )}
-          {message.toolCalls && message.toolCalls.size > 0 && (
-            <div style={{ marginTop: 8 }}>
-              {Array.from(message.toolCalls.values()).map((toolCall) => (
-                <div key={toolCall.toolCallId} style={{ marginBottom: 8 }}>
-                  {renderToolCall(toolCall)}
-                </div>
-              ))}
-            </div>
-          )}
-          {message.task && renderWorkflow(message.task)}
           {message.error && (
             <Alert
               message="错误"
