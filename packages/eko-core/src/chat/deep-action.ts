@@ -88,6 +88,11 @@ export default class DeepActionTool implements DialogueTool {
       chatId,
     );
     this.chatContext.addEko(messageId, eko);
+    if (this.params.signal) {
+      this.params.signal.addEventListener("abort", () => {
+        eko.abortTask(messageId, "user aborted");
+      });
+    }
     const workflow = await eko.generate(
       taskDescription,
       messageId,

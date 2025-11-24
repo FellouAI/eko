@@ -15,7 +15,6 @@ import {
 } from "antd";
 import {
   SendOutlined,
-  PaperClipOutlined,
   RobotOutlined,
   UserOutlined,
   ToolOutlined,
@@ -111,6 +110,7 @@ interface ChatMessage {
   content: string;
   timestamp: number;
   contentItems: ChatContentItem[]; // 所有内容按顺序
+  loading?: boolean; // 用户消息等待回调的 loading 状态
   error?: any;
   usage?: {
     promptTokens: number;
@@ -123,6 +123,7 @@ const AppRun = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [sending, setSending] = useState(false);
+  const [currentMessageId, setCurrentMessageId] = useState<string | null>(null); // 当前正在处理的消息 ID
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -150,6 +151,8 @@ const AppRun = () => {
           // 用户消息不存在，可能是消息顺序问题，先返回
           return prev;
         }
+        // 取消用户消息的 loading 状态
+        userMessage.loading = false;
         // 创建 AI 消息
         const aiMessage: ChatMessage = {
           id: aiMessageId,
@@ -302,13 +305,21 @@ const AppRun = () => {
         }
       } else if (data.type === "error") {
         message.error = data.error;
+        // 隐藏停止按钮
+        if (data.messageId === currentMessageId) {
+          setCurrentMessageId(null);
+        }
       } else if (data.type === "finish") {
         message.usage = data.usage;
+        // 隐藏停止按钮
+        if (data.messageId === currentMessageId) {
+          setCurrentMessageId(null);
+        }
       }
 
       return newMessages;
     });
-  }, []);
+  }, [currentMessageId]);
 
   // 处理 task 回调
   const handleTaskCallback = useCallback((data: AgentStreamMessage & { messageId: string }) => {
@@ -535,7 +546,6 @@ const AppRun = () => {
       } else if (message.type === "task_callback") {
         handleTaskCallback(message.data);
       }
-      sendResponse({ success: true });
     };
 
     chrome.runtime.onMessage.addListener(handleMessage);
@@ -555,27 +565,23 @@ const AppRun = () => {
       content: inputValue,
       timestamp: Date.now(),
       contentItems: [],
+      loading: true, // 显示 loading
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setSending(true);
+    setCurrentMessageId(messageId); // 设置当前消息 ID，显示停止按钮
 
     try {
-      const requestId = uuidv4();
       chrome.runtime.sendMessage(
         {
-          requestId,
+          requestId: uuidv4(),
           type: "chat",
           data: {
-            messageId,
+            messageId: messageId,
             user: [{ type: "text", text: inputValue }],
           },
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            console.error("Error sending message:", chrome.runtime.lastError);
-          }
         }
       );
     } catch (error) {
@@ -599,7 +605,7 @@ const AppRun = () => {
       <div style={{ marginBottom: 8 }}>
         <MarkdownRenderer content={item.text} />
         {!item.streamDone && (
-          <span className="streaming-cursor">▊</span>
+          <Spin size="small" style={{ color: "white" }} />
         )}
       </div>
     );
@@ -611,6 +617,7 @@ const AppRun = () => {
       <Collapse
         size="small"
         style={{ marginBottom: 8 }}
+        defaultActiveKey={item.streamDone ? [] : ['thinking']}
         items={[
           {
             key: "thinking",
@@ -627,7 +634,7 @@ const AppRun = () => {
               >
                 {item.text}
                 {!item.streamDone && (
-                  <span className="streaming-cursor">▊</span>
+                  <span className="streaming-cursor">|</span>
                 )}
               </Paragraph>
             ),
@@ -668,12 +675,13 @@ const AppRun = () => {
         {item.paramsText && !item.params && (
           <Text type="secondary" code>
             {item.paramsText}
-            <span className="streaming-cursor">▊</span>
+            <span className="streaming-cursor">|</span>
           </Text>
         )}
         {item.params && (
           <Collapse
             size="small"
+            defaultActiveKey={['params']}
             items={[
               {
                 key: "params",
@@ -690,31 +698,56 @@ const AppRun = () => {
         {item.running && item.runningText && (
           <Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
             {item.runningText}
-            {!item.running && <span className="streaming-cursor">▊</span>}
+            {!item.running && <span className="streaming-cursor">|</span>}
           </Paragraph>
         )}
         {item.result && (
-          <div style={{ marginTop: 8 }}>
-            {item.result.content.map((part, index) => {
-              if (part.type === "text") {
-                return (
-                  <Paragraph key={index} style={{ margin: 0 }}>
-                    {part.text}
-                  </Paragraph>
-                );
-              } else if (part.type === "image") {
-                return (
-                  <Image
-                    key={index}
-                    src={`data:${part.mimeType || "image/png"};base64,${part.data}`}
-                    alt="Tool result"
-                    style={{ maxWidth: "100%", marginTop: 8 }}
-                  />
-                );
-              }
-              return null;
-            })}
-          </div>
+          <Collapse
+            size="small"
+            style={{ marginTop: 8 }}
+            defaultActiveKey={item.result.isError ? ['result'] : []}
+            items={[
+              {
+                key: "result",
+                label: (
+                  <Space>
+                    <Text>结果</Text>
+                    {item.result.isError &&
+                      <Tag
+                        color="red"
+                        icon={
+                          <CloseCircleOutlined />
+                        }
+                      >失败</Tag>
+                    }
+                  </Space>
+                ),
+                children: (
+                  <div>
+                    {item.result.content.map((part, index) => {
+                      if (part.type === "text") {
+                        return (
+                          <Paragraph key={index} style={{ margin: 0 }}>
+                            {part.text}
+                          </Paragraph>
+                        );
+                      } else if (part.type === "image") {
+                        return (
+                          <Image
+                            key={index}
+                            src={`data:${part.mimeType || "image/png"};base64,${part.data}`}
+                            alt="Tool result"
+                            style={{ maxWidth: "100%", marginTop: 8 }}
+                          />
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                ),
+              },
+            ]}
+          />
         )}
       </Card>
     );
@@ -924,6 +957,9 @@ const AppRun = () => {
               <Paragraph style={{ margin: 0, color: "white" }}>
                 {message.content}
               </Paragraph>
+              {message.loading && (
+                <Spin size="small" style={{ color: "white" }} />
+              )}
             </Space>
           </Card>
         </div>
@@ -1052,25 +1088,42 @@ const AppRun = () => {
             }}
             placeholder="输入消息... (Shift+Enter 换行)"
             autoSize={{ minRows: 1, maxRows: 4 }}
-            style={{ flex: 1 }}
-            disabled={sending}
+            style={{ flex: 1, marginRight: "4px" }}
+            disabled={sending || currentMessageId !== null}
           />
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            onClick={sendMessage}
-            loading={sending}
-            disabled={!inputValue.trim()}
-          >
-            发送
-          </Button>
+          {currentMessageId ? (
+            <Button
+              danger
+              onClick={() => {
+                if (currentMessageId) {
+                  stopMessage(currentMessageId);
+                  setCurrentMessageId(null);
+                }
+              }}
+            >
+              停止
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              icon={<SendOutlined />}
+              onClick={sendMessage}
+              loading={sending}
+              disabled={!inputValue.trim()}
+            >
+              发送
+            </Button>
+          )}
         </Space.Compact>
       </div>
 
       <style>{`
+        body {
+          margin: 0 !important;
+        }
         .streaming-cursor {
           animation: blink 1s infinite;
-          color: #1890ff;
+          color: black;
         }
         .markdown-body {
           font-size: 14px;

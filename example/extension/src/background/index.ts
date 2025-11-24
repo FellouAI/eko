@@ -1,6 +1,5 @@
 import {
   LLMs,
-  uuidv4,
   global,
   ChatAgent,
   AgentStreamMessage,
@@ -82,9 +81,9 @@ export async function init(): Promise<ChatAgent> {
     const type = request.type;
     const data = request.data;
     if (type == "chat") {
-      const abortController = new AbortController();
-      const messageId = data.messageId || uuidv4();
+      const messageId = data.messageId;
       const user = data.user as (MessageTextPart | MessageFilePart)[];
+      const abortController = new AbortController();
       abortControllers.set(messageId, abortController);
       const result = await chatAgent.chat({
         user: user,
