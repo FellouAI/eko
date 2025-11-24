@@ -182,17 +182,7 @@ export function appendDynamicContentToSystemPrompt(
     agentNodeXml.indexOf("input=") > -1 ||
     agentNodeXml.indexOf("output=") > -1 ||
     tools.filter((tool) => tool.name == variable_storage).length > 0;
-  
-  // Append HumanInteract tool prompt if available
-  if (hasHumanTool) {
-    prompt += "\n" + HUMAN_PROMPT;
-  }
-  
-  // Append VariableStorage tool prompt if available
-  if (hasVariable) {
-    prompt += "\n" + VARIABLE_PROMPT;
-  }
-  
+
   // Append ForeachTask tool prompt if available
   if (hasForEachNode) {
     if (tools.filter((tool) => tool.name == foreach_task).length > 0) {
@@ -209,6 +199,17 @@ export function appendDynamicContentToSystemPrompt(
   
   // Append datetime (always needed)
   prompt += "\nCurrent datetime: " + new Date().toLocaleString();
+  
+  // Append VariableStorage tool prompt if available
+  if (hasVariable) {
+    prompt += "\n" + VARIABLE_PROMPT;
+  }
+
+  // Append HumanInteract tool prompt if available
+  if (hasHumanTool) {
+    prompt += "\n" + HUMAN_PROMPT;
+  }
+  
   
   // Append main task and pre-task results if multiple agents exist
   if (context.chain.agents.length > 1) {

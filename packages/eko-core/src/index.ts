@@ -38,6 +38,21 @@ export {
 } from "./agent";
 
 export {
+  type ICapability,
+  BaseCapability,
+  FileCapability,
+  ShellCapability,
+  ComputerCapability,
+  BrowserBaseCapability,
+  BrowserScreenCapability,
+  BrowserLabelsCapability,
+  registerCapability,
+  getCapabilityConstructor,
+  createCapability,
+  getRegisteredCapabilityNames,
+} from "./capabilities";
+
+export {
   HumanInteractTool,
   TaskNodeStatusTool,
   VariableStorageTool,
@@ -65,6 +80,7 @@ export {
   convertToolSchema,
   uuidv4,
   call_timeout,
+  sleep,
 } from "./common/utils";
 
 export {
@@ -74,4 +90,12 @@ export {
 } from "./common/xml";
 
 export { buildAgentTree } from "./common/tree";
-export { extract_page_content } from "./agent/browser/utils";
+export { extract_page_content, mark_screenshot_highlight_elements } from "./agent/browser/utils";
+export { run_build_dom_tree } from "./agent/browser/build_dom_tree";
+export { CallbackHelper, createCallbackHelper } from "./common/callback-helper";
+
+export type {
+  DebugEventHandler,
+  DebugEventType,
+  LangfuseSpanContext,
+} from "./types/trace.types";

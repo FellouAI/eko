@@ -23,6 +23,8 @@ import {
   HumanCallback,
   StreamCallback,
 } from "../types";
+import { ICapability } from "../capabilities/base";
+import { createCapability } from "../capabilities/registry";
 import {
   LanguageModelV2Prompt,
   LanguageModelV2FilePart,
@@ -59,6 +61,7 @@ export type AgentSerializedData = {
   description: string;
   system_prompt: string;
   tool_ids?: string[];
+  capabilities?: string[];
 };
 
 export class Agent {
@@ -76,6 +79,28 @@ export class Agent {
   /** Optional tool IDs for MCP tools to load */
   protected toolIds?: string[];
 
+  /** Capabilities attached to this agent */
+  protected capabilities: ICapability[] = [];
+
+  /**
+   * Constructor
+   *
+   * Initializes a new intelligent agent with configuration and capabilities.
+   *
+   * Initialization:
+   * 1. Base config: identifiers and descriptions
+   * 2. Capability config: tool collection and models
+   * 3. Extensions: MCP client and callback handler
+   * 4. State: prepare execution context
+   *
+   * Validation hints:
+   * - name: unique identifier
+   * - description: capability description for planning
+   * - tools: core capability set
+   * - llms/mcpClient: optional integrations
+   *
+   * @param params Agent configuration
+   */
   constructor(params: AgentParams) {
     this.name = params.name;
     this.description = params.description;
@@ -126,6 +151,18 @@ export class Agent {
       agent.toolIds = data.tool_ids;
     }
 
+    // Load capabilities if provided
+    if (data.capabilities && Array.isArray(data.capabilities)) {
+      for (const capName of data.capabilities) {
+        const capability = createCapability(capName);
+        if (capability) {
+          agent.addCapability(capability);
+        } else {
+          console.warn(`Failed to load capability: ${capName}`);
+        }
+      }
+    }
+
     return agent;
   }
 
@@ -158,7 +195,23 @@ export class Agent {
     this.agentContext = agentContext;
     const context = agentContext.context;
     const agentNode = agentContext.agentChain.agent;
-    const tools = [...this.tools, ...this.system_auto_tools(agentNode)];
+
+    // Create callback helper
+    const agentRunCbHelper = createCallbackHelper(
+      this.callback || context.config.callback,
+      context.taskId,
+      this.name,
+      agentNode.id
+    );
+
+    // Build complete tool set (agent tools + capability tools + system auto tools)
+    const capabilityTools = this.capabilities.flatMap((cap) => cap.tools);
+    const tools = mergeTools(
+      mergeTools(this.tools, capabilityTools),
+      this.system_auto_tools(agentNode)
+    );
+
+    // Build system and user prompts
     const systemPrompt = await this.buildSystemPrompt(agentContext, tools);
     const userPrompt = await this.buildUserPrompt(agentContext, tools);
     const messages: LanguageModelV2Prompt = [
@@ -400,25 +453,52 @@ export class Agent {
     agentContext: AgentContext,
     tools: Tool[]
   ): Promise<string> {
-    // If serialized system prompt exists, append dynamic content to it
+    // Collect capability guides and format with prefix
+    // Note: Capabilities are already added to the agent, we just collect their guides here
+    const capabilityGuides = this.capabilities
+      .map((cap) => cap.getGuide())
+      .filter((guide) => guide.length > 0)
+      .join("\n\n");
+    
+    const capabilityGuideSection = capabilityGuides
+      ? `Capability Guide：\n${capabilityGuides}`
+      : "";
+
+    // Build prompt first (with capability tools already included in tools parameter)
+    let prompt: string;
+    
+    // If serialized system prompt exists, first append Capability Guide, then do dynamic injection
     if (this.serializedSystemPrompt) {
-      return appendDynamicContentToSystemPrompt(
-        this.serializedSystemPrompt,
+      // Step 1: Append Capability Guide to serializedSystemPrompt first
+      let basePrompt = this.serializedSystemPrompt;
+      if (capabilityGuideSection) {
+        basePrompt = basePrompt + "\n\n" + capabilityGuideSection;
+      }
+      // Step 2: Then do dynamic content injection on the combined prompt
+      prompt = appendDynamicContentToSystemPrompt(
+        basePrompt,
         this,
         agentContext.agentChain.agent,
         agentContext.context,
         tools
       );
+    } else {
+      // Otherwise use existing dynamic building logic
+      let extPrompt = await this.extSysPrompt(agentContext, tools);
+      prompt = getAgentSystemPrompt(
+        this,
+        agentContext.agentChain.agent,
+        agentContext.context,
+        tools,
+        extPrompt
+      );
+      // Append capability guides at the end for non-serialized prompts
+      if (capabilityGuideSection) {
+        prompt = prompt + "\n\n" + capabilityGuideSection;
+      }
     }
-
-    // Otherwise use existing dynamic building logic
-    return getAgentSystemPrompt(
-      this,
-      agentContext.agentChain.agent,
-      agentContext.context,
-      tools,
-      await this.extSysPrompt(agentContext, tools)
-    );
+    
+    return prompt;
   }
 
   protected async buildUserPrompt(
@@ -607,8 +687,29 @@ export class Agent {
     return this.description;
   }
 
+  /**
+   * Get agent tools
+   * @returns Built-in tool list (including capability tools)
+   */
   get Tools(): Tool[] {
-    return this.tools;
+    const capabilityTools = this.capabilities.flatMap((cap) => cap.tools);
+    return mergeTools(this.tools, capabilityTools);
+  }
+
+  /**
+   * Add a capability to this agent
+   * @param capability Capability instance to add
+   */
+  public addCapability(capability: ICapability): void {
+    this.capabilities.push(capability);
+  }
+
+  /**
+   * Get all capabilities attached to this agent
+   * @returns Array of capabilities
+   */
+  public getCapabilities(): ICapability[] {
+    return [...this.capabilities];
   }
 
   get PlanDescription() {
