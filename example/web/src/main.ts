@@ -1,4 +1,4 @@
-import { Eko, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
+import { Eko, LLMs, AgentStreamMessage } from "@eko-ai/eko";
 import { BrowserAgent } from "@eko-ai/eko-web";
 
 export async function auto_test_case() {
@@ -15,7 +15,7 @@ export async function auto_test_case() {
   };
 
   const callback = {
-    onMessage: async (message: StreamCallbackMessage) => {
+    onMessage: async (message: AgentStreamMessage) => {
       if (message.type == "workflow" && !message.streamDone) {
         return;
       }

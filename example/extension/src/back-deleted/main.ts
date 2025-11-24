@@ -39,7 +39,7 @@ export async function main(prompt: string): Promise<Eko> {
       } else if (message.type == "tool_use") {
         printLog(
           `${message.agentName} > ${message.toolName}\n${JSON.stringify(
-            message.params
+            message.toolCallId
           )}`
         );
       }

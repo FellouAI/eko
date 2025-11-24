@@ -20,7 +20,7 @@ export type EkoConfig = {
 export type AgentStreamMessage = {
   streamType: "agent";
   chatId: string;
-  taskId: string;
+  taskId: string; // messageId
   agentName: string;
   nodeId?: string | null; // agent nodeId
 } & (
@@ -47,19 +47,19 @@ export type AgentStreamMessage = {
   | {
       type: "tool_streaming";
       toolName: string;
-      toolId: string;
+      toolCallId: string;
       paramsText: string;
     }
   | {
       type: "tool_use";
       toolName: string;
-      toolId: string;
+      toolCallId: string;
       params: Record<string, any>;
     }
   | {
       type: "tool_running";
       toolName: string;
-      toolId: string;
+      toolCallId: string;
       text: string;
       streamId: string;
       streamDone: boolean;
@@ -67,7 +67,7 @@ export type AgentStreamMessage = {
   | {
       type: "tool_result";
       toolName: string;
-      toolId: string;
+      toolCallId: string;
       params: Record<string, any>;
       toolResult: ToolResult;
     }

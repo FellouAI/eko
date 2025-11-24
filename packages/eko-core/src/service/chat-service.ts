@@ -8,9 +8,9 @@ export interface ChatService {
   memoryRecall(chatId: string, prompt: string): Promise<string>;
 
   uploadFile(
+    file: File | { base64Data: string; mimeType: string; filename: string },
     chatId: string,
-    taskId: string,
-    file: File
+    taskId?: string | undefined
   ): Promise<{
     fileId?: string;
     url: string;
@@ -35,9 +35,9 @@ export class SimpleChatService implements ChatService {
     return Promise.resolve("");
   }
   uploadFile(
+    file: File | { base64Data: string; mimeType: string; filename: string },
     chatId: string,
-    taskId: string,
-    file: File
+    taskId?: string | undefined
   ): Promise<{
     fileId?: string;
     url: string;

@@ -67,6 +67,7 @@ export type WebSearchResult = {
 export type ChatStreamMessage = {
   streamType: "chat";
   chatId: string;
+  messageId: string;
 } & (
   | {
       type: "text" | "thinking";
@@ -82,19 +83,19 @@ export type ChatStreamMessage = {
   | {
       type: "tool_streaming";
       toolName: string;
-      toolId: string;
+      toolCallId: string;
       paramsText: string;
     }
   | {
       type: "tool_use";
       toolName: string;
-      toolId: string;
+      toolCallId: string;
       params: Record<string, any>;
     }
   | {
       type: "tool_running";
       toolName: string;
-      toolId: string;
+      toolCallId: string;
       text: string;
       streamId: string;
       streamDone: boolean;
@@ -102,7 +103,7 @@ export type ChatStreamMessage = {
   | {
       type: "tool_result";
       toolName: string;
-      toolId: string;
+      toolCallId: string;
       params: Record<string, any>;
       toolResult: ToolResult;
     }
@@ -188,7 +189,8 @@ export interface DialogueTool {
   readonly parameters: JSONSchema7;
   execute: (
     args: Record<string, unknown>,
-    toolCall: LanguageModelV2ToolCallPart
+    toolCall: LanguageModelV2ToolCallPart,
+    messageId: string,
   ) => Promise<ToolResult>;
 }
 
@@ -197,9 +199,9 @@ export type EkoDialogueConfig = Omit<EkoConfig, "callback"> & {
 };
 
 export type DialogueParams = {
+  messageId: string;
   user: Array<MessageTextPart | MessageFilePart>;
   callback: ChatStreamCallback;
-  messageId?: string;
   signal?: AbortSignal;
   extra?: Record<string, any>;
 };

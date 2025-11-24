@@ -71,27 +71,31 @@ export default class DeepActionTool implements DialogueTool {
 
   async execute(
     args: Record<string, unknown>,
-    toolCall: LanguageModelV2ToolCallPart
+    toolCall: LanguageModelV2ToolCallPart,
+    messageId: string
   ): Promise<ToolResult> {
+    const chatId = this.chatContext.getChatId();
     const taskDescription = args.taskDescription as string;
     const variables = args.variables as string[];
     const fileIds = args.fileIds as string[];
-    const taskId = toolCall.toolCallId;
     const config = this.chatContext.getConfig();
     const globalVariables = this.chatContext.getGlobalVariables();
-    const eko = new Eko({
-      ...config,
-      callback: this.params.callback?.taskCallback,
-    });
-    this.chatContext.addEko(taskId, eko);
+    const eko = new Eko(
+      {
+        ...config,
+        callback: this.params.callback?.taskCallback,
+      },
+      chatId,
+    );
+    this.chatContext.addEko(messageId, eko);
     const workflow = await eko.generate(
       taskDescription,
-      taskId,
+      messageId,
       globalVariables
     );
-    const context = eko.getTask(taskId)!;
+    const context = eko.getTask(messageId)!;
     console.log("==> workflow", workflow);
-    const result = await eko.execute(taskId);
+    const result = await eko.execute(messageId);
     const variableNames: string[] = [];
     if (context.variables && context.variables.size > 0) {
       workflow.agents

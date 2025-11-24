@@ -10,7 +10,7 @@ import {
 
 export default class TaskContext {
   chatId: string;
-  taskId: string;
+  taskId: string; // messageId
   config: EkoConfig;
   chain: Chain;
   agents: Agent[];

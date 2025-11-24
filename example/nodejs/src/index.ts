@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import FileAgent from "./file-agent";
 import { BrowserAgent } from "@eko-ai/eko-nodejs";
-import { Eko, Agent, Log, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
+import { Eko, Agent, Log, LLMs, AgentStreamMessage } from "@eko-ai/eko";
 
 dotenv.config();
 
@@ -30,7 +30,7 @@ const llms: LLMs = {
 };
 
 const callback = {
-  onMessage: async (message: StreamCallbackMessage) => {
+  onMessage: async (message: AgentStreamMessage) => {
     if (message.type == "workflow" && !message.streamDone) {
       return;
     }

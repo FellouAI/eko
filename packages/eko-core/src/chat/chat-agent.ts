@@ -56,13 +56,14 @@ export class ChatAgent {
     params: DialogueParams,
     segmentedExecution: boolean
   ): Promise<string> {
+    await this.addUserMessage(params.messageId, params.user);
     const config = this.chatContext.getConfig();
     const rlm = new RetryLanguageModel(config.llms, config.chatLlms);
     for (let i = 0; i < 15; i++) {
       const messages = this.memory.buildMessages();
       const chatTools = [...this.buildInnerTools(params), ...this.tools];
       const results = await callChatLLM(
-        params.messageId as string,
+        params.messageId,
         this.chatContext,
         rlm,
         messages,
@@ -73,6 +74,7 @@ export class ChatAgent {
         params.signal
       );
       const finalResult = await this.handleCallResult(
+        params.messageId,
         chatTools,
         results,
         params.callback
@@ -85,8 +87,8 @@ export class ChatAgent {
   }
 
   protected async addUserMessage(
+    messageId: string,
     user: string | EkoMessageUserPart[],
-    messageId: string
   ): Promise<EkoMessage> {
     const message: EkoMessage = {
       id: messageId,
@@ -112,6 +114,7 @@ export class ChatAgent {
   }
 
   protected async handleCallResult(
+    messageId: string,
     chatTools: DialogueTool[],
     results: Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>,
     chatStreamCallback?: ChatStreamCallback
@@ -138,7 +141,7 @@ export class ChatAgent {
         if (!tool) {
           throw new Error(result.toolName + " tool does not exist");
         }
-        toolResult = await tool.execute(args, result);
+        toolResult = await tool.execute(args, result, messageId);
       } catch (e) {
         Log.error("tool call error: ", result.toolName, result.input, e);
         toolResult = {
@@ -156,8 +159,9 @@ export class ChatAgent {
         await callback.onMessage({
           streamType: "chat",
           chatId: this.chatContext.getChatId(),
+          messageId: messageId,
           type: "tool_result",
-          toolId: result.toolCallId,
+          toolCallId: result.toolCallId,
           toolName: result.toolName,
           params: result.input || {},
           toolResult: toolResult,

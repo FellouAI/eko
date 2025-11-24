@@ -74,6 +74,7 @@ export async function callChatLLM(
           await streamCallback.onMessage({
             streamType: "chat",
             chatId: chatContext.getChatId(),
+            messageId,
             type: "text",
             streamId: textStreamId,
             streamDone: false,
@@ -83,8 +84,9 @@ export async function callChatLLM(
             await streamCallback.onMessage({
               streamType: "chat",
               chatId: chatContext.getChatId(),
+              messageId,
               type: "tool_use",
-              toolId: toolPart.toolCallId,
+              toolCallId: toolPart.toolCallId,
               toolName: toolPart.toolName,
               params: toolPart.input || {},
             });
@@ -98,6 +100,7 @@ export async function callChatLLM(
             await streamCallback.onMessage({
               streamType: "chat",
               chatId: chatContext.getChatId(),
+              messageId,
               type: "text",
               streamId: textStreamId,
               streamDone: true,
@@ -115,6 +118,7 @@ export async function callChatLLM(
           await streamCallback.onMessage({
             streamType: "chat",
             chatId: chatContext.getChatId(),
+            messageId,
             type: "thinking",
             streamId: thinkStreamId,
             streamDone: false,
@@ -127,6 +131,7 @@ export async function callChatLLM(
             await streamCallback.onMessage({
               streamType: "chat",
               chatId: chatContext.getChatId(),
+              messageId,
               type: "thinking",
               streamId: thinkStreamId,
               streamDone: true,
@@ -155,6 +160,7 @@ export async function callChatLLM(
             await streamCallback.onMessage({
               streamType: "chat",
               chatId: chatContext.getChatId(),
+              messageId,
               type: "text",
               streamId: textStreamId,
               streamDone: true,
@@ -165,8 +171,9 @@ export async function callChatLLM(
           await streamCallback.onMessage({
             streamType: "chat",
             chatId: chatContext.getChatId(),
+            messageId,
             type: "tool_streaming",
-            toolId: chunk.id,
+            toolCallId: chunk.id,
             toolName: toolPart?.toolName || "",
             paramsText: toolArgsText,
           });
@@ -178,8 +185,9 @@ export async function callChatLLM(
           const message: ChatStreamMessage = {
             streamType: "chat",
             chatId: chatContext.getChatId(),
+            messageId,
             type: "tool_use",
-            toolId: chunk.toolCallId,
+            toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
             params: args,
           };
@@ -202,6 +210,7 @@ export async function callChatLLM(
           await streamCallback.onMessage({
             streamType: "chat",
             chatId: chatContext.getChatId(),
+            messageId,
             type: "error",
             error: chunk.error,
           });
@@ -213,6 +222,7 @@ export async function callChatLLM(
             await streamCallback.onMessage({
               streamType: "chat",
               chatId: chatContext.getChatId(),
+              messageId,
               type: "text",
               streamId: textStreamId,
               streamDone: true,
@@ -223,8 +233,9 @@ export async function callChatLLM(
             await streamCallback.onMessage({
               streamType: "chat",
               chatId: chatContext.getChatId(),
+              messageId,
               type: "tool_use",
-              toolId: toolPart.toolCallId,
+              toolCallId: toolPart.toolCallId,
               toolName: toolPart.toolName,
               params: toolPart.input || {},
             });
@@ -233,6 +244,7 @@ export async function callChatLLM(
           await streamCallback.onMessage({
             streamType: "chat",
             chatId: chatContext.getChatId(),
+            messageId,
             type: "finish",
             finishReason: chunk.finishReason,
             usage: {

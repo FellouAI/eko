@@ -33,7 +33,7 @@ export const GlobalPromptKey = {
 
 export type Global = {
   chatMap: Map<string, ChatContext>;
-  taskMap: Map<string, TaskContext>;
+  taskMap: Map<string, TaskContext>; // messageId -> TaskContext
   prompts: Map<string, string>;
   chatService: ChatService,
 };

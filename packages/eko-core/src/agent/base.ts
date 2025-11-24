@@ -302,7 +302,7 @@ export class Agent {
           agentName: agentContext.agent.Name,
           nodeId: agentContext.agentChain.agent.id,
           type: "tool_result",
-          toolId: result.toolCallId,
+          toolCallId: result.toolCallId,
           toolName: result.toolName,
           params: result.input || {},
           toolResult: toolResult,

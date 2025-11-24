@@ -13,6 +13,7 @@
   ],
   "dependencies": {
     "antd": "^5.22.4",
+    "@ant-design/icons": "^5.5.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "@eko-ai/eko": "workspace:*",

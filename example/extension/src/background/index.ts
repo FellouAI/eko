@@ -1,40 +1,160 @@
-import { config, Eko } from "@eko-ai/eko";
-import { main } from "./main";
+import {
+  LLMs,
+  uuidv4,
+  global,
+  ChatAgent,
+  AgentStreamMessage,
+} from "@eko-ai/eko";
+import {
+  HumanCallback,
+  MessageTextPart,
+  MessageFilePart,
+  ChatStreamMessage,
+  AgentStreamCallback,
+} from "@eko-ai/eko/types";
+import { BrowserAgent } from "@eko-ai/eko-extension";
 
-var eko: Eko;
+const abortControllers = new Map<string, AbortController>();
 
-chrome.storage.local.set({ running: false });
+export async function getLLMConfig(name: string = "llmConfig"): Promise<any> {
+  const result = await chrome.storage.sync.get([name]);
+  return result[name];
+}
 
-// Listen to messages from the browser extension
-chrome.runtime.onMessage.addListener(async function (
-  request,
-  sender,
-  sendResponse
-) {
-  if (request.type == "run") {
-    try {
-      // Click the RUN button to execute the main function (workflow)
-      chrome.runtime.sendMessage({ type: "log", log: "Run..." });
-      // Run workflow
-      eko = await main(request.prompt);
-    } catch (e) {
-      console.error(e);
-      chrome.runtime.sendMessage({
-        type: "log",
-        log: e + "",
-        level: "error",
-      });
-    }
-  } else if (request.type == "update_mode") {
-    config.mode = request.mode
-    config.markImageMode = request.markImageMode
-  } else if (request.type == "stop") {
-    eko && eko.getAllTaskId().forEach(taskId => {
-      eko.abortTask(taskId);
-      chrome.runtime.sendMessage({ type: "log", log: "Abort taskId: " + taskId });
-    });
-    chrome.runtime.sendMessage({ type: "log", log: "Stop" });
+export async function init(): Promise<ChatAgent> {
+  const config = await getLLMConfig();
+  if (!config || !config.apiKey) {
+    printLog(
+      "Please configure apiKey, configure in the eko extension options of the browser extensions.",
+      "error"
+    );
+    chrome.runtime.openOptionsPage();
+    chrome.storage.local.set({ running: false });
+    chrome.runtime.sendMessage({ type: "stop" });
+    return;
   }
+
+  const llms: LLMs = {
+    default: {
+      provider: config.llm as any,
+      model: config.modelName,
+      apiKey: config.apiKey,
+      config: {
+        baseURL: config.options.baseURL,
+      },
+    },
+  };
+
+  // Chat callback
+  const chatCallback = {
+    onMessage: async (message: ChatStreamMessage) => {
+      chrome.runtime.sendMessage({
+        type: "chat_callback",
+        data: message,
+      });
+      console.log("chat message: ", JSON.stringify(message, null, 2));
+    },
+  };
+
+  // Task agent callback
+  const taskCallback: AgentStreamCallback & HumanCallback = {
+    onMessage: async (message: AgentStreamMessage) => {
+      chrome.runtime.sendMessage({
+        type: "task_callback",
+        data: { ...message, messageId: message.taskId },
+      });
+      console.log("task message: ", JSON.stringify(message, null, 2));
+    },
+    onHumanConfirm: async (context, prompt) => {
+      return doConfirm(prompt);
+    },
+  };
+
+  const agents = [new BrowserAgent()];
+  const chatAgent = new ChatAgent({ llms, agents });
+
+  chrome.runtime.onMessage.addListener(async function (
+    request,
+    sender,
+    sendResponse
+  ) {
+    const requestId = request.requestId;
+    const type = request.type;
+    const data = request.data;
+    if (type == "chat") {
+      const abortController = new AbortController();
+      const messageId = data.messageId || uuidv4();
+      const user = data.user as (MessageTextPart | MessageFilePart)[];
+      abortControllers.set(messageId, abortController);
+      const result = await chatAgent.chat({
+        user: user,
+        messageId,
+        callback: {
+          chatCallback,
+          taskCallback,
+        },
+        signal: abortController.signal,
+      });
+
+      chrome.runtime.sendMessage({
+        requestId,
+        type: "chat_result",
+        data: { messageId, result },
+      });
+    } else if (type == "uploadFile") {
+      const base64Data = data.base64Data as string;
+      const mimeType = data.mimeType as string;
+      const filename = data.filename as string;
+      const { fileId, url } = await global.chatService.uploadFile(
+        { base64Data, mimeType, filename },
+        chatAgent.getChatContext().getChatId()
+      );
+      chrome.runtime.sendMessage({
+        requestId,
+        type: "uploadFile_result",
+        data: { fileId, url },
+      });
+    } else if (type == "stop") {
+      const abortController = abortControllers.get(data.messageId);
+      if (abortController) {
+        abortController.abort();
+        abortControllers.delete(data.messageId);
+      }
+    }
+  });
+
+  return chatAgent;
+}
+
+async function doConfirm(prompt: string) {
+  const tabs = (await chrome.tabs.query({
+    active: true,
+    windowType: "normal",
+  })) as any[];
+  const frameResults = await chrome.scripting.executeScript({
+    target: { tabId: tabs[0].id },
+    func: (prompt) => {
+      return window.confirm(prompt);
+    },
+    args: [prompt],
+  });
+  return frameResults[0].result;
+}
+
+function printLog(message: string, level?: "info" | "success" | "error") {
+  chrome.runtime.sendMessage({
+    type: "log",
+    data: {
+      level: level || "info",
+      message: message + "",
+    },
+  });
+}
+
+init().catch((error) => {
+  printLog(error, "error");
 });
 
-(chrome as any).sidePanel && (chrome as any).sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+if ((chrome as any).sidePanel) {
+  (chrome as any).sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+}

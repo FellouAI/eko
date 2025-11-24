@@ -122,7 +122,7 @@ async function doTodoListManager(
           agentName: agentContext.agent.Name,
           nodeId: agentContext.agentChain.agent.id,
           type: "tool_result",
-          toolId: toolCall.toolCallId,
+          toolCallId: toolCall.toolCallId,
           toolName: toolCall.toolName,
           params: args,
           toolResult: toolResult,
