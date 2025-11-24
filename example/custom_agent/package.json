@@ -1,0 +1,40 @@
+{
+  "name": "@eko-ai/eko-custom-agent-example",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "NODE_OPTIONS='--localstorage-file=./.localstorage' react-scripts build",
+    "start": "NODE_OPTIONS='--localstorage-file=./.localstorage' react-scripts start",
+    "dev": "pnpm run build && pnpm run start"
+  },
+  "author": "FellouAI",
+  "license": "MIT",
+  "keywords": [
+    "fellou",
+    "eko",
+    "custom-agent",
+    "outreach"
+  ],
+  "dependencies": {
+    "@eko-ai/eko": "file:../../packages/eko-core",
+    "@eko-ai/eko-web": "file:../../packages/eko-web",
+    "@langfuse/otel": "^4.2.0",
+    "@opentelemetry/context-zone": "^2.1.0",
+    "@opentelemetry/sdk-trace-web": "^2.1.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-scripts": "^5.0.1"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
+

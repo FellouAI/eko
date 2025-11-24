@@ -10,7 +10,7 @@ export default [
       {
         file: 'dist/index.cjs.js',
         format: 'cjs',
-        sourcemap: true
+        sourcemap: 'inline'
       }
     ],
     external: ["@eko-ai/eko"],
@@ -19,7 +19,10 @@ export default [
       resolve({
         preferBuiltins: true,
       }),
-      typescript(),
+      typescript({
+        sourceMap: true,
+        inlineSources: true,
+      }),
       copy({
         targets: [
           { src: '../../README.md', dest: './' }
@@ -33,7 +36,7 @@ export default [
       {
         file: 'dist/index.esm.js',
         format: 'esm',
-        sourcemap: true
+        sourcemap: 'inline'
       }
     ],
     external: ["@eko-ai/eko"],
@@ -43,7 +46,10 @@ export default [
         browser: true,
         preferBuiltins: true,
       }),
-      typescript(),
+      typescript({
+        sourceMap: true,
+        inlineSources: true,
+      }),
       copy({
         targets: [
           { src: '../../README.md', dest: './' }

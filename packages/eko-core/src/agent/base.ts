@@ -224,11 +224,6 @@ export class Agent {
     rlm.setContext(agentContext);
     let agentTools = tools;
 
-    await agentRunCbHelper.agentStart(
-      this,
-      agentContext
-    )
-
     // Main reasoning loop
     while (loopNum < maxReactNum) {
       await context.checkAborted();

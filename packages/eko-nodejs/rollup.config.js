@@ -11,7 +11,7 @@ export default [
       {
         file: 'dist/index.cjs.js',
         format: 'cjs',
-        sourcemap: true
+        sourcemap: 'inline'
       }
     ],
     external: ["dotenv", "@eko-ai/eko", "canvas", "playwright"],
@@ -21,7 +21,10 @@ export default [
       resolve({
         preferBuiltins: true,
       }),
-      typescript(),
+      typescript({
+        sourceMap: true,
+        inlineSources: true,
+      }),
       copy({
         targets: [
           { src: '../../README.md', dest: './' }
@@ -35,7 +38,7 @@ export default [
       {
         file: 'dist/index.esm.js',
         format: 'esm',
-        sourcemap: true
+        sourcemap: 'inline'
       }
     ],
     external: ["dotenv", "@eko-ai/eko", "canvas", "playwright"],
@@ -46,7 +49,10 @@ export default [
         browser: true,
         preferBuiltins: true,
       }),
-      typescript(),
+      typescript({
+        sourceMap: true,
+        inlineSources: true,
+      }),
       copy({
         targets: [
           { src: '../../README.md', dest: './' }
