@@ -97,7 +97,7 @@ export class EkoMemory {
       const content =
         typeof message.content === "string"
           ? message.content
-          : JSON.stringify(message.content);
+          : JSON.stringify(message.content.filter((part) => part.type != "file"));
       return total + this.calcTokens(content);
     }, tokens);
   }

@@ -94,7 +94,6 @@ export async function init(): Promise<ChatAgent> {
         },
         signal: abortController.signal,
       });
-
       chrome.runtime.sendMessage({
         requestId,
         type: "chat_result",
@@ -104,19 +103,27 @@ export async function init(): Promise<ChatAgent> {
       const base64Data = data.base64Data as string;
       const mimeType = data.mimeType as string;
       const filename = data.filename as string;
-      const { fileId, url } = await global.chatService.uploadFile(
-        { base64Data, mimeType, filename },
-        chatAgent.getChatContext().getChatId()
-      );
-      chrome.runtime.sendMessage({
-        requestId,
-        type: "uploadFile_result",
-        data: { fileId, url },
-      });
+      try {
+        const { fileId, url } = await global.chatService.uploadFile(
+          { base64Data, mimeType, filename },
+          chatAgent.getChatContext().getChatId()
+        );
+        chrome.runtime.sendMessage({
+          requestId,
+          type: "uploadFile_result",
+          data: { fileId, url },
+        });
+      } catch (error) {
+        chrome.runtime.sendMessage({
+          requestId,
+          type: "uploadFile_result",
+          data: { error: error + "" },
+        });
+      }
     } else if (type == "stop") {
       const abortController = abortControllers.get(data.messageId);
       if (abortController) {
-        abortController.abort();
+        abortController.abort("user aborted");
         abortControllers.delete(data.messageId);
       }
     }

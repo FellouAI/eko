@@ -15,12 +15,16 @@ import {
 } from "antd";
 import {
   SendOutlined,
+  PaperClipOutlined,
   RobotOutlined,
   UserOutlined,
   ToolOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   LoadingOutlined,
+  StopOutlined,
+  FileOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -28,11 +32,11 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import type {
+  Workflow,
+  ToolResult,
+  WorkflowAgent,
   ChatStreamMessage,
   AgentStreamMessage,
-  Workflow,
-  WorkflowAgent,
-  ToolResult,
 } from "@eko-ai/eko/types";
 import { uuidv4 } from "@eko-ai/eko";
 
@@ -104,12 +108,23 @@ interface AgentExecution {
   error?: any;
 }
 
+interface UploadedFile {
+  id: string;
+  file: File;
+  base64Data: string;
+  mimeType: string;
+  filename: string;
+  fileId?: string; // 上传后的 fileId
+  url?: string; // 上传后的 URL
+}
+
 interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string;
   timestamp: number;
   contentItems: ChatContentItem[]; // 所有内容按顺序
+  files?: UploadedFile[]; // 用户消息中的文件
   loading?: boolean; // 用户消息等待回调的 loading 状态
   error?: any;
   usage?: {
@@ -124,6 +139,8 @@ const AppRun = () => {
   const [inputValue, setInputValue] = useState("");
   const [sending, setSending] = useState(false);
   const [currentMessageId, setCurrentMessageId] = useState<string | null>(null); // 当前正在处理的消息 ID
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]); // 当前待发送的文件
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -554,22 +571,92 @@ const AppRun = () => {
     };
   }, [handleChatCallback, handleTaskCallback]);
 
+  // 上传文件到服务器
+  const uploadFile = useCallback(async (file: UploadedFile): Promise<{ fileId: string; url: string }> => {
+    return new Promise((resolve, reject) => {
+
+      const timer = setTimeout(() => {
+        chrome.runtime.onMessage.removeListener(listener);
+        reject('Upload timeout');
+      }, 180_000);
+
+      const requestId = uuidv4();
+      
+      // 先设置监听器
+      const listener = (message: any) => {
+        if (message.type === "uploadFile_result" && message.requestId === requestId) {
+          clearTimeout(timer);
+          chrome.runtime.onMessage.removeListener(listener);
+          if (!message.data || message.data.error) {
+            reject(new Error(message.data.error || "Upload failed"));
+          } else {
+            resolve(message.data);
+          }
+        }
+      };
+      chrome.runtime.onMessage.addListener(listener);
+      
+      // 发送上传请求
+      chrome.runtime.sendMessage(
+        {
+          requestId,
+          type: "uploadFile",
+          data: {
+            base64Data: file.base64Data,
+            mimeType: file.mimeType,
+            filename: file.filename,
+          },
+        }
+      );
+    });
+  }, []);
+
   // 发送消息
-  const sendMessage = async () => {
-    if (!inputValue.trim() || sending) return;
+  const sendMessage = useCallback(async () => {
+    if ((!inputValue.trim() && uploadedFiles.length === 0) || sending) return;
 
     const messageId = uuidv4();
+    
+    // 上传文件
+    const fileParts: Array<{ type: "file"; fileId: string; filename?: string; mimeType: string; data: string }> = [];
+    for (const file of uploadedFiles) {
+      try {
+        const { fileId, url } = await uploadFile(file);
+        file.fileId = fileId;
+        file.url = url;
+        fileParts.push({
+          type: "file",
+          fileId,
+          filename: file.filename,
+          mimeType: file.mimeType,
+          data: file.base64Data,
+        });
+        console.log("fileParts: ", fileParts);
+      } catch (error) {
+        console.error("Error uploading file:", error);
+      }
+    }
+
+    // 构建用户消息内容
+    const userParts: Array<{ type: "text"; text: string } | { type: "file"; fileId: string; filename?: string; mimeType: string; data: string }> = [];
+    if (inputValue.trim()) {
+      userParts.push({ type: "text", text: inputValue });
+    }
+    userParts.push(...fileParts);
+
     const userMessage: ChatMessage = {
       id: messageId,
       role: "user",
       content: inputValue,
       timestamp: Date.now(),
       contentItems: [],
+      files: [...uploadedFiles],
       loading: true, // 显示 loading
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
+    setUploadedFiles([]);
     setSending(true);
     setCurrentMessageId(messageId); // 设置当前消息 ID，显示停止按钮
 
@@ -580,7 +667,7 @@ const AppRun = () => {
           type: "chat",
           data: {
             messageId: messageId,
-            user: [{ type: "text", text: inputValue }],
+            user: userParts,
           },
         }
       );
@@ -589,7 +676,7 @@ const AppRun = () => {
     } finally {
       setSending(false);
     }
-  };
+  }, [inputValue, uploadedFiles, sending, uploadFile]);
 
   // 停止消息
   const stopMessage = (messageId: string) => {
@@ -597,6 +684,50 @@ const AppRun = () => {
       type: "stop",
       data: { messageId },
     });
+    setCurrentMessageId(null);
+  };
+
+  // 将文件转换为 base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // 处理文件选择
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const newFiles: UploadedFile[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const base64Data = await fileToBase64(file);
+      newFiles.push({
+        id: uuidv4(),
+        file,
+        base64Data,
+        mimeType: file.type,
+        filename: file.name,
+      });
+    }
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+    
+    // 清空 input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // 删除文件
+  const removeFile = (fileId: string) => {
+    setUploadedFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
 
   // 渲染单个文本项
@@ -952,13 +1083,53 @@ const AppRun = () => {
               body: { padding: "12px 16px" },
             }}
           >
-            <Space>
-              <UserOutlined />
-              <Paragraph style={{ margin: 0, color: "white" }}>
-                {message.content}
-              </Paragraph>
-              {message.loading && (
-                <Spin size="small" style={{ color: "white" }} />
+            <Space direction="vertical" size="small" style={{ width: "100%" }}>
+              {(message.content || message.files?.length) && (
+                <Space>
+                  <UserOutlined />
+                  {message.content && (
+                    <Paragraph style={{ margin: 0, color: "white" }}>
+                      {message.content}
+                    </Paragraph>
+                  )}
+                  {message.loading && (
+                    <Spin size="small" style={{ color: "white" }} />
+                  )}
+                </Space>
+              )}
+              {message.files && message.files.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  {message.files.map((file) => {
+                    const isImage = file.mimeType.startsWith("image/");
+                    return (
+                      <div
+                        key={file.id}
+                        style={{
+                          marginBottom: 8,
+                          padding: 8,
+                          backgroundColor: "rgba(255, 255, 255, 0.2)",
+                          borderRadius: 4,
+                        }}
+                      >
+                        {isImage ? (
+                          <Image
+                            src={`data:${file.mimeType};base64,${file.base64Data}`}
+                            alt={file.filename}
+                            style={{ maxWidth: "100%", maxHeight: 200, borderRadius: 4 }}
+                            preview={false}
+                          />
+                        ) : (
+                          <Space>
+                            <FileOutlined style={{ color: "white" }} />
+                            <Text style={{ color: "white", fontSize: 12 }}>
+                              {file.filename}
+                            </Text>
+                          </Space>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </Space>
           </Card>
@@ -1076,7 +1247,64 @@ const AppRun = () => {
           borderTop: "1px solid #e8e8e8",
         }}
       >
+        {/* 已上传的文件列表 */}
+        {uploadedFiles.length > 0 && (
+          <div style={{ marginBottom: 8 }}>
+            <Space wrap>
+              {uploadedFiles.map((file) => {
+                const isImage = file.mimeType.startsWith("image/");
+                return (
+                  <div
+                    key={file.id}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      padding: "4px 8px",
+                      backgroundColor: "#f5f5f5",
+                      borderRadius: 4,
+                      border: "1px solid #d9d9d9",
+                    }}
+                  >
+                    {isImage ? (
+                      <Image
+                        src={`data:${file.mimeType};base64,${file.base64Data}`}
+                        alt={file.filename}
+                        style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 4, marginRight: 8 }}
+                        preview={false}
+                      />
+                    ) : (
+                      <FileOutlined style={{ marginRight: 8, fontSize: 16 }} />
+                    )}
+                    <Text style={{ fontSize: 12, marginRight: 8, maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {file.filename}
+                    </Text>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() => removeFile(file.id)}
+                      style={{ padding: 0, width: 20, height: 20 }}
+                    />
+                  </div>
+                );
+              })}
+            </Space>
+          </div>
+        )}
         <Space.Compact style={{ width: "100%" }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,.pdf,.docx,.xlsx,.txt,.md,.json"
+            onChange={handleFileSelect}
+            style={{ display: "none" }}
+          />
+          <Button
+            icon={<PaperClipOutlined />}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={sending || currentMessageId !== null}
+          />
           <TextArea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -1086,18 +1314,18 @@ const AppRun = () => {
                 sendMessage();
               }
             }}
-            placeholder="输入消息... (Shift+Enter 换行)"
+            placeholder="输入消息..."
             autoSize={{ minRows: 1, maxRows: 4 }}
-            style={{ flex: 1, marginRight: "4px" }}
+            style={{ flex: 1, margin: "0 4px" }}
             disabled={sending || currentMessageId !== null}
           />
           {currentMessageId ? (
             <Button
               danger
+              icon={<StopOutlined />}
               onClick={() => {
                 if (currentMessageId) {
                   stopMessage(currentMessageId);
-                  setCurrentMessageId(null);
                 }
               }}
             >
@@ -1109,7 +1337,7 @@ const AppRun = () => {
               icon={<SendOutlined />}
               onClick={sendMessage}
               loading={sending}
-              disabled={!inputValue.trim()}
+              disabled={(!inputValue.trim() && uploadedFiles.length === 0) || sending}
             >
               发送
             </Button>
