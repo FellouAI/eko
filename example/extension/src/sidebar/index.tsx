@@ -23,6 +23,11 @@ import {
   CloseCircleOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import type {
   ChatStreamMessage,
   AgentStreamMessage,
@@ -34,7 +39,22 @@ import { uuidv4 } from "@eko-ai/eko";
 
 const { TextArea } = Input;
 const { Text, Paragraph } = Typography;
-const { Panel } = Collapse;
+
+const MarkdownRenderer = ({ content }: { content: string }) => {
+  if (!content) {
+    return null;
+  }
+  return (
+    <div className="markdown-body">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+};
 
 // 消息类型定义
 type MessageRole = "user" | "assistant";
@@ -474,15 +494,15 @@ const AppRun = () => {
     return (
       <div>
         {textArray.map(([streamId, streamText], index) => (
-          <Paragraph 
-            key={streamId} 
-            style={{ margin: index === 0 ? 0 : "8px 0 0 0", whiteSpace: "pre-wrap" }}
+          <div
+            key={streamId}
+            style={{ margin: index === 0 ? 0 : "8px 0 0 0" }}
           >
-            {streamText.text}
+            <MarkdownRenderer content={streamText.text} />
             {!streamText.streamDone && (
               <span className="streaming-cursor">▊</span>
             )}
-          </Paragraph>
+          </div>
         ))}
       </div>
     );
@@ -841,7 +861,9 @@ const AppRun = () => {
             <div style={{ marginBottom: 8 }}>{renderStreamText(message.texts)}</div>
           )}
           {!message.texts && message.content && (
-            <Paragraph style={{ margin: 0 }}>{message.content}</Paragraph>
+            <div style={{ marginBottom: 8 }}>
+              <MarkdownRenderer content={message.content} />
+            </div>
           )}
           {message.files && message.files.length > 0 && (
             <div style={{ marginBottom: 8 }}>
@@ -949,6 +971,28 @@ const AppRun = () => {
         .streaming-cursor {
           animation: blink 1s infinite;
           color: #1890ff;
+        }
+        .markdown-body {
+          font-size: 14px;
+          color: rgba(0, 0, 0, 0.88);
+        }
+        .markdown-body p {
+          margin: 0 0 8px 0;
+          white-space: pre-wrap;
+        }
+        .markdown-body ul,
+        .markdown-body ol {
+          margin: 0 0 8px 16px;
+        }
+        .markdown-body code {
+          background: rgba(0,0,0,0.04);
+          padding: 2px 4px;
+          border-radius: 4px;
+          font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        }
+        .markdown-body pre code {
+          display: block;
+          padding: 12px;
         }
         @keyframes blink {
           0%, 50% { opacity: 1; }
