@@ -32,7 +32,7 @@ const agent_data = {
   description: `An intelligent agent specialized in talent sourcing - browsing the web to find candidate profiles and drafting personalized recruitment outreach emails. This agent can navigate professional networks (LinkedIn, GitHub, etc.), extract candidate information (skills, experience, background), and compose professional recruitment email drafts.`,
   system_prompt: `You are "Web Sourcing Agent," specialized in talent sourcing and recruitment outreach.
 
-Your capabilities:
+Your SOP:
 
 **1. Collect target contact information from current page**
 - You are typically already on a page with candidate profiles or contact information
@@ -93,10 +93,10 @@ export function createOutReachAgent(): Agent {
     tool_ids: agent_data.tools,
     capabilities: agent_data.capabilities,  // Browser capability for web operations
   });
-  
+
   // Inject HumanInteractTool for user interaction
   agent.addTool(new HumanInteractTool());
-  
+
   return agent;
 }
 

@@ -119,9 +119,8 @@ export function getAgentSystemPrompt(
     for (let i = 0; i < context.chain.agents.length; i++) {
       const agentChain = context.chain.agents[i];
       if (agentChain.agentResult) {
-        prompt += `\n## ${
-          agentChain.agent.task || agentChain.agent.name
-        }\n<taskResult>\n${sub(agentChain.agentResult, 600, true)}\n</taskResult>`;
+        prompt += `\n## ${agentChain.agent.task || agentChain.agent.name
+          }\n<taskResult>\n${sub(agentChain.agentResult, 600, true)}\n</taskResult>`;
       }
     }
   }
@@ -160,78 +159,77 @@ export function getAgentUserPrompt(
   );
 }
 
-export function appendDynamicContentToSystemPrompt(
-  basePrompt: string,
-  agent: Agent,
-  agentNode: WorkflowAgent,
-  context: Context,
-  tools?: Tool[]
-): string {
-  let prompt = basePrompt;
-  
-  // Use provided tools or fallback to agent's tools
-  tools = tools || agent.Tools;
-  
-  // Check for built-in tools and append corresponding prompts
-  const agentNodeXml = agentNode.xml;
-  const hasWatchNode = agentNodeXml.indexOf("</watch>") > -1;
-  const hasForEachNode = agentNodeXml.indexOf("</forEach>") > -1;
-  const hasHumanTool =
-    tools.filter((tool) => tool.name == human_interact).length > 0;
-  const hasVariable =
-    agentNodeXml.indexOf("input=") > -1 ||
-    agentNodeXml.indexOf("output=") > -1 ||
-    tools.filter((tool) => tool.name == variable_storage).length > 0;
-
-  // Append ForeachTask tool prompt if available
-  if (hasForEachNode) {
-    if (tools.filter((tool) => tool.name == foreach_task).length > 0) {
-      prompt += "\n" + FOR_EACH_PROMPT;
-    }
-  }
-  
-  // Append WatchTrigger tool prompt if available
-  if (hasWatchNode) {
-    if (tools.filter((tool) => tool.name == watch_trigger).length > 0) {
-      prompt += "\n" + WATCH_PROMPT;
-    }
-  }
-  
-  // Append datetime (always needed)
-  prompt += "\nCurrent datetime: " + new Date().toLocaleString();
-  
-  // Append VariableStorage tool prompt if available
-  if (hasVariable) {
-    prompt += "\n" + VARIABLE_PROMPT;
-  }
-
-  // Append HumanInteract tool prompt if available
-  if (hasHumanTool) {
-    prompt += "\n" + HUMAN_PROMPT;
-  }
-  
-  
-  // Append main task and pre-task results if multiple agents exist
-  if (context.chain.agents.length > 1) {
-    prompt += "\n Main task: " + context.chain.taskPrompt;
-    prompt += "\n\n# Pre-task execution results";
-    for (let i = 0; i < context.chain.agents.length; i++) {
-      const agentChain = context.chain.agents[i];
-      if (agentChain.agentResult) {
-        prompt += `\n## ${
-          agentChain.agent.task || agentChain.agent.name
-        }\n<taskResult>\n${sub(agentChain.agentResult, 600, true)}\n</taskResult>`;
-      }
-    }
-  }
-  
-  // Append parallel tool calls hint if supported
-  if (agent.canParallelToolCalls()) {
-    prompt += "\nFor maximum efficiency, when executing multiple independent operations that do not depend on each other or conflict with one another, these tools can be called in parallel simultaneously.";
-  }
-  
-  // Append language output hint
-  prompt += "\nThe output language should follow the language corresponding to the user's task.";
-  
-  return prompt;
-}
+// export function appendDynamicContentToSystemPrompt(
+//   basePrompt: string,
+//   agent: Agent,
+//   agentNode: WorkflowAgent,
+//   context: Context,
+//   tools?: Tool[]
+// ): string {
+//   let prompt = basePrompt;
+// 
+//   // Use provided tools or fallback to agent's tools
+//   tools = tools || agent.Tools;
+// 
+//   // Check for built-in tools and append corresponding prompts
+//   const agentNodeXml = agentNode.xml;
+//   const hasWatchNode = agentNodeXml.indexOf("</watch>") > -1;
+//   const hasForEachNode = agentNodeXml.indexOf("</forEach>") > -1;
+//   const hasHumanTool =
+//     tools.filter((tool) => tool.name == human_interact).length > 0;
+//   const hasVariable =
+//     agentNodeXml.indexOf("input=") > -1 ||
+//     agentNodeXml.indexOf("output=") > -1 ||
+//     tools.filter((tool) => tool.name == variable_storage).length > 0;
+// 
+//   // Append ForeachTask tool prompt if available
+//   if (hasForEachNode) {
+//     if (tools.filter((tool) => tool.name == foreach_task).length > 0) {
+//       prompt += "\n" + FOR_EACH_PROMPT;
+//     }
+//   }
+// 
+//   // Append WatchTrigger tool prompt if available
+//   if (hasWatchNode) {
+//     if (tools.filter((tool) => tool.name == watch_trigger).length > 0) {
+//       prompt += "\n" + WATCH_PROMPT;
+//     }
+//   }
+// 
+//   // Append datetime (always needed)
+//   prompt += "\nCurrent datetime: " + new Date().toLocaleString();
+// 
+//   // Append VariableStorage tool prompt if available
+//   if (hasVariable) {
+//     prompt += "\n" + VARIABLE_PROMPT;
+//   }
+// 
+//   // Append HumanInteract tool prompt if available
+//   if (hasHumanTool) {
+//     prompt += "\n" + HUMAN_PROMPT;
+//   }
+// 
+// 
+//   // Append main task and pre-task results if multiple agents exist
+//   if (context.chain.agents.length > 1) {
+//     prompt += "\n Main task: " + context.chain.taskPrompt;
+//     prompt += "\n\n# Pre-task execution results";
+//     for (let i = 0; i < context.chain.agents.length; i++) {
+//       const agentChain = context.chain.agents[i];
+//       if (agentChain.agentResult) {
+//         prompt += `\n## ${agentChain.agent.task || agentChain.agent.name
+//           }\n<taskResult>\n${sub(agentChain.agentResult, 600, true)}\n</taskResult>`;
+//       }
+//     }
+//   }
+// 
+//   // Append parallel tool calls hint if supported
+//   if (agent.canParallelToolCalls()) {
+//     prompt += "\nFor maximum efficiency, when executing multiple independent operations that do not depend on each other or conflict with one another, these tools can be called in parallel simultaneously.";
+//   }
+// 
+//   // Append language output hint
+//   prompt += "\nThe output language should follow the language corresponding to the user's task.";
+// 
+//   return prompt;
+// }

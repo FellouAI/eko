@@ -41,7 +41,7 @@ import {
 } from "./llm";
 import { doTaskResultCheck } from "../tools/task_result_check";
 import { doTodoListManager } from "../tools/todo_list_manager";
-import { getAgentSystemPrompt, getAgentUserPrompt, appendDynamicContentToSystemPrompt } from "../prompt/agent";
+import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
 
 export type AgentParams = {
   name: string;
@@ -457,18 +457,18 @@ export class Agent {
     // If serialized system prompt exists, first append Capability Guide, then do dynamic injection
     if (this.serializedSystemPrompt) {
       // Step 1: Append Capability Guide to serializedSystemPrompt first
-      let basePrompt = this.serializedSystemPrompt;
+      let extPrompt = this.serializedSystemPrompt;
+
       if (capabilityGuideSection) {
-        basePrompt = basePrompt + "\n\n" + capabilityGuideSection;
+        extPrompt = extPrompt + "\n\n" + capabilityGuideSection;
       }
-      // Step 2: Then do dynamic content injection on the combined prompt
-      prompt = appendDynamicContentToSystemPrompt(
-        basePrompt,
+      prompt = getAgentSystemPrompt(
         this,
         agentContext.agentChain.agent,
         agentContext.context,
-        tools
-      );
+        tools,
+        extPrompt
+      )
     } else {
       // Otherwise use existing dynamic building logic
       let extPrompt = await this.extSysPrompt(agentContext, tools);
