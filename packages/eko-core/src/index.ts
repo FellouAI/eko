@@ -92,10 +92,3 @@ export {
 export { buildAgentTree } from "./common/tree";
 export { extract_page_content, mark_screenshot_highlight_elements } from "./agent/browser/utils";
 export { run_build_dom_tree } from "./agent/browser/build_dom_tree";
-export { CallbackHelper, createCallbackHelper } from "./common/callback-helper";
-
-export type {
-  DebugEventHandler,
-  DebugEventType,
-  LangfuseSpanContext,
-} from "./types/trace.types";

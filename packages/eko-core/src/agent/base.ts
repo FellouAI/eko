@@ -196,14 +196,6 @@ export class Agent {
     const context = agentContext.context;
     const agentNode = agentContext.agentChain.agent;
 
-    // Create callback helper
-    const agentRunCbHelper = createCallbackHelper(
-      this.callback || context.config.callback,
-      context.taskId,
-      this.name,
-      agentNode.id
-    );
-
     // Build complete tool set (agent tools + capability tools + system auto tools)
     const capabilityTools = this.capabilities.flatMap((cap) => cap.tools);
     const tools = mergeTools(
