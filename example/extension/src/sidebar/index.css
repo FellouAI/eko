@@ -1,0 +1,45 @@
+body {
+  margin: 0 !important;
+}
+
+.streaming-cursor {
+  animation: blink 1s infinite;
+  color: black;
+}
+
+.markdown-body {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.markdown-body p {
+  margin: 0 0 8px 0;
+  white-space: pre-wrap;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0 0 8px 16px;
+}
+
+.markdown-body code {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.markdown-body pre code {
+  display: block;
+  padding: 12px;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
