@@ -1,4 +1,12 @@
 import {
+  LLMs,
+  global,
+  uuidv4,
+  ChatAgent,
+  AgentContext,
+  AgentStreamMessage,
+} from "@eko-ai/eko";
+import {
   HumanCallback,
   MessageTextPart,
   MessageFilePart,
@@ -6,9 +14,9 @@ import {
   AgentStreamCallback,
 } from "@eko-ai/eko/types";
 import { BrowserAgent } from "@eko-ai/eko-extension";
-import { LLMs, global, ChatAgent, AgentStreamMessage } from "@eko-ai/eko";
 
 const abortControllers = new Map<string, AbortController>();
+const callbackIdMap = new Map<string, Function>();
 
 export async function getLLMConfig(name: string = "llmConfig"): Promise<any> {
   const result = await chrome.storage.sync.get([name]);
@@ -59,8 +67,113 @@ export async function init(): Promise<ChatAgent> {
       });
       console.log("task message: ", JSON.stringify(message, null, 2));
     },
-    onHumanConfirm: async (context, prompt) => {
-      return doConfirm(prompt);
+    onHumanConfirm: async (context: AgentContext, prompt: string) => {
+      const callbackId = uuidv4();
+      chrome.runtime.sendMessage({
+        type: "task_callback",
+        data: {
+          streamType: "agent",
+          chatId: context.context.chatId,
+          taskId: context.context.taskId,
+          agentName: context.agent.Name,
+          nodeId: context.agentChain.agent.id,
+          messageId: context.context.taskId,
+          type: "human_confirm",
+          callbackId: callbackId,
+          prompt: prompt,
+        },
+      });
+      console.log("human_confirm: ", prompt);
+      return new Promise((resolve) => {
+        callbackIdMap.set(callbackId, (value: boolean) => {
+          callbackIdMap.delete(callbackId);
+          resolve(value);
+        });
+      });
+    },
+    onHumanInput: async (context: AgentContext, prompt: string) => {
+      const callbackId = uuidv4();
+      chrome.runtime.sendMessage({
+        type: "task_callback",
+        data: {
+          streamType: "agent",
+          chatId: context.context.chatId,
+          taskId: context.context.taskId,
+          agentName: context.agent.Name,
+          nodeId: context.agentChain.agent.id,
+          messageId: context.context.taskId,
+          type: "human_input",
+          callbackId: callbackId,
+          prompt: prompt,
+        },
+      });
+      console.log("human_input: ", prompt);
+      return new Promise((resolve) => {
+        callbackIdMap.set(callbackId, (value: string) => {
+          callbackIdMap.delete(callbackId);
+          resolve(value);
+        });
+      });
+    },
+    onHumanSelect: async (
+      context: AgentContext,
+      prompt: string,
+      options: string[],
+      multiple: boolean
+    ) => {
+      const callbackId = uuidv4();
+      chrome.runtime.sendMessage({
+        type: "task_callback",
+        data: {
+          streamType: "agent",
+          chatId: context.context.chatId,
+          taskId: context.context.taskId,
+          agentName: context.agent.Name,
+          nodeId: context.agentChain.agent.id,
+          messageId: context.context.taskId,
+          type: "human_select",
+          callbackId: callbackId,
+          prompt: prompt,
+          options: options,
+          multiple: multiple,
+        },
+      });
+      console.log("human_select: ", prompt);
+      return new Promise((resolve) => {
+        callbackIdMap.set(callbackId, (value: string[]) => {
+          callbackIdMap.delete(callbackId);
+          resolve(value);
+        });
+      });
+    },
+    onHumanHelp: async (
+      context: AgentContext,
+      helpType: "request_login" | "request_assistance",
+      prompt: string
+    ) => {
+      const callbackId = uuidv4();
+      chrome.runtime.sendMessage({
+        type: "task_callback",
+        data: {
+          streamType: "agent",
+          chatId: context.context.chatId,
+          taskId: context.context.taskId,
+          agentName: context.agent.Name,
+          nodeId: context.agentChain.agent.id,
+          messageId: context.context.taskId,
+          type: "human_help",
+          callbackId: callbackId,
+          helpType: helpType,
+          prompt: prompt,
+        },
+      });
+      console.log("human_help: ", prompt);
+      return new Promise((resolve) => {
+        callbackIdMap.set(callbackId, (value: boolean) => {
+          callbackIdMap.delete(callbackId);
+          resolve(value);
+        });
+      });
     },
   };
 
@@ -93,6 +206,18 @@ export async function init(): Promise<ChatAgent> {
         requestId,
         type: "chat_result",
         data: { messageId, result },
+      });
+    } else if (type == "human_callback") {
+      const callbackId = data.callbackId as string;
+      const value = data.value as any;
+      const callback = callbackIdMap.get(callbackId);
+      if (callback) {
+        callback(value);
+      }
+      chrome.runtime.sendMessage({
+        requestId,
+        type: "human_callback_result",
+        data: { callbackId, success: callback != null },
       });
     } else if (type == "uploadFile") {
       const base64Data = data.base64Data as string;
@@ -163,21 +288,6 @@ export async function init(): Promise<ChatAgent> {
   });
 
   return chatAgent;
-}
-
-async function doConfirm(prompt: string) {
-  const tabs = (await chrome.tabs.query({
-    active: true,
-    windowType: "normal",
-  })) as any[];
-  const frameResults = await chrome.scripting.executeScript({
-    target: { tabId: tabs[0].id },
-    func: (prompt) => {
-      return window.confirm(prompt);
-    },
-    args: [prompt],
-  });
-  return frameResults[0].result;
 }
 
 function printLog(message: string, level?: "info" | "success" | "error") {

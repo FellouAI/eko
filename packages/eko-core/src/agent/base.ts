@@ -5,12 +5,12 @@ import { RetryLanguageModel } from "../llm";
 import { mergeTools } from "../common/utils";
 import { ToolWrapper } from "../tools/wrapper";
 import { AgentChain, ToolChain } from "./chain";
-import TaskContext, { AgentContext } from "./agent-context";
 import {
   McpTool,
   ForeachTaskTool,
   WatchTriggerTool,
   VariableStorageTool,
+  HumanInteractTool,
 } from "../tools";
 import {
   Tool,
@@ -37,6 +37,7 @@ import {
   convertToolResult,
   defaultMessageProviderOptions,
 } from "./llm";
+import TaskContext, { AgentContext } from "./agent-context";
 import { doTaskResultCheck } from "../tools/task-result-check";
 import { doTodoListManager } from "../tools/todo-list-manager";
 import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
@@ -72,7 +73,10 @@ export class Agent {
     this.requestHandler = params.requestHandler;
   }
 
-  public async run(context: TaskContext, agentChain: AgentChain): Promise<string> {
+  public async run(
+    context: TaskContext,
+    agentChain: AgentChain
+  ): Promise<string> {
     const mcpClient = this.mcpClient || context.config.defaultMcpClient;
     const agentContext = new AgentContext(context, this, agentChain);
     try {
@@ -101,7 +105,10 @@ export class Agent {
     this.agentContext = agentContext;
     const context = agentContext.context;
     const agentNode = agentContext.agentChain.agent;
-    const tools = [...this.tools, ...this.system_auto_tools(agentNode)];
+    const tools = [
+      ...this.tools,
+      ...this.system_auto_tools(agentNode, agentContext),
+    ];
     const systemPrompt = await this.buildSystemPrompt(agentContext, tools);
     const userPrompt = await this.buildUserPrompt(agentContext, tools);
     const messages: LanguageModelV2Prompt = [
@@ -166,7 +173,10 @@ export class Agent {
       );
       loopNum++;
       if (!finalResult) {
-        if (config.mode == "expert" && loopNum % config.expertModeTodoLoopNum == 0) {
+        if (
+          config.mode == "expert" &&
+          loopNum % config.expertModeTodoLoopNum == 0
+        ) {
           await doTodoListManager(agentContext, rlm, messages, llm_tools);
         }
         continue;
@@ -212,7 +222,8 @@ export class Agent {
       toolCalls.length > 1 &&
       this.canParallelToolCalls(toolCalls) &&
       toolCalls.every(
-        (s) => agentTools.find((t) => t.name == s.toolName)?.supportParallelCalls
+        (s) =>
+          agentTools.find((t) => t.name == s.toolName)?.supportParallelCalls
       )
     ) {
       const results = await Promise.all(
@@ -313,24 +324,36 @@ export class Agent {
     return convertToolResult(result, toolResult, user_messages);
   }
 
-  protected system_auto_tools(agentNode: WorkflowAgent): Tool[] {
-    let tools: Tool[] = [];
-    let agentNodeXml = agentNode.xml;
-    let hasVariable =
+  protected system_auto_tools(
+    agentNode: WorkflowAgent,
+    agentContext: AgentContext
+  ): Tool[] {
+    const tools: Tool[] = [];
+    const agentNodeXml = agentNode.xml;
+    const hasVariable =
       agentNodeXml.indexOf("input=") > -1 ||
       agentNodeXml.indexOf("output=") > -1;
     if (hasVariable) {
       tools.push(new VariableStorageTool());
     }
-    let hasForeach = agentNodeXml.indexOf("</forEach>") > -1;
+    const hasForeach = agentNodeXml.indexOf("</forEach>") > -1;
     if (hasForeach) {
       tools.push(new ForeachTaskTool());
     }
-    let hasWatch = agentNodeXml.indexOf("</watch>") > -1;
+    const hasWatch = agentNodeXml.indexOf("</watch>") > -1;
     if (hasWatch) {
       tools.push(new WatchTriggerTool());
     }
-    let toolNames = this.tools.map((tool) => tool.name);
+    const callback = this.callback || agentContext.context.config.callback;
+    if (
+      callback?.onHumanConfirm ||
+      callback?.onHumanInput ||
+      callback?.onHumanSelect ||
+      callback?.onHumanHelp
+    ) {
+      tools.push(new HumanInteractTool());
+    }
+    const toolNames = this.tools.map((tool) => tool.name);
     return tools.filter((tool) => toolNames.indexOf(tool.name) == -1);
   }
 

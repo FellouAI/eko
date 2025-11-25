@@ -45,6 +45,10 @@ const AppRun = () => {
         handleChatCallback(message.data);
       } else if (message.type === "task_callback") {
         handleTaskCallback(message.data);
+      } else if (message.type === "log") {
+        const level = message.data.level;
+        const msg = message.data.message;
+        console.log(level, msg);
       }
     };
 

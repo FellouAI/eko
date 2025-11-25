@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { TextItem } from "./TextItem";
+import { HumanCard } from "./HumanCard";
 import type { TaskData } from "../types";
 import { ThinkingItem } from "./ThinkingItem";
 import { ToolCallItem } from "./ToolCallItem";
 import type { WorkflowAgent } from "@eko-ai/eko/types";
+import { MarkdownRenderer } from "../MarkdownRenderer";
 import { Card, Space, Typography, Tag, Alert, Image, Spin } from "antd";
 import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 
@@ -23,6 +25,28 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
       a.agentNode.id === agentNode.id || a.agentNode.name === agentNode.name
   );
   const status = agent?.status || agentNode.status;
+  const [respondedCallbacks, setRespondedCallbacks] = useState<Set<string>>(
+    new Set()
+  );
+
+  const handleHumanResponse = (callbackId: string, value: any) => {
+    setRespondedCallbacks((prev) => new Set(prev).add(callbackId));
+    // Update the item in agent.contentItems
+    if (agent) {
+      const itemIndex = agent.contentItems.findIndex(
+        (item) =>
+          (item.type === "human_confirm" ||
+            item.type === "human_input" ||
+            item.type === "human_select" ||
+            item.type === "human_help") &&
+          item.callbackId === callbackId
+      );
+      if (itemIndex >= 0) {
+        (agent.contentItems[itemIndex] as any).value = value;
+        (agent.contentItems[itemIndex] as any).responded = true;
+      }
+    }
+  };
 
   return (
     <Card
@@ -104,13 +128,65 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
                   style={{ maxWidth: "100%", marginTop: 8, marginBottom: 8 }}
                 />
               );
+            } else if (item.type === "human_confirm") {
+              const isResponded =
+                respondedCallbacks.has(item.callbackId) || item.responded;
+              return (
+                <div key={`human-confirm-${item.callbackId}-${index}`}>
+                  <HumanCard
+                    item={{ ...item, responded: isResponded }}
+                    onRespond={(value: any) =>
+                      handleHumanResponse(item.callbackId, value)
+                    }
+                  />
+                </div>
+              );
+            } else if (item.type === "human_input") {
+              const isResponded =
+                respondedCallbacks.has(item.callbackId) || item.responded;
+              return (
+                <div key={`human-input-${item.callbackId}-${index}`}>
+                  <HumanCard
+                    item={{ ...item, responded: isResponded }}
+                    onRespond={(value: any) =>
+                      handleHumanResponse(item.callbackId, value)
+                    }
+                  />
+                </div>
+              );
+            } else if (item.type === "human_select") {
+              const isResponded =
+                respondedCallbacks.has(item.callbackId) || item.responded;
+              return (
+                <div key={`human-select-${item.callbackId}-${index}`}>
+                  <HumanCard
+                    item={{ ...item, responded: isResponded }}
+                    onRespond={(value: any) =>
+                      handleHumanResponse(item.callbackId, value)
+                    }
+                  />
+                </div>
+              );
+            } else if (item.type === "human_help") {
+              const isResponded =
+                respondedCallbacks.has(item.callbackId) || item.responded;
+              return (
+                <div key={`human-help-${item.callbackId}-${index}`}>
+                  <HumanCard
+                    item={{ ...item, responded: isResponded }}
+                    onRespond={(value: any) =>
+                      handleHumanResponse(item.callbackId, value)
+                    }
+                  />
+                </div>
+              );
             }
             return null;
           })}
           {agent.result && (
             <Alert
               message="Execution Result"
-              description={agent.result}
+              description={<MarkdownRenderer content={agent.result} />}
               type="success"
               style={{ marginTop: 8 }}
             />

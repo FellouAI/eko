@@ -441,6 +441,43 @@ export const useChatCallbacks = (
             agent.status = "error";
             agent.error = data.error;
           }
+        } else if (
+          (data as any).type === "human_confirm" ||
+          (data as any).type === "human_input" ||
+          (data as any).type === "human_select" ||
+          (data as any).type === "human_help"
+        ) {
+          const humanData = data as any;
+          const agent = taskItem.task.agents.find(
+            (a) =>
+              a.agentNode.id === (humanData.nodeId || humanData.agentName) ||
+              a.agentNode.name === humanData.agentName
+          );
+          if (agent) {
+            // Check if item with same callbackId already exists
+            const existingIndex = agent.contentItems.findIndex(
+              (item) =>
+                (item.type === "human_confirm" ||
+                  item.type === "human_input" ||
+                  item.type === "human_select" ||
+                  item.type === "human_help") &&
+                (item as any).callbackId === humanData.callbackId
+            );
+
+            if (existingIndex >= 0) {
+              // Update existing item (shouldn't happen, but just in case)
+              agent.contentItems[existingIndex] = {
+                ...humanData,
+                responded: false,
+              };
+            } else {
+              // Add new item
+              agent.contentItems.push({
+                ...humanData,
+                responded: false,
+              });
+            }
+          }
         }
 
         return newMessages;

@@ -44,6 +44,37 @@ export type AgentContentItem =
       result?: ToolResult;
       running?: boolean;
       runningText?: string;
+    }
+  | {
+      type: "human_confirm";
+      callbackId: string;
+      prompt: string;
+      responded?: boolean;
+      value?: any;
+    }
+  | {
+      type: "human_input";
+      callbackId: string;
+      prompt: string;
+      responded?: boolean;
+      value?: any;
+    }
+  | {
+      type: "human_select";
+      callbackId: string;
+      prompt: string;
+      options: string[];
+      multiple: boolean;
+      responded?: boolean;
+      value?: any;
+    }
+  | {
+      type: "human_help";
+      callbackId: string;
+      prompt: string;
+      helpType: "request_login" | "request_assistance";
+      responded?: boolean;
+      value?: any;
     };
 
 export interface AgentExecution {
