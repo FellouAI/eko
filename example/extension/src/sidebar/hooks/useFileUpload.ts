@@ -3,7 +3,7 @@ import { uuidv4 } from "@eko-ai/eko";
 import type { UploadedFile } from "../types";
 
 export const useFileUpload = () => {
-  // 将文件转换为 base64
+  // Convert file to base64
   const fileToBase64 = useCallback((file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -16,7 +16,7 @@ export const useFileUpload = () => {
     });
   }, []);
 
-  // 上传文件到服务器
+  // Upload file to server
   const uploadFile = useCallback(
     async (file: UploadedFile): Promise<{ fileId: string; url: string }> => {
       return new Promise((resolve, reject) => {
@@ -27,7 +27,7 @@ export const useFileUpload = () => {
 
         const requestId = uuidv4();
 
-        // 先设置监听器
+        // Set up listener first
         const listener = (message: any) => {
           if (
             message.type === "uploadFile_result" &&
@@ -44,7 +44,7 @@ export const useFileUpload = () => {
         };
         chrome.runtime.onMessage.addListener(listener);
 
-        // 发送上传请求
+        // Send upload request
         chrome.runtime.sendMessage({
           requestId,
           type: "uploadFile",

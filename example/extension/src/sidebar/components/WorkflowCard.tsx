@@ -17,7 +17,7 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({ task }) => {
   const workflow = task.workflow;
   const agents = workflow.agents;
 
-  // 构建 agent 树结构
+  // Build agent tree structure
   const buildAgentGroups = () => {
     const groups: WorkflowAgent[][] = [];
     let currentGroup: WorkflowAgent[] = [];
@@ -49,7 +49,7 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({ task }) => {
         title={
           <Space>
             <RobotOutlined />
-            <Text strong>Multi-Agent 工作流</Text>
+            <Text strong>Multi-Agent Workflow</Text>
             {!task.workflowStreamDone && <Spin size="small" />}
           </Space>
         }
@@ -63,12 +63,12 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({ task }) => {
         {agentGroups.map((group, groupIndex) => (
           <div key={groupIndex} style={{ marginBottom: 16 }}>
             {group.length === 1 ? (
-              // 单个 agent
+              // Single agent
               <div>
                 <AgentExecutionCard agentNode={group[0]} task={task} />
               </div>
             ) : (
-              // 并行 agent
+              // Parallel agents
               <div>
                 <Text strong style={{ color: "#1890ff" }}>
                   [{group.map((a) => a.name).join(", ")}]

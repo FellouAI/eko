@@ -28,7 +28,7 @@ export interface TaskData {
   taskId: string;
   workflow?: Workflow;
   workflowStreamDone?: boolean;
-  agents: AgentExecution[]; // 按执行顺序排列
+  agents: AgentExecution[]; // Ordered by execution sequence
 }
 
 export type AgentContentItem =
@@ -48,7 +48,7 @@ export type AgentContentItem =
 
 export interface AgentExecution {
   agentNode: WorkflowAgent;
-  contentItems: AgentContentItem[]; // 所有内容按顺序
+  contentItems: AgentContentItem[]; // All content in order
   status: "init" | "running" | "done" | "error";
   result?: string;
   error?: any;
@@ -60,8 +60,8 @@ export interface UploadedFile {
   base64Data: string;
   mimeType: string;
   filename: string;
-  fileId?: string; // 上传后的 fileId
-  url?: string; // 上传后的 URL
+  fileId?: string; // File ID after upload
+  url?: string; // URL after upload
 }
 
 export interface ChatMessage {
@@ -69,9 +69,9 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   timestamp: number;
-  contentItems: ChatContentItem[]; // 所有内容按顺序
-  files?: UploadedFile[]; // 用户消息中的文件
-  loading?: boolean; // 用户消息等待回调的 loading 状态
+  contentItems: ChatContentItem[]; // All content in order
+  files?: UploadedFile[]; // Files in user message
+  loading?: boolean; // Loading state while waiting for callback
   error?: any;
   usage?: {
     promptTokens: number;

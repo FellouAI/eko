@@ -34,7 +34,7 @@ export const ToolCallItem: React.FC<ToolCallItemProps> = ({ item }) => {
                 )
               }
             >
-              {item.result.isError ? "失败" : "完成"}
+              {item.result.isError ? "Failed" : "Completed"}
             </Tag>
           )}
         </Space>
@@ -53,7 +53,7 @@ export const ToolCallItem: React.FC<ToolCallItemProps> = ({ item }) => {
           items={[
             {
               key: "params",
-              label: "参数",
+              label: "Parameters",
               children: (
                 <pre style={{ margin: 0, fontSize: 12 }}>
                   {JSON.stringify(item.params, null, 2)}
@@ -79,10 +79,10 @@ export const ToolCallItem: React.FC<ToolCallItemProps> = ({ item }) => {
               key: "result",
               label: (
                 <Space>
-                  <Text>结果</Text>
+                  <Text>Result</Text>
                   {item.result.isError && (
                     <Tag color="red" icon={<CloseCircleOutlined />}>
-                      失败
+                      Failed
                     </Tag>
                   )}
                 </Space>

@@ -25,7 +25,7 @@ const AppRun = () => {
   );
   const { fileToBase64, uploadFile } = useFileUpload();
 
-  // 滚动到底部
+  // Scroll to bottom
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
@@ -34,7 +34,7 @@ const AppRun = () => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // 监听 background 消息
+  // Listen to background messages
   useEffect(() => {
     const handleMessage = (
       message: any,
@@ -54,13 +54,13 @@ const AppRun = () => {
     };
   }, [handleChatCallback, handleTaskCallback]);
 
-  // 发送消息
+  // Send message
   const sendMessage = useCallback(async () => {
     if ((!inputValue.trim() && uploadedFiles.length === 0) || sending) return;
 
     const messageId = uuidv4();
 
-    // 上传文件
+    // Upload files
     const fileParts: Array<{
       type: "file";
       fileId: string;
@@ -85,7 +85,7 @@ const AppRun = () => {
       }
     }
 
-    // 构建用户消息内容
+    // Build user message content
     const userParts: Array<
       | { type: "text"; text: string }
       | {
@@ -133,7 +133,7 @@ const AppRun = () => {
     }
   }, [inputValue, uploadedFiles, sending, uploadFile]);
 
-  // 停止消息
+  // Stop message
   const stopMessage = useCallback((messageId: string) => {
     chrome.runtime.sendMessage({
       type: "stop",
@@ -142,7 +142,7 @@ const AppRun = () => {
     setCurrentMessageId(null);
   }, []);
 
-  // 处理文件选择
+  // Handle file selection
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files;
@@ -165,7 +165,7 @@ const AppRun = () => {
     [fileToBase64]
   );
 
-  // 删除文件
+  // Remove file
   const removeFile = useCallback((fileId: string) => {
     setUploadedFiles((prev) => prev.filter((f) => f.id !== fileId));
   }, []);
@@ -185,7 +185,7 @@ const AppRun = () => {
         backgroundColor: "#ffffff",
       }}
     >
-      {/* 消息区域 */}
+      {/* Message area */}
       <div
         ref={messagesContainerRef}
         style={{
@@ -196,7 +196,7 @@ const AppRun = () => {
         }}
       >
         {messages.length === 0 ? (
-          <Empty description="开始对话吧！" style={{ marginTop: "20vh" }} />
+          <Empty description="Start a conversation!" style={{ marginTop: "20vh" }} />
         ) : (
           messages.map((message) => (
             <MessageItem key={message.id} message={message} />
@@ -205,7 +205,7 @@ const AppRun = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 输入区域 */}
+      {/* Input area */}
       <ChatInput
         inputValue={inputValue}
         onInputChange={setInputValue}

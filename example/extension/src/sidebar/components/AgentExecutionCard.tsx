@@ -45,12 +45,12 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
           {status === "running" && <Spin size="small" />}
           {status === "done" && (
             <Tag color="success" icon={<CheckCircleOutlined />}>
-              完成
+              Completed
             </Tag>
           )}
           {status === "error" && (
             <Tag color="error" icon={<CloseCircleOutlined />}>
-              错误
+              Error
             </Tag>
           )}
         </Space>
@@ -64,7 +64,7 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
 
       {agent && (
         <>
-          {/* 按照内容出现顺序渲染 */}
+          {/* Render content in order of appearance */}
           {agent.contentItems.map((item, index) => {
             if (item.type === "thinking") {
               return (
@@ -109,7 +109,7 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
           })}
           {agent.result && (
             <Alert
-              message="执行结果"
+              message="Execution Result"
               description={agent.result}
               type="success"
               style={{ marginTop: 8 }}
@@ -117,7 +117,7 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
           )}
           {agent.error && (
             <Alert
-              message="执行错误"
+              message="Execution Error"
               description={String(agent.error)}
               type="error"
               style={{ marginTop: 8 }}

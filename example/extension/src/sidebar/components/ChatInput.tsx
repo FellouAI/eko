@@ -45,7 +45,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         borderTop: "1px solid #e8e8e8",
       }}
     >
-      {/* 已上传的文件列表 */}
+      {/* Uploaded files list */}
       {uploadedFiles.length > 0 && (
         <div style={{ marginBottom: 8 }}>
           <Space wrap>
@@ -127,14 +127,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               onSend();
             }
           }}
-          placeholder="输入消息..."
+          placeholder="Type a message..."
           autoSize={{ minRows: 1, maxRows: 4 }}
           style={{ flex: 1, margin: "0 4px" }}
           disabled={sending || currentMessageId !== null}
         />
         {currentMessageId ? (
           <Button danger icon={<StopOutlined />} onClick={onStop}>
-            停止
+            Stop
           </Button>
         ) : (
           <Button
@@ -146,7 +146,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               (!inputValue.trim() && uploadedFiles.length === 0) || sending
             }
           >
-            发送
+            Send
           </Button>
         )}
       </Space.Compact>

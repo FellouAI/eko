@@ -92,7 +92,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     );
   }
 
-  // AI 消息
+  // AI message
   return (
     <div style={{ marginBottom: 16 }}>
       <Card
@@ -100,7 +100,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         title={
           <Space>
             <RobotOutlined />
-            <Text strong>AI 助手</Text>
+            <Text strong>AI Assistant</Text>
           </Space>
         }
       >
@@ -163,7 +163,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             )}
         {message.error && (
           <Alert
-            message="错误"
+            message="Error"
             description={String(message.error)}
             type="error"
             style={{ marginTop: 8 }}

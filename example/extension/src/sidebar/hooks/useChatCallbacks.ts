@@ -14,7 +14,7 @@ export const useChatCallbacks = (
   currentMessageId: string | null,
   setCurrentMessageId: React.Dispatch<React.SetStateAction<string | null>>
 ) => {
-  // 处理 chat 回调
+  // Handle chat callbacks
   const handleChatCallback = useCallback(
     (data: ChatStreamMessage) => {
       setMessages((prev) => {
@@ -22,17 +22,17 @@ export const useChatCallbacks = (
         const aiMessageId = `ai-${data.messageId}`;
         let message = newMessages.find((m) => m.id === aiMessageId);
 
-        // 如果 AI 消息不存在，创建它
+        // If AI message doesn't exist, create it
         if (!message) {
-          // 确保对应的用户消息存在
+          // Ensure corresponding user message exists
           const userMessage = newMessages.find((m) => m.id === data.messageId);
           if (!userMessage) {
-            // 用户消息不存在，可能是消息顺序问题，先返回
+            // User message doesn't exist, might be message order issue, return early
             return prev;
           }
-          // 取消用户消息的 loading 状态
+          // Clear user message loading state
           userMessage.loading = false;
-          // 创建 AI 消息
+          // Create AI message
           const aiMessage: ChatMessage = {
             id: aiMessageId,
             role: "assistant",
@@ -48,9 +48,9 @@ export const useChatCallbacks = (
           message.contentItems = [];
         }
 
-        // 处理不同类型的回调
+        // Handle different types of callbacks
         if (data.type === "text" || data.type === "thinking") {
-          // 查找是否已存在相同的 streamId
+          // Check if item with same streamId already exists
           const existingIndex = message.contentItems.findIndex(
             (item) =>
               (item.type === "text" || item.type === "thinking") &&
@@ -58,12 +58,12 @@ export const useChatCallbacks = (
           );
 
           if (existingIndex >= 0) {
-            // 更新已存在的项
+            // Update existing item
             (message.contentItems[existingIndex] as any).text = data.text;
             (message.contentItems[existingIndex] as any).streamDone =
               data.streamDone;
           } else {
-            // 添加新项
+            // Add new item
             message.contentItems.push({
               type: data.type,
               streamId: data.streamId,
@@ -72,7 +72,7 @@ export const useChatCallbacks = (
             });
           }
 
-          // 更新 content 为最新的文本
+          // Update content to latest text
           if (data.type === "text" && data.streamDone) {
             message.content = data.text;
           }
@@ -83,18 +83,18 @@ export const useChatCallbacks = (
             data: data.data,
           });
         } else if (data.type === "tool_streaming") {
-          // 查找是否已存在相同的 toolCallId
+          // Check if tool call with same toolCallId already exists
           const existingIndex = message.contentItems.findIndex(
             (item) =>
               item.type === "tool" && item.toolCallId === data.toolCallId
           );
 
           if (existingIndex >= 0) {
-            // 更新已存在的工具调用
+            // Update existing tool call
             (message.contentItems[existingIndex] as any).paramsText =
               data.paramsText;
           } else {
-            // 添加新工具调用
+            // Add new tool call
             message.contentItems.push({
               type: "tool",
               toolCallId: data.toolCallId,
@@ -103,17 +103,17 @@ export const useChatCallbacks = (
             });
           }
         } else if (data.type === "tool_use") {
-          // 查找是否已存在相同的 toolCallId
+          // Check if tool call with same toolCallId already exists
           const existingIndex = message.contentItems.findIndex(
             (item) =>
               item.type === "tool" && item.toolCallId === data.toolCallId
           );
 
           if (existingIndex >= 0) {
-            // 更新已存在的工具调用
+            // Update existing tool call
             (message.contentItems[existingIndex] as any).params = data.params;
           } else {
-            // 添加新工具调用
+            // Add new tool call
             message.contentItems.push({
               type: "tool",
               toolCallId: data.toolCallId,
@@ -122,20 +122,20 @@ export const useChatCallbacks = (
             });
           }
         } else if (data.type === "tool_running") {
-          // 查找是否已存在相同的 toolCallId
+          // Check if tool call with same toolCallId already exists
           const existingIndex = message.contentItems.findIndex(
             (item) =>
               item.type === "tool" && item.toolCallId === data.toolCallId
           );
 
           if (existingIndex >= 0) {
-            // 更新已存在的工具调用
+            // Update existing tool call
             (message.contentItems[existingIndex] as any).running =
               !data.streamDone;
             (message.contentItems[existingIndex] as any).runningText =
               data.text;
           } else {
-            // 添加新工具调用
+            // Add new tool call
             message.contentItems.push({
               type: "tool",
               toolCallId: data.toolCallId,
@@ -145,19 +145,19 @@ export const useChatCallbacks = (
             });
           }
         } else if (data.type === "tool_result") {
-          // 查找是否已存在相同的 toolCallId
+          // Check if tool call with same toolCallId already exists
           const existingIndex = message.contentItems.findIndex(
             (item) =>
               item.type === "tool" && item.toolCallId === data.toolCallId
           );
 
           if (existingIndex >= 0) {
-            // 更新已存在的工具调用
+            // Update existing tool call
             (message.contentItems[existingIndex] as any).result =
               data.toolResult;
             (message.contentItems[existingIndex] as any).running = false;
           } else {
-            // 添加新工具调用
+            // Add new tool call
             message.contentItems.push({
               type: "tool",
               toolCallId: data.toolCallId,
@@ -167,16 +167,16 @@ export const useChatCallbacks = (
             });
           }
 
-          // 如果是 deepAction 工具，在工具项之后添加 task 项
+          // If it's a deepAction tool, add task item after tool item
           if (data.toolName === "deepAction") {
             const taskId = (data.params as any)?.taskId || uuidv4();
-            // 检查是否已经存在 task 项
+            // Check if task item already exists
             const taskIndex = message.contentItems.findIndex(
               (item) => item.type === "task" && item.taskId === taskId
             );
 
             if (taskIndex < 0) {
-              // 在工具项之后添加 task 项
+              // Add task item after tool item
               const toolIndex = message.contentItems.findIndex(
                 (item) =>
                   item.type === "tool" && item.toolCallId === data.toolCallId
@@ -195,13 +195,13 @@ export const useChatCallbacks = (
           }
         } else if (data.type === "error") {
           message.error = data.error;
-          // 隐藏停止按钮
+          // Hide stop button
           if (data.messageId === currentMessageId) {
             setCurrentMessageId(null);
           }
         } else if (data.type === "finish") {
           message.usage = data.usage;
-          // 隐藏停止按钮
+          // Hide stop button
           if (data.messageId === currentMessageId) {
             setCurrentMessageId(null);
           }
@@ -213,7 +213,7 @@ export const useChatCallbacks = (
     [currentMessageId, setCurrentMessageId, setMessages]
   );
 
-  // 处理 task 回调
+  // Handle task callbacks
   const handleTaskCallback = useCallback(
     (data: AgentStreamMessage & { messageId: string }) => {
       setMessages((prev) => {
@@ -224,13 +224,13 @@ export const useChatCallbacks = (
 
         if (!message) return prev;
 
-        // 查找对应的 task 项
+        // Find corresponding task item
         const taskItemIndex = message.contentItems.findIndex(
           (item) => item.type === "task" && item.taskId === data.taskId
         );
 
         if (taskItemIndex < 0) {
-          // 如果不存在，创建一个新的 task 项
+          // If doesn't exist, create a new task item
           message.contentItems.push({
             type: "task",
             taskId: data.taskId,
@@ -251,7 +251,7 @@ export const useChatCallbacks = (
           taskItem.task.workflow = data.workflow;
           taskItem.task.workflowStreamDone = data.streamDone;
         } else if (data.type === "agent_start") {
-          // 检查是否已存在该 agent
+          // Check if agent already exists
           const existingAgent = taskItem.task.agents.find(
             (a) =>
               a.agentNode.id === (data.nodeId || data.agentName) ||
@@ -273,7 +273,7 @@ export const useChatCallbacks = (
               a.agentNode.name === data.agentName
           );
           if (agent) {
-            // 查找是否已存在相同的 streamId
+            // Check if item with same streamId already exists
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
                 (item.type === "text" || item.type === "thinking") &&
@@ -281,12 +281,12 @@ export const useChatCallbacks = (
             );
 
             if (existingIndex >= 0) {
-              // 更新已存在的项
+              // Update existing item
               (agent.contentItems[existingIndex] as any).text = data.text;
               (agent.contentItems[existingIndex] as any).streamDone =
                 data.streamDone;
             } else {
-              // 添加新项
+              // Add new item
               agent.contentItems.push({
                 type: data.type,
                 streamId: data.streamId,
@@ -315,18 +315,18 @@ export const useChatCallbacks = (
               a.agentNode.name === data.agentName
           );
           if (agent) {
-            // 查找是否已存在相同的 toolCallId
+            // Check if tool call with same toolCallId already exists
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
                 item.type === "tool" && item.toolCallId === data.toolCallId
             );
 
             if (existingIndex >= 0) {
-              // 更新已存在的工具调用
+              // Update existing tool call
               (agent.contentItems[existingIndex] as any).paramsText =
                 data.paramsText;
             } else {
-              // 添加新工具调用
+              // Add new tool call
               agent.contentItems.push({
                 type: "tool",
                 toolCallId: data.toolCallId,
@@ -342,17 +342,17 @@ export const useChatCallbacks = (
               a.agentNode.name === data.agentName
           );
           if (agent) {
-            // 查找是否已存在相同的 toolCallId
+            // Check if tool call with same toolCallId already exists
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
                 item.type === "tool" && item.toolCallId === data.toolCallId
             );
 
             if (existingIndex >= 0) {
-              // 更新已存在的工具调用
+              // Update existing tool call
               (agent.contentItems[existingIndex] as any).params = data.params;
             } else {
-              // 添加新工具调用
+              // Add new tool call
               agent.contentItems.push({
                 type: "tool",
                 toolCallId: data.toolCallId,
@@ -368,20 +368,20 @@ export const useChatCallbacks = (
               a.agentNode.name === data.agentName
           );
           if (agent) {
-            // 查找是否已存在相同的 toolCallId
+            // Check if tool call with same toolCallId already exists
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
                 item.type === "tool" && item.toolCallId === data.toolCallId
             );
 
             if (existingIndex >= 0) {
-              // 更新已存在的工具调用
+              // Update existing tool call
               (agent.contentItems[existingIndex] as any).running =
                 !data.streamDone;
               (agent.contentItems[existingIndex] as any).runningText =
                 data.text;
             } else {
-              // 添加新工具调用
+              // Add new tool call
               agent.contentItems.push({
                 type: "tool",
                 toolCallId: data.toolCallId,
@@ -398,19 +398,19 @@ export const useChatCallbacks = (
               a.agentNode.name === data.agentName
           );
           if (agent) {
-            // 查找是否已存在相同的 toolCallId
+            // Check if tool call with same toolCallId already exists
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
                 item.type === "tool" && item.toolCallId === data.toolCallId
             );
 
             if (existingIndex >= 0) {
-              // 更新已存在的工具调用
+              // Update existing tool call
               (agent.contentItems[existingIndex] as any).result =
                 data.toolResult;
               (agent.contentItems[existingIndex] as any).running = false;
             } else {
-              // 添加新工具调用
+              // Add new tool call
               agent.contentItems.push({
                 type: "tool",
                 toolCallId: data.toolCallId,

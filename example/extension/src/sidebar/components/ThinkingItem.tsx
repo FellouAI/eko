@@ -25,7 +25,7 @@ export const ThinkingItem: React.FC<ThinkingItemProps> = ({
           label: (
             <Space>
               <LoadingOutlined />
-              <Text type="secondary">思考中...</Text>
+              <Text type="secondary">Thinking...</Text>
             </Space>
           ),
           children: (
