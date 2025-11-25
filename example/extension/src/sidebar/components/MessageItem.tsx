@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { TextItem } from "./TextItem";
 import type { ChatMessage } from "../types";
 import { ThinkingItem } from "./ThinkingItem";
@@ -10,11 +10,103 @@ import { RobotOutlined, UserOutlined, FileOutlined } from "@ant-design/icons";
 
 const { Text, Paragraph } = Typography;
 
+const decodeHtmlEntities = (text: string) => {
+  if (!text) return "";
+  if (typeof window === "undefined") {
+    return text
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+  }
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = text;
+  return textarea.value;
+};
+
+const renderContentWithWebRefs = (
+  content: string,
+  onWebRefClick: (url: string) => void
+) => {
+  if (!content) return null;
+  const elements: React.ReactNode[] = [];
+  const regex =
+    /<span class="webpage-reference"[^>]*tab-id="([^"]+)"[^>]*url="([^"]+)"[^>]*>(.*?)<\/span>/gi;
+  let lastIndex = 0;
+  let keyIndex = 0;
+
+  const pushText = (text: string) => {
+    if (!text) return;
+    const normalized = text.replace(/<br\s*\/?>/gi, "\n");
+    const decoded = decodeHtmlEntities(normalized);
+    if (!decoded) return;
+    const parts = decoded.split(/(\n)/);
+    parts.forEach((part) => {
+      if (!part) {
+        return;
+      }
+      if (part === "\n") {
+        elements.push(<br key={`br-${keyIndex++}`} />);
+      } else {
+        elements.push(
+          <React.Fragment key={`text-${keyIndex++}`}>{part}</React.Fragment>
+        );
+      }
+    });
+  };
+
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(content)) !== null) {
+    const [fullMatch, tabId, url, title] = match;
+    if (match.index > lastIndex) {
+      pushText(content.slice(lastIndex, match.index));
+    }
+
+    const decodedTitle = decodeHtmlEntities(title);
+    const decodedUrl = decodeHtmlEntities(url);
+    elements.push(
+      <span
+        key={`webref-${tabId || keyIndex}`}
+        className="webpage-reference-display user-webpage-reference"
+        onClick={() => onWebRefClick(decodedUrl)}
+      >
+        {`${decodedTitle}`}
+      </span>
+    );
+    lastIndex = match.index + fullMatch.length;
+  }
+
+  if (lastIndex < content.length) {
+    pushText(content.slice(lastIndex));
+  }
+
+  if (elements.length === 0) {
+    return decodeHtmlEntities(content);
+  }
+
+  return elements;
+};
+
 interface MessageItemProps {
   message: ChatMessage;
 }
 
 export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
+  const handleWebRefClick = (url: string) => {
+    if (!url) return;
+    if (typeof chrome !== "undefined" && chrome.tabs?.create) {
+      chrome.tabs.create({ url });
+    } else {
+      window.open(url, "_blank", "noopener");
+    }
+  };
+
+  const userContent = useMemo(
+    () => renderContentWithWebRefs(message.content || "", handleWebRefClick),
+    [message.content]
+  );
+
   if (message.role === "user") {
     return (
       <div
@@ -40,7 +132,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                 <UserOutlined />
                 {message.content && (
                   <Paragraph style={{ margin: 0, color: "white" }}>
-                    {message.content}
+                    {userContent}
                   </Paragraph>
                 )}
                 {message.loading && (

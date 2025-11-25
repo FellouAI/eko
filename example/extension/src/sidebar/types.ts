@@ -64,6 +64,16 @@ export interface UploadedFile {
   url?: string; // URL after upload
 }
 
+export interface TabInfo {
+  tabId: string;
+  title: string;
+  url: string;
+  active: boolean;
+  iconUrl?: string;
+  status?: string;
+  lastAccessed: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: MessageRole;

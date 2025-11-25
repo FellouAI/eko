@@ -55,7 +55,7 @@ export const ToolCallItem: React.FC<ToolCallItemProps> = ({ item }) => {
               key: "params",
               label: "Parameters",
               children: (
-                <pre style={{ margin: 0, fontSize: 12 }}>
+                <pre className="tool-params-pre">
                   {JSON.stringify(item.params, null, 2)}
                 </pre>
               ),

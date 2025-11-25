@@ -1,10 +1,4 @@
 import {
-  LLMs,
-  global,
-  ChatAgent,
-  AgentStreamMessage,
-} from "@eko-ai/eko";
-import {
   HumanCallback,
   MessageTextPart,
   MessageFilePart,
@@ -12,6 +6,7 @@ import {
   AgentStreamCallback,
 } from "@eko-ai/eko/types";
 import { BrowserAgent } from "@eko-ai/eko-extension";
+import { LLMs, global, ChatAgent, AgentStreamMessage } from "@eko-ai/eko";
 
 const abortControllers = new Map<string, AbortController>();
 
@@ -125,6 +120,44 @@ export async function init(): Promise<ChatAgent> {
       if (abortController) {
         abortController.abort("user aborted");
         abortControllers.delete(data.messageId);
+      }
+    } else if (type == "getTabs") {
+      try {
+        const tabs = await chrome.tabs.query({});
+        const sortedTabs = tabs
+          .sort((a, b) => {
+            const aTime = (a as any).lastAccessed || 0;
+            const bTime = (b as any).lastAccessed || 0;
+            return bTime - aTime;
+          })
+          .filter((tab) => !tab.url.startsWith("chrome://"))
+          .map((tab) => {
+            const lastAccessed = (tab as any).lastAccessed;
+            return {
+              tabId: String(tab.id),
+              title: tab.title || "",
+              url: tab.url || "",
+              active: tab.active,
+              status: tab.status,
+              iconUrl: tab.favIconUrl,
+              lastAccessed: lastAccessed
+                ? new Date(lastAccessed).toLocaleString()
+                : "",
+            };
+          })
+          .slice(0, 15);
+
+        chrome.runtime.sendMessage({
+          requestId,
+          type: "getTabs_result",
+          data: { tabs: sortedTabs },
+        });
+      } catch (error) {
+        chrome.runtime.sendMessage({
+          requestId,
+          type: "getTabs_result",
+          data: { error: String(error) },
+        });
       }
     }
   });

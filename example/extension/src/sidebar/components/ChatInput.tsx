@@ -1,3 +1,4 @@
+import React, { useRef } from "react";
 import {
   SendOutlined,
   StopOutlined,
@@ -5,11 +6,10 @@ import {
   DeleteOutlined,
   PaperClipOutlined,
 } from "@ant-design/icons";
-import React, { useRef } from "react";
 import type { UploadedFile } from "../types";
-import { Button, Input, Space, Image, Typography } from "antd";
+import { Button, Space, Image, Typography } from "antd";
+import { WebpageMentionInput } from "./WebpageMentionInput";
 
-const { TextArea } = Input;
 const { Text } = Typography;
 
 interface ChatInputProps {
@@ -45,7 +45,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         borderTop: "1px solid #e8e8e8",
       }}
     >
-      {/* Uploaded files list */}
       {uploadedFiles.length > 0 && (
         <div style={{ marginBottom: 8 }}>
           <Space wrap>
@@ -104,7 +103,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </Space>
         </div>
       )}
-      <Space.Compact style={{ width: "100%" }}>
+
+      <Space.Compact style={{ width: "100%", alignItems: "center" }}>
         <input
           ref={fileInputRef}
           type="file"
@@ -118,20 +118,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onClick={() => fileInputRef.current?.click()}
           disabled={sending || currentMessageId !== null}
         />
-        <TextArea
+
+        <WebpageMentionInput
           value={inputValue}
-          onChange={(e) => onInputChange(e.target.value)}
-          onPressEnter={(e) => {
-            if (!e.shiftKey) {
-              e.preventDefault();
-              onSend();
-            }
-          }}
-          placeholder="Type a message..."
-          autoSize={{ minRows: 1, maxRows: 4 }}
-          style={{ flex: 1, margin: "0 4px" }}
+          onChange={onInputChange}
           disabled={sending || currentMessageId !== null}
+          onSend={onSend}
         />
+
         {currentMessageId ? (
           <Button danger icon={<StopOutlined />} onClick={onStop}>
             Stop
@@ -145,6 +139,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             disabled={
               (!inputValue.trim() && uploadedFiles.length === 0) || sending
             }
+            style={{ padding: "0 10px" }}
           >
             Send
           </Button>

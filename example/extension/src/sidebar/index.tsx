@@ -191,12 +191,16 @@ const AppRun = () => {
         style={{
           flex: 1,
           overflowY: "auto",
+          overflowX: "hidden",
           padding: "16px",
           backgroundColor: "#f5f5f5",
         }}
       >
         {messages.length === 0 ? (
-          <Empty description="Start a conversation!" style={{ marginTop: "20vh" }} />
+          <Empty
+            description="Start a conversation!"
+            style={{ marginTop: "20vh" }}
+          />
         ) : (
           messages.map((message) => (
             <MessageItem key={message.id} message={message} />
