@@ -1,37 +1,22 @@
+import config from "../config";
 import { LanguageModelV2Message } from "@ai-sdk/provider";
-import { defaultMessageProviderOptions } from "../agent/llm";
-import { EkoMessage, LanguageModelV2Prompt } from "../types";
+import { defaultMessageProviderOptions } from "../agent/agent-llm";
 import { toFile, uuidv4, getMimeType, sub } from "../common/utils";
-
-export interface MemoryConfig {
-  maxMessages?: number;
-  maxTokens?: number;
-  enableCompression?: boolean;
-  compressionThreshold?: number;
-  compressionMaxLength?: number;
-}
+import { EkoMessage, LanguageModelV2Prompt, MemoryConfig } from "../types";
 
 export class EkoMemory {
-  protected systemPrompt: string;
+  protected systemPrompt?: string;
   protected messages: EkoMessage[];
-  private maxMessages: number;
-  private maxTokens: number;
-  private enableCompression: boolean;
-  private compressionThreshold: number;
-  private compressionMaxLength: number;
+  private memoryConfig: MemoryConfig;
 
   constructor(
-    systemPrompt: string,
+    systemPrompt?: string,
     messages: EkoMessage[] = [],
-    config: MemoryConfig = {}
+    memoryConfig: MemoryConfig = config.memoryConfig
   ) {
     this.messages = messages;
     this.systemPrompt = systemPrompt;
-    this.maxMessages = config.maxMessages ?? 15;
-    this.maxTokens = config.maxTokens ?? 16000;
-    this.enableCompression = config.enableCompression ?? false;
-    this.compressionThreshold = config.compressionThreshold ?? 10;
-    this.compressionMaxLength = config.compressionMaxLength ?? 4000;
+    this.memoryConfig = memoryConfig;
   }
 
   public genMessageId(): string {
@@ -48,6 +33,14 @@ export class EkoMemory {
     } else {
       await this.manageCapacity();
     }
+  }
+
+  public setSystemPrompt(systemPrompt: string): void {
+    this.systemPrompt = systemPrompt;
+  }
+
+  public getSystemPrompt(): string | undefined {
+    return this.systemPrompt;
   }
 
   public async addMessages(messages: EkoMessage[]): Promise<void> {
@@ -90,14 +83,16 @@ export class EkoMemory {
 
   public getEstimatedTokens(calcSystemPrompt: boolean = true): number {
     let tokens = 0;
-    if (calcSystemPrompt) {
+    if (calcSystemPrompt && this.systemPrompt) {
       tokens += this.calcTokens(this.systemPrompt);
     }
     return this.messages.reduce((total, message) => {
       const content =
         typeof message.content === "string"
           ? message.content
-          : JSON.stringify(message.content.filter((part) => part.type != "file"));
+          : JSON.stringify(
+              message.content.filter((part) => part.type != "file")
+            );
       return total + this.calcTokens(content);
     }, tokens);
   }
@@ -110,20 +105,20 @@ export class EkoMemory {
   }
 
   public async updateConfig(config: Partial<MemoryConfig>): Promise<void> {
-    if (config.maxMessages !== undefined) {
-      this.maxMessages = config.maxMessages;
+    if (config.maxMessageNum !== undefined) {
+      this.memoryConfig.maxMessageNum = config.maxMessageNum;
     }
-    if (config.maxTokens !== undefined) {
-      this.maxTokens = config.maxTokens;
+    if (config.maxInputTokens !== undefined) {
+      this.memoryConfig.maxInputTokens = config.maxInputTokens;
     }
     if (config.enableCompression !== undefined) {
-      this.enableCompression = config.enableCompression;
+      this.memoryConfig.enableCompression = config.enableCompression;
     }
     if (config.compressionThreshold !== undefined) {
-      this.compressionThreshold = config.compressionThreshold;
+      this.memoryConfig.compressionThreshold = config.compressionThreshold;
     }
     if (config.compressionMaxLength !== undefined) {
-      this.compressionMaxLength = config.compressionMaxLength;
+      this.memoryConfig.compressionMaxLength = config.compressionMaxLength;
     }
     await this.manageCapacity();
   }
@@ -136,13 +131,13 @@ export class EkoMemory {
     if (this.messages[this.messages.length - 1].role == "user") {
       await this.dynamicSystemPrompt(this.messages);
     }
-    if (this.messages.length > this.maxMessages) {
-      const excess = this.messages.length - this.maxMessages;
+    if (this.messages.length > this.memoryConfig.maxMessageNum) {
+      const excess = this.messages.length - this.memoryConfig.maxMessageNum;
       this.messages.splice(0, excess);
     }
     if (
-      this.enableCompression &&
-      this.messages.length > this.compressionThreshold
+      this.memoryConfig.enableCompression &&
+      this.messages.length > this.memoryConfig.compressionThreshold
     ) {
       // compress messages
       for (let i = 0; i < this.messages.length; i++) {
@@ -151,11 +146,15 @@ export class EkoMemory {
           message.content = message.content.map((part) => {
             if (
               part.type == "text" &&
-              part.text.length > this.compressionMaxLength
+              part.text.length > this.memoryConfig.compressionMaxLength
             ) {
               return {
                 type: "text",
-                text: sub(part.text, this.compressionMaxLength, true),
+                text: sub(
+                  part.text,
+                  this.memoryConfig.compressionMaxLength,
+                  true
+                ),
               };
             }
             return part;
@@ -165,11 +164,15 @@ export class EkoMemory {
           message.content = message.content.map((part) => {
             if (
               typeof part.result === "string" &&
-              part.result.length > this.compressionMaxLength
+              part.result.length > this.memoryConfig.compressionMaxLength
             ) {
               return {
                 ...part,
-                result: sub(part.result, this.compressionMaxLength, true),
+                result: sub(
+                  part.result,
+                  this.memoryConfig.compressionMaxLength,
+                  true
+                ),
               };
             }
             return part;
@@ -178,7 +181,7 @@ export class EkoMemory {
       }
     }
     while (
-      this.getEstimatedTokens(true) > this.maxTokens &&
+      this.getEstimatedTokens(true) > this.memoryConfig.maxInputTokens &&
       this.messages.length > 0
     ) {
       this.messages.shift();
@@ -238,10 +241,6 @@ export class EkoMemory {
     if (removeIds.length > 0) {
       removeIds.forEach((id) => this.removeMessageById(id));
     }
-  }
-
-  public getSystemPrompt(): string {
-    return this.systemPrompt;
   }
 
   public getFirstUserMessage(): EkoMessage | undefined {
@@ -346,7 +345,7 @@ export class EkoMemory {
     return [
       {
         role: "system",
-        content: this.getSystemPrompt(),
+        content: this.getSystemPrompt() || "You are a helpful assistant.",
         providerOptions: defaultMessageProviderOptions(),
       },
       ...llmMessages,

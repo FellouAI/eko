@@ -5,12 +5,12 @@ import {
   DialogueParams,
   GlobalPromptKey,
   LanguageModelV2ToolCallPart,
-} from "../types";
-import { sub } from "../common/utils";
-import global from "../config/global";
-import Eko, { Agent } from "../agent";
-import { ChatContext } from "./chat-context";
-import { recursiveTextNode } from "../common/workflow";
+} from "../../types";
+import { sub } from "../../common/utils";
+import global from "../../config/global";
+import Eko, { Agent } from "../../agent";
+import { ChatContext } from "../chat-context";
+import { recursiveTextNode } from "../../common/workflow";
 
 export const TOOL_NAME = "deepAction";
 
@@ -55,7 +55,7 @@ export default class DeepActionTool implements DialogueTool {
             "Browser Tab IDs associated with this task, When user says 'left side' or 'current', it means current active tab",
           items: { type: "integer" },
         },
-        variables: {
+        dependentVariables: {
           type: "array",
           description:
             "The current task relies on variable data from prerequisite execution outputs. Provide the name of the dependent variable.",
@@ -75,9 +75,10 @@ export default class DeepActionTool implements DialogueTool {
     messageId: string
   ): Promise<ToolResult> {
     const chatId = this.chatContext.getChatId();
+    const language = args.language as string;
     const taskDescription = args.taskDescription as string;
-    const variables = args.variables as string[];
-    const fileIds = args.fileIds as string[];
+    const tabIds = args.tabIds as string[];
+    const dependentVariables = args.dependentVariables as string[];
     const config = this.chatContext.getConfig();
     const globalVariables = this.chatContext.getGlobalVariables();
     const eko = new Eko(
@@ -85,7 +86,7 @@ export default class DeepActionTool implements DialogueTool {
         ...config,
         callback: this.params.callback?.taskCallback,
       },
-      chatId,
+      chatId
     );
     this.chatContext.addEko(messageId, eko);
     if (this.params.signal) {
@@ -93,11 +94,26 @@ export default class DeepActionTool implements DialogueTool {
         eko.abortTask(messageId, "user aborted");
       });
     }
-    const workflow = await eko.generate(
-      taskDescription,
-      messageId,
-      globalVariables
-    );
+    const attachments = this.params.user
+      .filter((part) => part.type === "file")
+      .filter((part) => part.data && part.data.length < 500)
+      .map((part) => {
+        return {
+          file_name: part.filename,
+          file_path: part.filePath,
+          file_url: part.data,
+        };
+      });
+    const taskWebsite = await this.gettaskWebsite(tabIds);
+    const workflow = await eko.generate(taskDescription, messageId, {
+      ...globalVariables,
+      tabIds: tabIds,
+      language: language,
+      attachments: attachments,
+      taskWebsite: taskWebsite,
+      dependentVariables: dependentVariables,
+      datetime: this.params.datetime || new Date().toLocaleString(),
+    });
     const context = eko.getTask(messageId)!;
     console.log("==> workflow", workflow);
     const result = await eko.execute(messageId);
@@ -138,6 +154,23 @@ export default class DeepActionTool implements DialogueTool {
         },
       ],
     };
+  }
+
+  private async gettaskWebsite(tabIds: string[]): Promise<any[]> {
+    if (!global.browserService) {
+      return [];
+    }
+    const tabs = await global.browserService.loadTabs(
+      this.chatContext.getChatId(),
+      tabIds
+    );
+    return tabs.map((tab) => {
+      return {
+        tabId: tab.tabId,
+        title: tab.title,
+        url: sub(tab.url, 300),
+      };
+    });
   }
 }
 

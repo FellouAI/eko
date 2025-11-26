@@ -13,10 +13,11 @@ import {
   ChatStreamMessage,
   AgentStreamCallback,
 } from "@eko-ai/eko/types";
+import { initAgentServices } from "./agent";
 import { BrowserAgent } from "@eko-ai/eko-extension";
 
+const humanCallbackIdMap = new Map<string, Function>();
 const abortControllers = new Map<string, AbortController>();
-const callbackIdMap = new Map<string, Function>();
 
 export async function getLLMConfig(name: string = "llmConfig"): Promise<any> {
   const result = await chrome.storage.sync.get([name]);
@@ -31,8 +32,6 @@ export async function init(): Promise<ChatAgent> {
       "error"
     );
     chrome.runtime.openOptionsPage();
-    chrome.storage.local.set({ running: false });
-    chrome.runtime.sendMessage({ type: "stop" });
     return;
   }
 
@@ -85,8 +84,8 @@ export async function init(): Promise<ChatAgent> {
       });
       console.log("human_confirm: ", prompt);
       return new Promise((resolve) => {
-        callbackIdMap.set(callbackId, (value: boolean) => {
-          callbackIdMap.delete(callbackId);
+        humanCallbackIdMap.set(callbackId, (value: boolean) => {
+          humanCallbackIdMap.delete(callbackId);
           resolve(value);
         });
       });
@@ -109,8 +108,8 @@ export async function init(): Promise<ChatAgent> {
       });
       console.log("human_input: ", prompt);
       return new Promise((resolve) => {
-        callbackIdMap.set(callbackId, (value: string) => {
-          callbackIdMap.delete(callbackId);
+        humanCallbackIdMap.set(callbackId, (value: string) => {
+          humanCallbackIdMap.delete(callbackId);
           resolve(value);
         });
       });
@@ -140,8 +139,8 @@ export async function init(): Promise<ChatAgent> {
       });
       console.log("human_select: ", prompt);
       return new Promise((resolve) => {
-        callbackIdMap.set(callbackId, (value: string[]) => {
-          callbackIdMap.delete(callbackId);
+        humanCallbackIdMap.set(callbackId, (value: string[]) => {
+          humanCallbackIdMap.delete(callbackId);
           resolve(value);
         });
       });
@@ -169,8 +168,8 @@ export async function init(): Promise<ChatAgent> {
       });
       console.log("human_help: ", prompt);
       return new Promise((resolve) => {
-        callbackIdMap.set(callbackId, (value: boolean) => {
-          callbackIdMap.delete(callbackId);
+        humanCallbackIdMap.set(callbackId, (value: boolean) => {
+          humanCallbackIdMap.delete(callbackId);
           resolve(value);
         });
       });
@@ -179,6 +178,9 @@ export async function init(): Promise<ChatAgent> {
 
   const agents = [new BrowserAgent()];
   const chatAgent = new ChatAgent({ llms, agents });
+  chatAgent.initMessages().catch((e) => {
+    printLog("init messages error: " + e, "error");
+  });
 
   chrome.runtime.onMessage.addListener(async function (
     request,
@@ -210,7 +212,7 @@ export async function init(): Promise<ChatAgent> {
     } else if (type == "human_callback") {
       const callbackId = data.callbackId as string;
       const value = data.value as any;
-      const callback = callbackIdMap.get(callbackId);
+      const callback = humanCallbackIdMap.get(callbackId);
       if (callback) {
         callback(value);
       }
@@ -264,7 +266,7 @@ export async function init(): Promise<ChatAgent> {
               url: tab.url || "",
               active: tab.active,
               status: tab.status,
-              iconUrl: tab.favIconUrl,
+              favicon: tab.favIconUrl,
               lastAccessed: lastAccessed
                 ? new Date(lastAccessed).toLocaleString()
                 : "",
@@ -300,10 +302,13 @@ function printLog(message: string, level?: "info" | "success" | "error") {
   });
 }
 
+initAgentServices();
+
 init().catch((error) => {
   printLog(error, "error");
 });
 
 if ((chrome as any).sidePanel) {
+  // open panel on action click
   (chrome as any).sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 }

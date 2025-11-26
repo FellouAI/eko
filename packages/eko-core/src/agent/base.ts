@@ -36,7 +36,7 @@ import {
   callAgentLLM,
   convertToolResult,
   defaultMessageProviderOptions,
-} from "./llm";
+} from "./agent-llm";
 import TaskContext, { AgentContext } from "./agent-context";
 import { doTaskResultCheck } from "../tools/task-result-check";
 import { doTodoListManager } from "../tools/todo-list-manager";

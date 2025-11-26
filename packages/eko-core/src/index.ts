@@ -1,19 +1,20 @@
 import config from "./config";
-import global from "./config/global";
 import Log from "./common/log";
 import Eko from "./agent/index";
+import global from "./config/global";
 import { Planner } from "./agent/plan";
 import { RetryLanguageModel } from "./llm";
 import { EkoMemory } from "./memory/memory";
 import { ChatAgent, ChatContext } from "./chat";
 import Chain, { AgentChain } from "./agent/chain";
 import { ChatService } from "./service/chat-service";
+import { BrowserService } from "./service/browser-service";
 import { SimpleSseMcpClient, SimpleHttpMcpClient } from "./mcp";
 import TaskContext, { AgentContext } from "./agent/agent-context";
 
 export default Eko;
 
-export type { ChatService };
+export type { ChatService, BrowserService };
 
 export {
   Eko,
@@ -31,7 +32,7 @@ export {
   AgentChain,
   SimpleSseMcpClient,
   SimpleHttpMcpClient,
-  RetryLanguageModel
+  RetryLanguageModel,
 };
 
 export {

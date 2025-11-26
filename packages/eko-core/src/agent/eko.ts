@@ -27,7 +27,8 @@ export class Eko {
   public async generate(
     taskPrompt: string,
     taskId: string = uuidv4(),
-    contextParams?: Record<string, any>
+    contextParams?: Record<string, any>,
+    datetime?: string
   ): Promise<Workflow> {
     const agents = [...(this.config.agents || [])];
     const chain: Chain = new Chain(taskPrompt);
@@ -50,7 +51,7 @@ export class Eko {
         context.agents = mergeAgents(context.agents, a2aList);
       }
       const planner = new Planner(context);
-      context.workflow = await planner.plan(taskPrompt);
+      context.workflow = await planner.plan(taskPrompt, true, datetime);
       return context.workflow;
     } catch (e) {
       this.deleteTask(taskId);

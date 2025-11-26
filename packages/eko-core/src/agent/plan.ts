@@ -25,7 +25,8 @@ export class Planner {
 
   async plan(
     taskPrompt: string | LanguageModelV2TextPart,
-    saveHistory: boolean = true
+    saveHistory?: boolean,
+    datetime?: string
   ): Promise<Workflow> {
     let taskPromptStr;
     let userPrompt: LanguageModelV2TextPart;
@@ -34,9 +35,8 @@ export class Planner {
       userPrompt = {
         type: "text",
         text: getPlanUserPrompt(
-          taskPrompt,
-          this.context.variables.get("task_website"),
-          this.context.variables.get("plan_ext_prompt")
+          this.context,
+          taskPrompt
         ),
       };
     } else {
@@ -53,12 +53,13 @@ export class Planner {
         content: [userPrompt],
       },
     ];
-    return await this.doPlan(taskPromptStr, messages, saveHistory);
+    return await this.doPlan(taskPromptStr, messages, saveHistory ?? true);
   }
 
   async replan(
     taskPrompt: string,
-    saveHistory: boolean = true
+    saveHistory: boolean = true,
+    datetime?: string
   ): Promise<Workflow> {
     const chain = this.context.chain;
     if (chain.planRequest && chain.planResult) {
@@ -75,7 +76,7 @@ export class Planner {
       ];
       return await this.doPlan(taskPrompt, messages, saveHistory);
     } else {
-      return this.plan(taskPrompt, saveHistory);
+      return this.plan(taskPrompt, saveHistory, datetime);
     }
   }
 
@@ -89,7 +90,7 @@ export class Planner {
     const rlm = new RetryLanguageModel(config.llms, config.planLlms);
     rlm.setContext(this.context);
     const request: LLMRequest = {
-      maxTokens: 8192,
+      maxOutputTokens: 8192,
       temperature: 0.7,
       messages: messages,
       abortSignal: this.context.controller.signal,

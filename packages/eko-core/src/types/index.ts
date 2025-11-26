@@ -4,6 +4,7 @@ export * from "./llm.types";
 export * from "./tools.types";
 export * from "./mcp.types";
 export * from "./config.types";
+export * from "./service.types";
 
 export type {
   JSONSchema7,

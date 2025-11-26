@@ -25,6 +25,7 @@ import {
   LanguageModelV2ToolResultPart,
   LanguageModelV2ToolResultOutput,
 } from "@ai-sdk/provider";
+import global from "../config/global";
 
 export function defaultLLMProviderOptions(): SharedV2ProviderOptions {
   return {
@@ -82,7 +83,7 @@ export function getTool<T extends Tool | DialogueTool>(
 export function convertToolResult(
   toolUse: LanguageModelV2ToolCallPart,
   toolResult: ToolResult,
-  user_messages: LanguageModelV2Prompt
+  user_messages?: LanguageModelV2Prompt
 ): LanguageModelV2ToolResultPart {
   let result: LanguageModelV2ToolResultOutput;
   if (!toolResult || !toolResult.content) {
@@ -153,20 +154,27 @@ export function convertToolResult(
         } else {
           // Only the claude model supports returning images from tool results, while openai only supports text,
           // Compatible with other AI models that do not support tool results as images.
-          user_messages.push({
-            role: "user",
-            content: [
-              {
-                type: "file",
-                data: toFile(content.data),
-                mediaType: content.mimeType || getMimeType(content.data),
-              },
-              {
-                type: "text",
-                text: `call \`${toolUse.toolName}\` tool result`,
-              },
-            ],
-          });
+          if (user_messages) {
+            user_messages.push({
+              role: "user",
+              content: [
+                {
+                  type: "file",
+                  data: toFile(content.data),
+                  mediaType: content.mimeType || getMimeType(content.data),
+                },
+                {
+                  type: "text",
+                  text: `call \`${toolUse.toolName}\` tool result`,
+                },
+              ],
+            });
+          } else {
+            result.value.push({
+              type: "text",
+              text: "[image]",
+            });
+          }
         }
       }
     }

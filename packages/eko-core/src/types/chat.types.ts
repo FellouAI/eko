@@ -17,6 +17,7 @@ export type MessageFilePart = {
   filename?: string;
   mimeType: string;
   data: string; // base64 / URL
+  filePath?: string;
 };
 
 export type ToolCallPart = {
@@ -32,36 +33,6 @@ export type ToolResultPart = {
   toolName: string;
   isError: boolean;
   output: string | Record<string, any>;
-};
-
-export type ChatMessage = { id: string } & (
-  | {
-      role: "user";
-      content: Array<MessageTextPart | MessageFilePart>;
-    }
-  | {
-      role: "assistant";
-      thinkingContent?: string;
-      content: Array<MessageTextPart | ToolCallPart>;
-    }
-  | {
-      role: "tool";
-      content: Array<ToolResultPart>;
-    }
-) & {
-    createdAt: number;
-    extra?: Record<string, any>;
-  };
-
-export type ChatMessages = Array<ChatMessage>;
-
-export type WebSearchResult = {
-  name: string;
-  url: string;
-  logo?: string;
-  snippet: string;
-  content?: string;
-  imageList?: string[];
 };
 
 export type ChatStreamMessage = {
@@ -129,25 +100,23 @@ export interface ChatStreamCallback {
   taskCallback?: AgentStreamCallback & HumanCallback;
 }
 
-export type EkoMessage =
+export type EkoMessage = { id: string } & (
   | {
-      id: string;
       role: "user";
-      timestamp: number;
       content: string | EkoMessageUserPart[];
     }
   | {
-      id: string;
       role: "assistant";
-      timestamp: number;
       content: EkoMessageAssistantPart[];
     }
   | {
-      id: string;
       role: "tool";
-      timestamp: number;
       content: EkoMessageToolPart[];
-    };
+    }
+) & {
+    timestamp: number;
+    extra?: Record<string, any>;
+  };
 
 export type EkoMessageUserPart =
   | {
@@ -190,7 +159,7 @@ export interface DialogueTool {
   execute: (
     args: Record<string, unknown>,
     toolCall: LanguageModelV2ToolCallPart,
-    messageId: string,
+    messageId: string
   ) => Promise<ToolResult>;
 }
 
@@ -202,6 +171,7 @@ export type DialogueParams = {
   messageId: string;
   user: Array<MessageTextPart | MessageFilePart>;
   callback: ChatStreamCallback;
+  datetime?: string;
   signal?: AbortSignal;
   extra?: Record<string, any>;
 };

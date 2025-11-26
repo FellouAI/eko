@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { Typography } from "antd";
 import { uuidv4 } from "@eko-ai/eko";
-import type { TabInfo } from "../types";
+import type { PageTab } from "@eko-ai/eko/types";
 import { GlobalOutlined } from "@ant-design/icons";
 
 interface WebpageMentionInputProps {
@@ -136,7 +136,7 @@ export const WebpageMentionInput: React.FC<WebpageMentionInputProps> = ({
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const tabListRef = useRef<HTMLDivElement>(null);
-  const [tabs, setTabs] = useState<TabInfo[]>([]);
+  const [tabs, setTabs] = useState<PageTab[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [atPosition, setAtPosition] = useState<number | null>(null);
   const [mentionQueryLength, setMentionQueryLength] = useState(0);
@@ -156,7 +156,7 @@ export const WebpageMentionInput: React.FC<WebpageMentionInputProps> = ({
 
   const getTabs = useCallback(async () => {
     setLoadingTabs(true);
-    return new Promise<TabInfo[]>((resolve, reject) => {
+    return new Promise<PageTab[]>((resolve, reject) => {
       const requestId = uuidv4();
       const timer = setTimeout(() => {
         chrome.runtime.onMessage.removeListener(listener);
@@ -198,7 +198,7 @@ export const WebpageMentionInput: React.FC<WebpageMentionInputProps> = ({
           return title.includes(query) || url.includes(query);
         })
       : tabs;
-    return list.slice(0, 15);
+    return list;
   }, [mentionQuery, tabs]);
 
   useEffect(() => {
@@ -350,7 +350,7 @@ export const WebpageMentionInput: React.FC<WebpageMentionInputProps> = ({
   }, [highlightedIndex, showDropdown]);
 
   const insertWebpageReference = useCallback(
-    (tab: TabInfo) => {
+    (tab: PageTab) => {
       if (atPosition === null) return;
 
       const beforeAt = value.substring(0, atPosition);
@@ -524,9 +524,9 @@ export const WebpageMentionInput: React.FC<WebpageMentionInputProps> = ({
                     onMouseEnter={() => setHighlightedIndex(index)}
                     data-tab-option-index={index}
                   >
-                    {tab.iconUrl ? (
+                    {tab.favicon ? (
                       <img
-                        src={tab.iconUrl}
+                        src={tab.favicon}
                         alt="icon"
                         style={{
                           width: "1em",

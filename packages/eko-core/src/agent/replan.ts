@@ -45,7 +45,7 @@ If after executing some subtasks it is found that the previous plan has issues o
     ];
     const functionName = "check_task_status";
     const request: LLMRequest = {
-      maxTokens: 512,
+      maxOutputTokens: 512,
       temperature: 0.7,
       messages: messages,
       abortSignal: context.controller.signal,

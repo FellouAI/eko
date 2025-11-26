@@ -1,11 +1,13 @@
 import config from "../config";
+import { Agent } from "../agent";
 import { sub } from "../common/utils";
 import global from "../config/global";
 import { GlobalPromptKey } from "../types";
 import TaskContext from "../agent/agent-context";
+import { PromptTemplate } from "./prompt_template";
 
 const PLAN_SYSTEM_TEMPLATE = `
-You are {name}, an autonomous AI Agent Planner.
+You are {{name}}, an autonomous AI Agent Planner.
 
 ## Task Description
 Your task is to understand the user's requirements, dynamically plan the user's tasks based on the Agent list, and please follow the steps below:
@@ -18,7 +20,7 @@ Your task is to understand the user's requirements, dynamically plan the user's 
 - The output language should follow the language corresponding to the user's task.
 
 ## Agent list
-{agents}
+{{agents}}
 
 ## Output Rules and Format
 <root>
@@ -75,6 +77,10 @@ Your task is to understand the user's requirements, dynamically plan the user's 
   </agents>
 </root>
 
+{{examples}}
+`;
+
+const EXAMPLE_TEMPLATE = `
 ## Example 1
 User: Open Boss Zhipin, find 10 operation positions in Chengdu, and send a personal introduction to the recruiters based on the page information.
 Output result:
@@ -231,23 +237,66 @@ Output result:
 `;
 
 const PLAN_USER_TEMPLATE = `
-User Platform: {platform}
-Current datetime: {datetime}
-Task Description: {task_prompt}
-`;
-
-const PLAN_USER_WEBSITE_TEMPLATE = `
-User Platform: {platform}
-Task Website: {task_website}
-Current datetime: {datetime}
-Task Description: {task_prompt}
+<if language>
+Language: {{language}}
+</if>
+User Platform: {{platform}}
+<if taskWebsite>
+Task Websites:
+{{taskWebsite}}
+</if>
+<if dependentVariables>
+Dependent Variables: {{dependentVariables}}
+</if>
+Current datetime: {{datetime}}
+User Task Description: {{taskPrompt}}
+<if attachments>
+Attachments:
+{{attachments}}
+</if>
+<if extPrompt>
+{{extPrompt}}
+</if>
 `;
 
 export async function getPlanSystemPrompt(
   context: TaskContext
 ): Promise<string> {
+  const agents_prompt = await buildAgentsPrompt(context.agents, context);
+  const planSysPrompt =
+    global.prompts.get(GlobalPromptKey.planner_system) || PLAN_SYSTEM_TEMPLATE;
+  const planExamplePrompt =
+    global.prompts.get(GlobalPromptKey.planner_example) || EXAMPLE_TEMPLATE;
+  return PromptTemplate.render(planSysPrompt, {
+    name: config.name,
+    agents: agents_prompt.trim(),
+    examples: planExamplePrompt.trim(),
+  }).trim();
+}
+
+export function getPlanUserPrompt(
+  context: TaskContext,
+  taskPrompt: string
+): string {
+  const planUserPrompt =
+    global.prompts.get(GlobalPromptKey.planner_user) || PLAN_USER_TEMPLATE;
+  return PromptTemplate.render(planUserPrompt, {
+    taskPrompt: taskPrompt,
+    platform: config.platform,
+    taskWebsite: context.variables.get("taskWebsite"),
+    language: context.variables.get("language"),
+    attachments: context.variables.get("attachments"),
+    dependentVariables: context.variables.get("dependentVariables"),
+    datetime: context.variables.get("datetime") || new Date().toLocaleString(),
+    extPrompt: context.variables.get("planExtPrompt"),
+  }).trim();
+}
+
+async function buildAgentsPrompt(
+  agents: Agent[],
+  context: TaskContext
+): Promise<string> {
   let agents_prompt = "";
-  let agents = context.agents;
   for (let i = 0; i < agents.length; i++) {
     let agent = agents[i];
     let tools = await agent.loadTools(context);
@@ -275,36 +324,5 @@ export async function getPlanSystemPrompt(
         .join("\n") +
       "\n</agent>\n\n";
   }
-  const planSysPrompt =
-    global.prompts.get(GlobalPromptKey.planner_system) || PLAN_SYSTEM_TEMPLATE;
-  return planSysPrompt
-    .replace("{name}", config.name)
-    .replace("{agents}", agents_prompt.trim())
-    .trim();
-}
-
-export function getPlanUserPrompt(
-  task_prompt: string,
-  task_website?: string,
-  ext_prompt?: string
-): string {
-  let prompt = "";
-  if (task_website) {
-    const planUserPrompt =
-      global.prompts.get(GlobalPromptKey.planner_user_website) ||
-      PLAN_USER_WEBSITE_TEMPLATE;
-    prompt = planUserPrompt.replace("{task_website}", task_website);
-  } else {
-    prompt =
-      global.prompts.get(GlobalPromptKey.planner_user) || PLAN_USER_TEMPLATE;
-  }
-  prompt = prompt
-    .replace("{task_prompt}", task_prompt)
-    .replace("{platform}", config.platform)
-    .replace("{datetime}", new Date().toLocaleString())
-    .trim();
-  if (ext_prompt) {
-    prompt += `\n${ext_prompt.trim()}`;
-  }
-  return prompt;
+  return agents_prompt.trim();
 }

@@ -1,6 +1,8 @@
 import { JSONSchema7 } from "json-schema";
-import { ChatContext } from "./chat-context";
-import { DialogueParams, DialogueTool, ToolResult } from "../types";
+import global from "../../config/global";
+import { sub } from "../../common/utils";
+import { ChatContext } from "../chat-context";
+import { DialogueParams, DialogueTool, ToolResult } from "../../types";
 
 export const TOOL_NAME = "webSearch";
 
@@ -21,15 +23,7 @@ export default class WebSearchTool implements DialogueTool {
         query: {
           type: "string",
           description:
-            "The search query to execute. Use specific keywords and phrases for better results. Current UTC time: {current_utc_time}",
-        },
-        keywords: {
-          type: "array",
-          items: {
-            type: "string",
-          },
-          description:
-            "The search keywords to execute. Contains 2-4 keywords, representing different search perspectives for the query. Use specific keywords and phrases for better results. Current UTC time: {current_utc_time}",
+            "The search query to execute. Use specific keywords and phrases for better results.",
         },
         language: {
           type: "string",
@@ -50,13 +44,41 @@ export default class WebSearchTool implements DialogueTool {
   }
 
   async execute(args: Record<string, unknown>): Promise<ToolResult> {
-    return {
+    if (!global.chatService) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Error: not implemented",
+          },
+        ],
+      };
+    }
+    const query = args.query as string;
+    const language = args.language as string;
+    const count = (args.count as number) || 10;
+    const results = await global.chatService.websearch(
+      this.chatContext.getChatId(),
+      query,
+      undefined,
+      language,
+      count
+    );
+    return Promise.resolve({
       content: [
         {
           type: "text",
-          text: "Error: not implemented",
+          text: JSON.stringify(
+            results.map((result) => {
+              return {
+                title: result.title,
+                url: result.url,
+                content: sub(result.content || result.snippet || "", 6000),
+              };
+            })
+          ),
         },
       ],
-    };
+    });
   }
 }

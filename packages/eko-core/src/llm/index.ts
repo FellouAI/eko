@@ -18,8 +18,8 @@ import {
   StreamResult,
   GenerateResult,
 } from "../types/llm.types";
+import { defaultLLMProviderOptions } from "../agent/agent-llm";
 import TaskContext, { AgentContext } from "../agent/agent-context";
-import { defaultLLMProviderOptions } from "../agent/llm";
 
 export class RetryLanguageModel {
   private llms: LLMs;
@@ -61,7 +61,7 @@ export class RetryLanguageModel {
       prompt: request.messages,
       tools: request.tools,
       toolChoice: request.toolChoice,
-      maxOutputTokens: request.maxTokens,
+      maxOutputTokens: request.maxOutputTokens,
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
@@ -73,7 +73,7 @@ export class RetryLanguageModel {
   async doGenerate(
     options: LanguageModelV2CallOptions
   ): Promise<GenerateResult> {
-    const maxTokens = options.maxOutputTokens;
+    const maxOutputTokens = options.maxOutputTokens;
     const providerOptions = options.providerOptions;
     const names = [...this.names, ...this.names];
     let lastError;
@@ -84,9 +84,9 @@ export class RetryLanguageModel {
       if (!llm) {
         continue;
       }
-      if (!maxTokens) {
+      if (!maxOutputTokens) {
         options.maxOutputTokens =
-          llmConfig.config?.maxTokens || config.maxTokens;
+          llmConfig.config?.maxOutputTokens || config.maxOutputTokens;
       }
       if (!providerOptions) {
         options.providerOptions = defaultLLMProviderOptions();
@@ -132,7 +132,7 @@ export class RetryLanguageModel {
       prompt: request.messages,
       tools: request.tools,
       toolChoice: request.toolChoice,
-      maxOutputTokens: request.maxTokens,
+      maxOutputTokens: request.maxOutputTokens,
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
@@ -142,7 +142,7 @@ export class RetryLanguageModel {
   }
 
   async doStream(options: LanguageModelV2CallOptions): Promise<StreamResult> {
-    const maxTokens = options.maxOutputTokens;
+    const maxOutputTokens = options.maxOutputTokens;
     const providerOptions = options.providerOptions;
     const names = [...this.names, ...this.names];
     let lastError;
@@ -153,9 +153,9 @@ export class RetryLanguageModel {
       if (!llm) {
         continue;
       }
-      if (!maxTokens) {
+      if (!maxOutputTokens) {
         options.maxOutputTokens =
-          llmConfig.config?.maxTokens || config.maxTokens;
+          llmConfig.config?.maxOutputTokens || config.maxOutputTokens;
       }
       if (!providerOptions) {
         options.providerOptions = defaultLLMProviderOptions();

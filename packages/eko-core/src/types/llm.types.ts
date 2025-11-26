@@ -34,7 +34,7 @@ export type LLMConfig = {
     temperature?: number;
     topP?: number;
     topK?: number;
-    maxTokens?: number;
+    maxOutputTokens?: number;
     [key: string]: any;
   };
   options?: Record<string, any>;
@@ -78,7 +78,7 @@ export type StreamResult = {
 };
 
 export type LLMRequest = {
-  maxTokens?: number;
+  maxOutputTokens?: number;
   messages: LanguageModelV2Prompt;
   toolChoice?: LanguageModelV2ToolChoice;
   tools?: Array<LanguageModelV2FunctionTool>;

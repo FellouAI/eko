@@ -1,6 +1,6 @@
 import { JSONSchema7 } from "json-schema";
-import { ChatContext } from "./chat-context";
-import { DialogueParams, DialogueTool, ToolResult } from "../types";
+import { ChatContext } from "../chat-context";
+import { DialogueParams, DialogueTool, ToolResult } from "../../types";
 
 export const TOOL_NAME = "taskVariableStorage";
 

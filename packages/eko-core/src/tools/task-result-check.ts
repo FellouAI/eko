@@ -2,7 +2,7 @@ import { JSONSchema7 } from "json-schema";
 import { RetryLanguageModel } from "../llm";
 import { extractUsedTool } from "../memory";
 import { mergeTools } from "../common/utils";
-import { callAgentLLM } from "../agent/llm";
+import { callAgentLLM } from "../agent/agent-llm";
 import { AgentContext } from "../agent/agent-context";
 import { Tool, ToolResult } from "../types/tools.types";
 import {

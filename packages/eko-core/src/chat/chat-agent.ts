@@ -1,12 +1,12 @@
 import {
+  PageTab,
   EkoMessage,
   ToolResult,
   DialogueTool,
   DialogueParams,
-  ChatStreamCallback,
   EkoDialogueConfig,
   EkoMessageUserPart,
-  LanguageModelV2Prompt,
+  ChatStreamCallback,
   LanguageModelV2TextPart,
   LanguageModelV2ToolCallPart,
   LanguageModelV2ToolResultPart,
@@ -14,26 +14,25 @@ import {
 import {
   callChatLLM,
   convertToolResults,
-  convertUserContent,
   convertAssistantToolResults,
-} from "./llm";
+} from "./chat-llm";
 import Log from "../common/log";
 import global from "../config/global";
-import { uuidv4 } from "../common/utils";
-import DeepActionTool from "./deep-action";
+import { mergeTools, uuidv4 } from "../common/utils";
+import DeepActionTool from "./tools/deep-action";
 import { RetryLanguageModel } from "../llm";
 import { EkoMemory } from "../memory/memory";
 import { ChatContext } from "./chat-context";
-import WebpageQaTool from "./webpage-qa";
-import WebSearchTool from "./web-search";
+import WebpageQaTool from "./tools/webpage-qa";
+import WebSearchTool from "./tools/web-search";
 import { getChatSystemPrompt } from "../prompt/chat";
-import TaskVariableStorageTool from "./variable-storage";
-import { convertTools, getTool, convertToolResult } from "../agent/llm";
+import TaskVariableStorageTool from "./tools/variable-storage";
+import { convertTools, getTool, convertToolResult } from "../agent/agent-llm";
 
 export class ChatAgent {
-  protected chatContext: ChatContext;
   protected memory: EkoMemory;
   protected tools: DialogueTool[];
+  protected chatContext: ChatContext;
 
   constructor(
     config: EkoDialogueConfig,
@@ -42,8 +41,7 @@ export class ChatAgent {
     tools?: DialogueTool[]
   ) {
     this.tools = tools ?? [];
-    const systemPrompt = getChatSystemPrompt();
-    this.memory = memory ?? new EkoMemory(systemPrompt);
+    this.memory = memory ?? new EkoMemory();
     this.chatContext = new ChatContext(chatId, config);
     global.chatMap.set(chatId, this.chatContext);
   }
@@ -56,12 +54,13 @@ export class ChatAgent {
     params: DialogueParams,
     segmentedExecution: boolean
   ): Promise<string> {
+    const chatTools = mergeTools(this.buildInnerTools(params), this.tools);
+    await this.buildSystemPrompt(params, chatTools);
     await this.addUserMessage(params.messageId, params.user);
     const config = this.chatContext.getConfig();
     const rlm = new RetryLanguageModel(config.llms, config.chatLlms);
     for (let i = 0; i < 15; i++) {
       const messages = this.memory.buildMessages();
-      const chatTools = [...this.buildInnerTools(params), ...this.tools];
       const results = await callChatLLM(
         params.messageId,
         this.chatContext,
@@ -86,9 +85,62 @@ export class ChatAgent {
     return "Unfinished";
   }
 
+  public async initMessages(): Promise<void> {
+    if (!global.chatService) {
+      return;
+    }
+    const messages = this.memory.getMessages();
+    if (messages.length == 0) {
+      const messages = await global.chatService.loadMessages(
+        this.chatContext.getChatId()
+      );
+      if (messages && messages.length > 0) {
+        await this.memory.addMessages(messages);
+      }
+    }
+  }
+
+  protected async buildSystemPrompt(params: DialogueParams, chatTools: DialogueTool[]): Promise<void> {
+    let _memory = undefined;
+    if (global.chatService) {
+      try {
+        const userPrompt = params.user
+          .map((part) => (part.type == "text" ? part.text : ""))
+          .join("\n")
+          .trim();
+        if (userPrompt) {
+          _memory = await global.chatService.memoryRecall(
+            this.chatContext.getChatId(),
+            userPrompt
+          );
+        }
+      } catch (e) {
+        Log.error("chat service memory recall error: ", e);
+      }
+    }
+    let _tabs: PageTab[] | undefined = undefined;
+    if (global.browserService) {
+      try {
+        _tabs = await global.browserService.loadTabs(
+          this.chatContext.getChatId()
+        );
+      } catch (e) {
+        Log.error("browser service load tabs error: ", e);
+      }
+    }
+    const datetime = params.datetime || new Date().toLocaleString();
+    const systemPrompt = getChatSystemPrompt(
+      chatTools,
+      datetime,
+      _memory,
+      _tabs
+    );
+    this.memory.setSystemPrompt(systemPrompt);
+  }
+
   protected async addUserMessage(
     messageId: string,
-    user: string | EkoMessageUserPart[],
+    user: string | EkoMessageUserPart[]
   ): Promise<EkoMessage> {
     const message: EkoMessage = {
       id: messageId,
@@ -96,17 +148,32 @@ export class ChatAgent {
       timestamp: Date.now(),
       content: user,
     };
-    await this.memory.addMessages([message]);
+    await this.addMessages([message]);
     return message;
   }
 
+  protected async addMessages(
+    messages: EkoMessage[],
+    storage: boolean = true
+  ): Promise<void> {
+    await this.memory.addMessages(messages);
+    if (storage && global.chatService) {
+      await global.chatService.addMessage(
+        this.chatContext.getChatId(),
+        messages
+      );
+    }
+  }
+
   protected buildInnerTools(params: DialogueParams): DialogueTool[] {
-    return [
-      new DeepActionTool(this.chatContext, params),
-      new WebpageQaTool(this.chatContext, params),
-      new WebSearchTool(this.chatContext, params),
-      new TaskVariableStorageTool(this.chatContext, params),
-    ];
+    const tools: DialogueTool[] = [];
+    tools.push(new DeepActionTool(this.chatContext, params));
+    if (global.browserService) {
+      tools.push(new WebpageQaTool(this.chatContext, params));
+    }
+    tools.push(new WebSearchTool(this.chatContext, params));
+    tools.push(new TaskVariableStorageTool(this.chatContext, params));
+    return tools;
   }
 
   public getChatContext(): ChatContext {
@@ -120,7 +187,6 @@ export class ChatAgent {
     chatStreamCallback?: ChatStreamCallback
   ): Promise<string | null> {
     let text: string | null = null;
-    const user_messages: LanguageModelV2Prompt = [];
     const toolResults: LanguageModelV2ToolResultPart[] = [];
     if (results.length == 0) {
       return null;
@@ -167,14 +233,10 @@ export class ChatAgent {
           toolResult: toolResult,
         });
       }
-      const llmToolResult = convertToolResult(
-        result,
-        toolResult,
-        user_messages
-      );
+      const llmToolResult = convertToolResult(result, toolResult);
       toolResults.push(llmToolResult);
     }
-    await this.memory.addMessages([
+    await this.addMessages([
       {
         id: this.memory.genMessageId(),
         role: "assistant",
@@ -183,7 +245,7 @@ export class ChatAgent {
       },
     ]);
     if (toolResults.length > 0) {
-      await this.memory.addMessages([
+      await this.addMessages([
         {
           id: this.memory.genMessageId(),
           role: "tool",
@@ -191,19 +253,6 @@ export class ChatAgent {
           content: convertToolResults(toolResults),
         },
       ]);
-      for (let i = 0; i < user_messages.length; i++) {
-        const message = user_messages[i];
-        if (message.role == "user") {
-          await this.memory.addMessages([
-            {
-              id: this.memory.genMessageId(),
-              role: "user",
-              timestamp: Date.now(),
-              content: convertUserContent(message.content),
-            },
-          ]);
-        }
-      }
       return null;
     } else {
       return text;

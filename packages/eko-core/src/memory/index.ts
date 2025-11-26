@@ -8,7 +8,7 @@ import config from "../config";
 import { Tool } from "../types";
 import Log from "../common/log";
 import TaskSnapshotTool from "./snapshot";
-import { callAgentLLM } from "../agent/llm";
+import { callAgentLLM } from "../agent/agent-llm";
 import { RetryLanguageModel } from "../llm";
 import { fixJson, mergeTools, sub } from "../common/utils";
 import { AgentContext } from "../agent/agent-context";

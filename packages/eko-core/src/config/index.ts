@@ -5,7 +5,7 @@ const config: Config = {
   mode: "normal",
   platform: "mac",
   maxReactNum: 500,
-  maxTokens: 16000,
+  maxOutputTokens: 16000,
   maxRetryNum: 3,
   agentParallel: false,
   compressThreshold: 80,
@@ -17,6 +17,13 @@ const config: Config = {
   parallelToolCalls: true,
   markImageMode: "draw",
   expertModeTodoLoopNum: 10,
+  memoryConfig: {
+    maxMessageNum: 15,
+    maxInputTokens: 64000,
+    enableCompression: true,
+    compressionThreshold: 10,
+    compressionMaxLength: 6000,
+  },
 };
 
 export default config;
