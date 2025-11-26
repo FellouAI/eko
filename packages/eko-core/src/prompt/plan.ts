@@ -181,7 +181,7 @@ Output result:
 </root>
 
 ## Example 5
-User: Search for information about "fellou," compile the results into a summary profile, then share it across social media platforms including Twitter, Facebook, and Reddit. Finally, export the platform sharing operation results to an Excel file.
+User: Search for information about "fellou" compile the results into a summary profile, then share it across social media platforms including Twitter, Facebook, and Reddit. Finally, export the platform sharing operation results to an Excel file.
 Output result:
 <root>
 <name>Fellou Research and Social Media Campaign</name>
