@@ -17,13 +17,14 @@ Eko (pronounced like 'echo') is a production-ready JavaScript framework that ena
 
 ## News
 
+- **2025-11:** Eko 4.0 supports chat conversations & optimizes agent logic.
 - **2025-09:** Eko 3.0 introduces dependency-aware parallel agent execution.
 - **2025-09:** New pause, resume, and interrupt controls with `task_snapshot` workflow recovery.
 - **2025-09:** Monorepo tooling migrated to pnpm for consistent workspace management.
 
-## Upgrading to Eko 3.0
+## Upgrading to Eko 4.0
 
-Follow these steps when moving an existing Eko 2.x project to 3.0:
+Follow these steps when moving an existing Eko 3.x project to 4.0:
 
 1. Update dependencies with `pnpm up @eko-ai/eko @eko-ai/eko-nodejs @eko-ai/eko-web @eko-ai/eko-extension`.
 2. Regenerate saved workflows or exported plans so they use the v3 schema and dependency graph format.
