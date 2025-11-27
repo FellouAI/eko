@@ -1,8 +1,8 @@
 import "./index.css";
-import { Empty } from "antd";
 import { uuidv4 } from "@eko-ai/eko";
 import { createRoot } from "react-dom/client";
 import { ChatInput } from "./components/ChatInput";
+import { Empty, message as AntdMessage } from "antd";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { MessageItem } from "./components/MessageItem";
 import type { ChatMessage, UploadedFile } from "./types";
@@ -45,10 +45,26 @@ const AppRun = () => {
         handleChatCallback(message.data);
       } else if (message.type === "task_callback") {
         handleTaskCallback(message.data);
+      } else if (message.type === "chat_result") {
+        const messageId = message.data.messageId;
+        const error = message.data.error;
+        if (error && messageId === currentMessageId) {
+          setCurrentMessageId(null);
+          const userMessage = messages.find((m) => m.id === messageId);
+          if (userMessage) {
+            userMessage.status = "error";
+          }
+        }
       } else if (message.type === "log") {
         const level = message.data.level;
         const msg = message.data.message;
-        console.log(level, msg);
+        const showMessage =
+          level === "error"
+            ? AntdMessage.error
+            : level === "success"
+            ? AntdMessage.success
+            : AntdMessage.info;
+        showMessage(msg, 3);
       }
     };
 
@@ -56,7 +72,7 @@ const AppRun = () => {
     return () => {
       chrome.runtime.onMessage.removeListener(handleMessage);
     };
-  }, [handleChatCallback, handleTaskCallback]);
+  }, [handleChatCallback, handleTaskCallback, currentMessageId]);
 
   // Send message
   const sendMessage = useCallback(async () => {
@@ -112,7 +128,7 @@ const AppRun = () => {
       timestamp: Date.now(),
       contentItems: [],
       uploadedFiles: [...uploadedFiles],
-      loading: true,
+      status: "waiting",
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -131,6 +147,7 @@ const AppRun = () => {
         },
       });
     } catch (error) {
+      userMessage.status = "error";
       console.error("Error sending message:", error);
     } finally {
       setSending(false);

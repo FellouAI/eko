@@ -96,7 +96,12 @@ export class Eko {
         taskId,
         success: false,
         stopReason: e?.name == "AbortError" ? "abort" : "error",
-        result: e ? e.name + ": " + e.message : "Error",
+        result:
+          typeof e == "string"
+            ? e
+            : e instanceof Error
+            ? e.name + ": " + e.message
+            : String(e || "Unknown error"),
         error: e,
       };
     }
@@ -329,7 +334,7 @@ export class Eko {
   }
 
   public abortTask(taskId: string, reason?: string): boolean {
-    let context = global.taskMap.get(taskId);
+    const context = global.taskMap.get(taskId);
     if (context) {
       context.setPause(false);
       this.onTaskStatus(context, "abort", reason);

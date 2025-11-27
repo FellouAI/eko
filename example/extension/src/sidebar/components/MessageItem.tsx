@@ -135,7 +135,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                     {userContent}
                   </Paragraph>
                 )}
-                {message.loading && (
+                {message.status == "waiting" && (
                   <Spin size="small" style={{ color: "white" }} />
                 )}
               </Space>
@@ -200,67 +200,71 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           </Space>
         }
       >
-        {message.contentItems && message.contentItems.length > 0
-          ? message.contentItems.map((item, index) => {
-              if (item.type === "thinking") {
-                return (
-                  <div key={`chat-thinking-${item.streamId}-${index}`}>
-                    <ThinkingItem
-                      streamId={item.streamId}
-                      text={item.text}
-                      streamDone={item.streamDone}
-                    />
-                  </div>
-                );
-              } else if (item.type === "text") {
-                return (
-                  <div key={`chat-text-${item.streamId}-${index}`}>
-                    <TextItem
-                      streamId={item.streamId}
-                      text={item.text}
-                      streamDone={item.streamDone}
-                    />
-                  </div>
-                );
-              } else if (item.type === "tool") {
-                return (
-                  <div
-                    key={`chat-tool-${item.toolCallId}-${index}`}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <ToolCallItem item={item} />
-                  </div>
-                );
-              } else if (item.type === "file") {
-                return (
-                  <Image
-                    key={`chat-file-${index}`}
-                    src={
-                      item.data.startsWith("http")
-                        ? item.data
-                        : `data:${item.mimeType};base64,${item.data}`
-                    }
-                    alt="Message file"
-                    style={{ maxWidth: "100%", marginTop: 8, marginBottom: 8 }}
+        {message.contentItems && message.contentItems.length > 0 ? (
+          message.contentItems.map((item, index) => {
+            if (item.type === "thinking") {
+              return (
+                <div key={`chat-thinking-${item.streamId}-${index}`}>
+                  <ThinkingItem
+                    streamId={item.streamId}
+                    text={item.text}
+                    streamDone={item.streamDone}
                   />
-                );
-              } else if (item.type === "task") {
-                return (
-                  <div
-                    key={`chat-task-${item.taskId}-${index}`}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <WorkflowCard task={item.task} />
-                  </div>
-                );
-              }
-              return null;
-            })
-          : message.content && (
-              <div style={{ marginBottom: 8 }}>
-                <MarkdownRenderer content={message.content} />
-              </div>
-            )}
+                </div>
+              );
+            } else if (item.type === "text") {
+              return (
+                <div key={`chat-text-${item.streamId}-${index}`}>
+                  <TextItem
+                    streamId={item.streamId}
+                    text={item.text}
+                    streamDone={item.streamDone}
+                  />
+                </div>
+              );
+            } else if (item.type === "tool") {
+              return (
+                <div
+                  key={`chat-tool-${item.toolCallId}-${index}`}
+                  style={{ marginBottom: 8 }}
+                >
+                  <ToolCallItem item={item} />
+                </div>
+              );
+            } else if (item.type === "file") {
+              return (
+                <Image
+                  key={`chat-file-${index}`}
+                  src={
+                    item.data.startsWith("http")
+                      ? item.data
+                      : `data:${item.mimeType};base64,${item.data}`
+                  }
+                  alt="Message file"
+                  style={{ maxWidth: "100%", marginTop: 8, marginBottom: 8 }}
+                />
+              );
+            } else if (item.type === "task") {
+              return (
+                <div
+                  key={`chat-task-${item.taskId}-${index}`}
+                  style={{ marginBottom: 8 }}
+                >
+                  <WorkflowCard task={item.task} />
+                </div>
+              );
+            }
+            return null;
+          })
+        ) : message.content ? (
+          <div style={{ marginBottom: 8 }}>
+            <MarkdownRenderer content={message.content} />
+          </div>
+        ) : message.status == "waiting" ? (
+          <Spin size="small" />
+        ) : (
+          <></>
+        )}
         {message.error && (
           <Alert
             message="Error"

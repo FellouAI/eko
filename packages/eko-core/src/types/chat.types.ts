@@ -41,6 +41,9 @@ export type ChatStreamMessage = {
   messageId: string;
 } & (
   | {
+      type: "chat_start";
+    }
+  | {
       type: "text" | "thinking";
       streamId: string;
       streamDone: boolean;
@@ -90,6 +93,12 @@ export type ChatStreamMessage = {
         completionTokens: number;
         totalTokens: number;
       };
+    }
+  | {
+      type: "chat_end";
+      error: string | null;
+      duration: number;
+      reactLoopNum: number;
     }
 );
 

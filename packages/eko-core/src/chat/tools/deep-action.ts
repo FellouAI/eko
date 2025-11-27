@@ -90,8 +90,13 @@ export default class DeepActionTool implements DialogueTool {
     );
     this.chatContext.addEko(messageId, eko);
     if (this.params.signal) {
+      if (this.params.signal.aborted) {
+        const error = new Error("Operation was interrupted");
+        error.name = "AbortError";
+        throw error;
+      }
       this.params.signal.addEventListener("abort", () => {
-        eko.abortTask(messageId, "user aborted");
+        eko.abortTask(messageId, "User aborted");
       });
     }
     const attachments = this.params.user

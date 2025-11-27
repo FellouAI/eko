@@ -100,9 +100,9 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   timestamp: number;
-  contentItems: ChatContentItem[]; // All content in order
   uploadedFiles?: UploadedFile[]; // Files in user message
-  loading?: boolean; // Loading state while waiting for callback
+  contentItems: ChatContentItem[]; // All content in order
+  status?: "waiting" | "running" | "done" | "error" | "terminated";
   error?: any;
   usage?: {
     promptTokens: number;

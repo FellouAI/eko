@@ -20,51 +20,52 @@ export const useChatCallbacks = (
       setMessages((prev) => {
         const newMessages = [...prev];
         const aiMessageId = `ai-${data.messageId}`;
-        let message = newMessages.find((m) => m.id === aiMessageId);
+        let aiMessage = newMessages.find((m) => m.id === aiMessageId);
 
-        // If AI message doesn't exist, create it
-        if (!message) {
-          // Ensure corresponding user message exists
+        if (!aiMessage) {
           const userMessage = newMessages.find((m) => m.id === data.messageId);
           if (!userMessage) {
             // User message doesn't exist, might be message order issue, return early
             return prev;
           }
-          // Clear user message loading state
-          userMessage.loading = false;
-          // Create AI message
-          const aiMessage: ChatMessage = {
+          userMessage.status = "running";
+          const _aiMessage: ChatMessage = {
             id: aiMessageId,
             role: "assistant",
             content: "",
+            status: "waiting",
             timestamp: Date.now(),
             contentItems: [],
           };
-          newMessages.push(aiMessage);
-          message = aiMessage;
+          newMessages.push(_aiMessage);
+          aiMessage = _aiMessage;
         }
 
-        if (!message.contentItems) {
-          message.contentItems = [];
+        if (!aiMessage.contentItems) {
+          aiMessage.contentItems = [];
         }
 
         // Handle different types of callbacks
+        if (data.type === "chat_start") {
+          if (data.messageId !== currentMessageId) {
+            setCurrentMessageId(data.messageId);
+          }
+        } else {
+          aiMessage.status = "running";
+        }
         if (data.type === "text" || data.type === "thinking") {
-          // Check if item with same streamId already exists
-          const existingIndex = message.contentItems.findIndex(
+          const existingIndex = aiMessage.contentItems.findIndex(
             (item) =>
               (item.type === "text" || item.type === "thinking") &&
               item.streamId === data.streamId
           );
 
           if (existingIndex >= 0) {
-            // Update existing item
-            (message.contentItems[existingIndex] as any).text = data.text;
-            (message.contentItems[existingIndex] as any).streamDone =
+            (aiMessage.contentItems[existingIndex] as any).text = data.text;
+            (aiMessage.contentItems[existingIndex] as any).streamDone =
               data.streamDone;
           } else {
-            // Add new item
-            message.contentItems.push({
+            aiMessage.contentItems.push({
               type: data.type,
               streamId: data.streamId,
               text: data.text,
@@ -72,30 +73,26 @@ export const useChatCallbacks = (
             });
           }
 
-          // Update content to latest text
           if (data.type === "text" && data.streamDone) {
-            message.content = data.text;
+            aiMessage.content = data.text;
           }
         } else if (data.type === "file") {
-          message.contentItems.push({
+          aiMessage.contentItems.push({
             type: "file",
             mimeType: data.mimeType,
             data: data.data,
           });
         } else if (data.type === "tool_streaming") {
-          // Check if tool call with same toolCallId already exists
-          const existingIndex = message.contentItems.findIndex(
+          const existingIndex = aiMessage.contentItems.findIndex(
             (item) =>
               item.type === "tool" && item.toolCallId === data.toolCallId
           );
 
           if (existingIndex >= 0) {
-            // Update existing tool call
-            (message.contentItems[existingIndex] as any).paramsText =
+            (aiMessage.contentItems[existingIndex] as any).paramsText =
               data.paramsText;
           } else {
-            // Add new tool call
-            message.contentItems.push({
+            aiMessage.contentItems.push({
               type: "tool",
               toolCallId: data.toolCallId,
               toolName: data.toolName,
@@ -103,18 +100,15 @@ export const useChatCallbacks = (
             });
           }
         } else if (data.type === "tool_use") {
-          // Check if tool call with same toolCallId already exists
-          const existingIndex = message.contentItems.findIndex(
+          const existingIndex = aiMessage.contentItems.findIndex(
             (item) =>
               item.type === "tool" && item.toolCallId === data.toolCallId
           );
 
           if (existingIndex >= 0) {
-            // Update existing tool call
-            (message.contentItems[existingIndex] as any).params = data.params;
+            (aiMessage.contentItems[existingIndex] as any).params = data.params;
           } else {
-            // Add new tool call
-            message.contentItems.push({
+            aiMessage.contentItems.push({
               type: "tool",
               toolCallId: data.toolCallId,
               toolName: data.toolName,
@@ -122,21 +116,18 @@ export const useChatCallbacks = (
             });
           }
         } else if (data.type === "tool_running") {
-          // Check if tool call with same toolCallId already exists
-          const existingIndex = message.contentItems.findIndex(
+          const existingIndex = aiMessage.contentItems.findIndex(
             (item) =>
               item.type === "tool" && item.toolCallId === data.toolCallId
           );
 
           if (existingIndex >= 0) {
-            // Update existing tool call
-            (message.contentItems[existingIndex] as any).running =
+            (aiMessage.contentItems[existingIndex] as any).running =
               !data.streamDone;
-            (message.contentItems[existingIndex] as any).runningText =
+            (aiMessage.contentItems[existingIndex] as any).runningText =
               data.text;
           } else {
-            // Add new tool call
-            message.contentItems.push({
+            aiMessage.contentItems.push({
               type: "tool",
               toolCallId: data.toolCallId,
               toolName: data.toolName,
@@ -145,20 +136,17 @@ export const useChatCallbacks = (
             });
           }
         } else if (data.type === "tool_result") {
-          // Check if tool call with same toolCallId already exists
-          const existingIndex = message.contentItems.findIndex(
+          const existingIndex = aiMessage.contentItems.findIndex(
             (item) =>
               item.type === "tool" && item.toolCallId === data.toolCallId
           );
 
           if (existingIndex >= 0) {
-            // Update existing tool call
-            (message.contentItems[existingIndex] as any).result =
+            (aiMessage.contentItems[existingIndex] as any).result =
               data.toolResult;
-            (message.contentItems[existingIndex] as any).running = false;
+            (aiMessage.contentItems[existingIndex] as any).running = false;
           } else {
-            // Add new tool call
-            message.contentItems.push({
+            aiMessage.contentItems.push({
               type: "tool",
               toolCallId: data.toolCallId,
               toolName: data.toolName,
@@ -167,23 +155,20 @@ export const useChatCallbacks = (
             });
           }
 
-          // If it's a deepAction tool, add task item after tool item
           if (data.toolName === "deepAction") {
             const taskId = (data.params as any)?.taskId || uuidv4();
-            // Check if task item already exists
-            const taskIndex = message.contentItems.findIndex(
+            const taskIndex = aiMessage.contentItems.findIndex(
               (item) => item.type === "task" && item.taskId === taskId
             );
 
             if (taskIndex < 0) {
-              // Add task item after tool item
-              const toolIndex = message.contentItems.findIndex(
+              const toolIndex = aiMessage.contentItems.findIndex(
                 (item) =>
                   item.type === "tool" && item.toolCallId === data.toolCallId
               );
               const insertIndex =
-                toolIndex >= 0 ? toolIndex + 1 : message.contentItems.length;
-              message.contentItems.splice(insertIndex, 0, {
+                toolIndex >= 0 ? toolIndex + 1 : aiMessage.contentItems.length;
+              aiMessage.contentItems.splice(insertIndex, 0, {
                 type: "task",
                 taskId: taskId,
                 task: {
@@ -194,17 +179,46 @@ export const useChatCallbacks = (
             }
           }
         } else if (data.type === "error") {
-          message.error = data.error;
-          // Hide stop button
-          if (data.messageId === currentMessageId) {
-            setCurrentMessageId(null);
-          }
+          aiMessage.error = data.error;
         } else if (data.type === "finish") {
-          message.usage = data.usage;
-          // Hide stop button
+          aiMessage.usage = data.usage;
+        } else if (data.type == "chat_end") {
           if (data.messageId === currentMessageId) {
             setCurrentMessageId(null);
           }
+          const userMessage = newMessages.find((m) => m.id === data.messageId);
+          if (userMessage) {
+            userMessage.status = data.error ? "error" : "done";
+          }
+          aiMessage.error = data.error;
+          if (aiMessage.status != "terminated") {
+            aiMessage.status = data.error ? "error" : "done";
+          }
+          aiMessage.contentItems.forEach((item) => {
+            if (item.type == "text" || item.type == "thinking") {
+              item.streamDone = true;
+            } else if (item.type == "tool") {
+              item.running = false;
+            } else if (item.type == "task") {
+              const task = item.task;
+              task.workflowStreamDone = true;
+              task.agents.forEach((agent) => {
+                if (agent.status == "running") {
+                  agent.status = data.error ? "error" : "done";
+                }
+                agent.contentItems.forEach((contentItem) => {
+                  if (
+                    contentItem.type == "text" ||
+                    contentItem.type == "thinking"
+                  ) {
+                    contentItem.streamDone = true;
+                  } else if (contentItem.type == "tool") {
+                    contentItem.running = false;
+                  }
+                });
+              });
+            }
+          });
         }
 
         return newMessages;
@@ -224,13 +238,11 @@ export const useChatCallbacks = (
 
         if (!message) return prev;
 
-        // Find corresponding task item
         const taskItemIndex = message.contentItems.findIndex(
           (item) => item.type === "task" && item.taskId === data.taskId
         );
 
         if (taskItemIndex < 0) {
-          // If doesn't exist, create a new task item
           message.contentItems.push({
             type: "task",
             taskId: data.taskId,
@@ -251,7 +263,6 @@ export const useChatCallbacks = (
           taskItem.task.workflow = data.workflow;
           taskItem.task.workflowStreamDone = data.streamDone;
         } else if (data.type === "agent_start") {
-          // Check if agent already exists
           const existingAgent = taskItem.task.agents.find(
             (a) =>
               a.agentNode.id === (data.nodeId || data.agentName) ||
@@ -273,7 +284,6 @@ export const useChatCallbacks = (
               a.agentNode.name === data.agentName
           );
           if (agent) {
-            // Check if item with same streamId already exists
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
                 (item.type === "text" || item.type === "thinking") &&
@@ -281,12 +291,10 @@ export const useChatCallbacks = (
             );
 
             if (existingIndex >= 0) {
-              // Update existing item
               (agent.contentItems[existingIndex] as any).text = data.text;
               (agent.contentItems[existingIndex] as any).streamDone =
                 data.streamDone;
             } else {
-              // Add new item
               agent.contentItems.push({
                 type: data.type,
                 streamId: data.streamId,
@@ -315,18 +323,15 @@ export const useChatCallbacks = (
               a.agentNode.name === data.agentName
           );
           if (agent) {
-            // Check if tool call with same toolCallId already exists
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
                 item.type === "tool" && item.toolCallId === data.toolCallId
             );
 
             if (existingIndex >= 0) {
-              // Update existing tool call
               (agent.contentItems[existingIndex] as any).paramsText =
                 data.paramsText;
             } else {
-              // Add new tool call
               agent.contentItems.push({
                 type: "tool",
                 toolCallId: data.toolCallId,
@@ -342,17 +347,14 @@ export const useChatCallbacks = (
               a.agentNode.name === data.agentName
           );
           if (agent) {
-            // Check if tool call with same toolCallId already exists
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
                 item.type === "tool" && item.toolCallId === data.toolCallId
             );
 
             if (existingIndex >= 0) {
-              // Update existing tool call
               (agent.contentItems[existingIndex] as any).params = data.params;
             } else {
-              // Add new tool call
               agent.contentItems.push({
                 type: "tool",
                 toolCallId: data.toolCallId,
@@ -368,20 +370,17 @@ export const useChatCallbacks = (
               a.agentNode.name === data.agentName
           );
           if (agent) {
-            // Check if tool call with same toolCallId already exists
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
                 item.type === "tool" && item.toolCallId === data.toolCallId
             );
 
             if (existingIndex >= 0) {
-              // Update existing tool call
               (agent.contentItems[existingIndex] as any).running =
                 !data.streamDone;
               (agent.contentItems[existingIndex] as any).runningText =
                 data.text;
             } else {
-              // Add new tool call
               agent.contentItems.push({
                 type: "tool",
                 toolCallId: data.toolCallId,
@@ -398,19 +397,16 @@ export const useChatCallbacks = (
               a.agentNode.name === data.agentName
           );
           if (agent) {
-            // Check if tool call with same toolCallId already exists
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
                 item.type === "tool" && item.toolCallId === data.toolCallId
             );
 
             if (existingIndex >= 0) {
-              // Update existing tool call
               (agent.contentItems[existingIndex] as any).result =
                 data.toolResult;
               (agent.contentItems[existingIndex] as any).running = false;
             } else {
-              // Add new tool call
               agent.contentItems.push({
                 type: "tool",
                 toolCallId: data.toolCallId,
@@ -454,7 +450,6 @@ export const useChatCallbacks = (
               a.agentNode.name === humanData.agentName
           );
           if (agent) {
-            // Check if item with same callbackId already exists
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
                 (item.type === "human_confirm" ||
@@ -465,13 +460,11 @@ export const useChatCallbacks = (
             );
 
             if (existingIndex >= 0) {
-              // Update existing item (shouldn't happen, but just in case)
               agent.contentItems[existingIndex] = {
                 ...humanData,
                 responded: false,
               };
             } else {
-              // Add new item
               agent.contentItems.push({
                 ...humanData,
                 responded: false,

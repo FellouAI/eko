@@ -18,14 +18,14 @@ import {
 } from "./chat-llm";
 import Log from "../common/log";
 import global from "../config/global";
-import { mergeTools, uuidv4 } from "../common/utils";
-import DeepActionTool from "./tools/deep-action";
 import { RetryLanguageModel } from "../llm";
 import { EkoMemory } from "../memory/memory";
 import { ChatContext } from "./chat-context";
 import WebpageQaTool from "./tools/webpage-qa";
 import WebSearchTool from "./tools/web-search";
+import DeepActionTool from "./tools/deep-action";
 import { getChatSystemPrompt } from "../prompt/chat";
+import { mergeTools, uuidv4 } from "../common/utils";
 import TaskVariableStorageTool from "./tools/variable-storage";
 import { convertTools, getTool, convertToolResult } from "../agent/agent-llm";
 
@@ -54,35 +54,74 @@ export class ChatAgent {
     params: DialogueParams,
     segmentedExecution: boolean
   ): Promise<string> {
-    const chatTools = mergeTools(this.buildInnerTools(params), this.tools);
-    await this.buildSystemPrompt(params, chatTools);
-    await this.addUserMessage(params.messageId, params.user);
-    const config = this.chatContext.getConfig();
-    const rlm = new RetryLanguageModel(config.llms, config.chatLlms);
-    for (let i = 0; i < 15; i++) {
-      const messages = this.memory.buildMessages();
-      const results = await callChatLLM(
-        params.messageId,
-        this.chatContext,
-        rlm,
-        messages,
-        convertTools(chatTools),
-        undefined,
-        0,
-        params.callback,
-        params.signal
-      );
-      const finalResult = await this.handleCallResult(
-        params.messageId,
-        chatTools,
-        results,
-        params.callback
-      );
-      if (finalResult) {
-        return finalResult;
+    const runStartTime = Date.now();
+    let reactLoopNum = 0;
+    let errorInfo: string | null = null;
+    try {
+      if (params.callback?.chatCallback) {
+        await params.callback.chatCallback.onMessage({
+          streamType: "chat",
+          chatId: this.chatContext.getChatId(),
+          messageId: params.messageId,
+          type: "chat_start",
+        });
+      }
+      const chatTools = mergeTools(this.buildInnerTools(params), this.tools);
+      await this.buildSystemPrompt(params, chatTools);
+      await this.addUserMessage(params.messageId, params.user);
+      const config = this.chatContext.getConfig();
+      const rlm = new RetryLanguageModel(config.llms, config.chatLlms);
+      for (; reactLoopNum < 15; reactLoopNum++) {
+        const messages = this.memory.buildMessages();
+        const results = await callChatLLM(
+          params.messageId,
+          this.chatContext,
+          rlm,
+          messages,
+          convertTools(chatTools),
+          undefined,
+          0,
+          params.callback,
+          params.signal
+        );
+        const finalResult = await this.handleCallResult(
+          params.messageId,
+          chatTools,
+          results,
+          params.callback
+        );
+        if (finalResult) {
+          return finalResult;
+        }
+        if (params.signal?.aborted) {
+          const error = new Error("Operation was interrupted");
+          error.name = "AbortError";
+          throw error;
+        }
+      }
+      reactLoopNum--;
+      return "Unfinished";
+    } catch (e: any) {
+      Log.error("chat error: ", e);
+      if (e instanceof Error) {
+        errorInfo = e.name + ": " + e.message;
+      } else {
+        errorInfo = String(e);
+      }
+      return errorInfo;
+    } finally {
+      if (params.callback?.chatCallback) {
+        await params.callback.chatCallback.onMessage({
+          streamType: "chat",
+          chatId: this.chatContext.getChatId(),
+          messageId: params.messageId,
+          type: "chat_end",
+          error: errorInfo,
+          duration: Date.now() - runStartTime,
+          reactLoopNum: reactLoopNum + 1,
+        });
       }
     }
-    return "Unfinished";
   }
 
   public async initMessages(): Promise<void> {
@@ -100,7 +139,10 @@ export class ChatAgent {
     }
   }
 
-  protected async buildSystemPrompt(params: DialogueParams, chatTools: DialogueTool[]): Promise<void> {
+  protected async buildSystemPrompt(
+    params: DialogueParams,
+    chatTools: DialogueTool[]
+  ): Promise<void> {
     let _memory = undefined;
     if (global.chatService) {
       try {

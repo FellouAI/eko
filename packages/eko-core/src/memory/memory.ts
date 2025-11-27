@@ -123,14 +123,7 @@ export class EkoMemory {
     await this.manageCapacity();
   }
 
-  protected async dynamicSystemPrompt(messages: EkoMessage[]): Promise<void> {
-    // RAG dynamic system prompt
-  }
-
   protected async manageCapacity(): Promise<void> {
-    if (this.messages[this.messages.length - 1].role == "user") {
-      await this.dynamicSystemPrompt(this.messages);
-    }
     if (this.messages.length > this.memoryConfig.maxMessageNum) {
       const excess = this.messages.length - this.memoryConfig.maxMessageNum;
       this.messages.splice(0, excess);
@@ -206,11 +199,12 @@ export class EkoMemory {
       if (
         message.role == "user" &&
         lastMessage &&
-        lastMessage.role == "user" &&
-        message.content == lastMessage.content
+        lastMessage.role == "user"
+        // && message.content == lastMessage.content
       ) {
         // remove duplicate user messages
-        removeIds.push(message.id);
+        removeIds.push(lastMessage.id);
+        continue;
       }
       if (
         lastMessage &&

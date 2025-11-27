@@ -48,6 +48,8 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
     }
   };
 
+  console.log("agent_error", agent?.error);
+
   return (
     <Card
       size="small"
@@ -198,7 +200,11 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
           {agent.error && (
             <Alert
               message="Execution Error"
-              description={String(agent.error)}
+              description={
+                agent.error.name
+                  ? agent.error.name + ": " + agent.error.message
+                  : String(agent.error)
+              }
               type="error"
               style={{ marginTop: 8 }}
             />
