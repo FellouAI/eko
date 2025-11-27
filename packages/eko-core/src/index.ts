@@ -1,22 +1,31 @@
 import config from "./config";
 import Log from "./common/log";
-import { Planner } from "./core/plan";
+import Eko from "./agent/index";
+import global from "./config/global";
+import { Planner } from "./agent/plan";
 import { RetryLanguageModel } from "./llm";
 import { EkoMemory } from "./memory/memory";
-import { Eko, EkoDialogue } from "./core/index";
-import Chain, { AgentChain } from "./core/chain";
-import Context, { AgentContext } from "./core/context";
+import { ChatAgent, ChatContext } from "./chat";
+import Chain, { AgentChain } from "./agent/chain";
+import { ChatService } from "./service/chat-service";
+import { BrowserService } from "./service/browser-service";
 import { SimpleSseMcpClient, SimpleHttpMcpClient } from "./mcp";
+import TaskContext, { AgentContext } from "./agent/agent-context";
 
 export default Eko;
 
+export type { ChatService, BrowserService };
+
 export {
   Eko,
-  EkoDialogue,
+  ChatAgent,
+  ChatContext,
   EkoMemory,
   Log,
   config,
-  Context,
+  global,
+  TaskContext,
+  TaskContext as Context,
   Planner,
   AgentContext,
   Chain,
@@ -29,9 +38,6 @@ export {
 export {
   Agent,
   type AgentParams,
-  BaseFileAgent,
-  BaseShellAgent,
-  BaseComputerAgent,
   BaseBrowserAgent,
   BaseBrowserLabelsAgent,
   BaseBrowserScreenAgent,
@@ -48,19 +54,22 @@ export {
 export {
   type LLMs,
   type LLMRequest,
-  type StreamCallback,
   type HumanCallback,
   type EkoConfig,
   type Workflow,
   type WorkflowAgent,
   type WorkflowNode,
-  type StreamCallbackMessage,
+  type AgentStreamCallback,
+  type AgentStreamMessage,
+  type AgentStreamCallback as StreamCallback,
+  type AgentStreamMessage as StreamCallbackMessage,
 } from "./types";
 
 export {
-  mergeTools,
-  toImage,
+  sub,
   toFile,
+  toImage,
+  mergeTools,
   compressImageData,
   convertToolSchema,
   uuidv4,

@@ -1,7 +1,7 @@
 import {
   LanguageModelV2,
-  LanguageModelV2CallOptions,
   LanguageModelV2StreamPart,
+  LanguageModelV2CallOptions,
 } from "@ai-sdk/provider";
 import Log from "../common/log";
 import config from "../config";
@@ -18,15 +18,15 @@ import {
   StreamResult,
   GenerateResult,
 } from "../types/llm.types";
-import Context, { AgentContext } from "../core/context";
-import { defaultLLMProviderOptions } from "../agent/llm";
+import { defaultLLMProviderOptions } from "../agent/agent-llm";
+import TaskContext, { AgentContext } from "../agent/agent-context";
 
 export class RetryLanguageModel {
   private llms: LLMs;
   private names: string[];
   private stream_first_timeout: number;
   private stream_token_timeout: number;
-  private context?: Context;
+  private context?: TaskContext;
   private agentContext?: AgentContext;
 
   constructor(
@@ -34,7 +34,7 @@ export class RetryLanguageModel {
     names?: string[],
     stream_first_timeout?: number,
     stream_token_timeout?: number,
-    context?: Context | AgentContext,
+    context?: TaskContext | AgentContext,
   ) {
     this.llms = llms;
     this.names = names || [];
@@ -46,13 +46,13 @@ export class RetryLanguageModel {
     }
   }
 
-  setContext(context?: Context | AgentContext) {
+  setContext(context?: TaskContext | AgentContext) {
     if (!context) {
       this.context = undefined;
       this.agentContext = undefined;
       return;
     }
-    this.context = context instanceof Context ? context : context.context;
+    this.context = context instanceof TaskContext ? context : context.context;
     this.agentContext = context instanceof AgentContext ? context : undefined;
   }
 
@@ -61,7 +61,7 @@ export class RetryLanguageModel {
       prompt: request.messages,
       tools: request.tools,
       toolChoice: request.toolChoice,
-      maxOutputTokens: request.maxTokens,
+      maxOutputTokens: request.maxOutputTokens,
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
@@ -73,7 +73,7 @@ export class RetryLanguageModel {
   async doGenerate(
     options: LanguageModelV2CallOptions
   ): Promise<GenerateResult> {
-    const maxTokens = options.maxOutputTokens;
+    const maxOutputTokens = options.maxOutputTokens;
     const providerOptions = options.providerOptions;
     const names = [...this.names, ...this.names];
     let lastError;
@@ -84,9 +84,9 @@ export class RetryLanguageModel {
       if (!llm) {
         continue;
       }
-      if (!maxTokens) {
+      if (!maxOutputTokens) {
         options.maxOutputTokens =
-          llmConfig.config?.maxTokens || config.maxTokens;
+          llmConfig.config?.maxOutputTokens || config.maxOutputTokens;
       }
       if (!providerOptions) {
         options.providerOptions = defaultLLMProviderOptions();
@@ -132,7 +132,7 @@ export class RetryLanguageModel {
       prompt: request.messages,
       tools: request.tools,
       toolChoice: request.toolChoice,
-      maxOutputTokens: request.maxTokens,
+      maxOutputTokens: request.maxOutputTokens,
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
@@ -142,7 +142,7 @@ export class RetryLanguageModel {
   }
 
   async doStream(options: LanguageModelV2CallOptions): Promise<StreamResult> {
-    const maxTokens = options.maxOutputTokens;
+    const maxOutputTokens = options.maxOutputTokens;
     const providerOptions = options.providerOptions;
     const names = [...this.names, ...this.names];
     let lastError;
@@ -153,9 +153,9 @@ export class RetryLanguageModel {
       if (!llm) {
         continue;
       }
-      if (!maxTokens) {
+      if (!maxOutputTokens) {
         options.maxOutputTokens =
-          llmConfig.config?.maxTokens || config.maxTokens;
+          llmConfig.config?.maxOutputTokens || config.maxOutputTokens;
       }
       if (!providerOptions) {
         options.providerOptions = defaultLLMProviderOptions();

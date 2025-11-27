@@ -1,17 +1,18 @@
 import {
-  Agent,
   Log,
   LLMs,
+  Agent,
+  uuidv4,
+  ChatAgent,
   StreamCallbackMessage,
-  EkoDialogue,
 } from "../../src/index";
 import dotenv from "dotenv";
 import {
+  SimpleFileAgent,
   SimpleBrowserAgent,
   SimpleComputerAgent,
-  SimpleFileAgent,
 } from "./agents";
-import { ChatStreamCallbackMessage } from "../../src/types";
+import { ChatStreamMessage } from "../../src/types";
 
 dotenv.config();
 
@@ -32,7 +33,7 @@ const llms: LLMs = {
 async function run() {
   Log.setLevel(0);
   const chatCallback = {
-    onMessage: async (message: ChatStreamCallbackMessage) => {
+    onMessage: async (message: ChatStreamMessage) => {
       if (message.type == "text" && !message.streamDone) {
         return;
       }
@@ -61,41 +62,25 @@ async function run() {
     new SimpleComputerAgent(),
     new SimpleFileAgent(),
   ];
-  const segmentedExecution: boolean = true;
-  const dialogue = new EkoDialogue({ llms, agents, segmentedExecution });
-  const result1 = await dialogue.chat({
-    user: "Hello",
+  const chatAgent = new ChatAgent({ llms, agents });
+  const result1 = await chatAgent.chat({
+    messageId: uuidv4(),
+    user: [{ type: "text", text: "Hello" }],
     callback: {
       chatCallback,
       taskCallback,
     },
   });
   console.log("=================>\nresult1: ", result1);
-  const result2 = await dialogue.chat({
-    user: "Search for information about Musk",
+  const result2 = await chatAgent.chat({
+    messageId: uuidv4(),
+    user: [{ type: "text", text: "Search for information about Musk" }],
     callback: {
       chatCallback,
       taskCallback,
     },
   });
   console.log("=================>\nresult2: ", result2);
-  if (segmentedExecution) {
-    const result3 = await dialogue.chat({
-      user: "Modify the plan: search on X and focus on Tesla information",
-      callback: {
-        chatCallback,
-        taskCallback,
-      },
-    });
-    console.log("=================>\nresult3: ", result3);
-    const result4 = await dialogue.segmentedExecution({
-      callback: {
-        chatCallback,
-        taskCallback,
-      },
-    });
-    console.log("=================>\nresult4: ", result4);
-  }
 }
 
 test.only("dialogue", async () => {

@@ -1,15 +1,26 @@
 import config from "../config";
+import { Agent } from "../agent";
 import { sub } from "../common/utils";
-import Context from "../core/context";
+import global from "../config/global";
+import { GlobalPromptKey } from "../types";
+import TaskContext from "../agent/agent-context";
+import { PromptTemplate } from "./prompt_template";
 
 const PLAN_SYSTEM_TEMPLATE = `
-You are {name}, an autonomous AI Agent Planner.
+You are {{name}}, an autonomous AI Agent Planner.
 
 ## Task Description
-{task_description}
+Your task is to understand the user's requirements, dynamically plan the user's tasks based on the Agent list, and please follow the steps below:
+- Analyze the Agents that need to be used based on the user's requirements.
+- Generate the Agent calling plan based on the analysis results.
+- About agent name, please do not arbitrarily fabricate non-existent agent names.
+- You only need to provide the steps to complete the user's task, key steps only, no need to be too detailed.
+- Try to break down tasks into independently completable subtasks, and for maximum efficiency, run multiple independent subtasks in parallel whenever possible.
+- Please strictly follow the output format and example output.
+- The output language should follow the language corresponding to the user's task.
 
 ## Agent list
-{agents}
+{{agents}}
 
 ## Output Rules and Format
 <root>
@@ -66,20 +77,12 @@ You are {name}, an autonomous AI Agent Planner.
   </agents>
 </root>
 
-{example_prompt}
+{{examples}}
 `;
 
-const PLAN_TASK_DESCRIPTION = `Your task is to understand the user's requirements, dynamically plan the user's tasks based on the Agent list, and please follow the steps below:
-- Analyze the Agents that need to be used based on the user's requirements.
-- Generate the Agent calling plan based on the analysis results.
-- About agent name, please do not arbitrarily fabricate non-existent agent names.
-- You only need to provide the steps to complete the user's task, key steps only, no need to be too detailed.
-- Try to break down tasks into independently completable subtasks, and for maximum efficiency, run multiple independent subtasks in parallel whenever possible.
-- Please strictly follow the output format and example output.
-- The output language should follow the language corresponding to the user's task.`;
-
-const PLAN_EXAMPLE_LIST = [
-  `User: Open Boss Zhipin, find 10 operation positions in Chengdu, and send a personal introduction to the recruiters based on the page information.
+const EXAMPLE_TEMPLATE = `
+## Example 1
+User: Open Boss Zhipin, find 10 operation positions in Chengdu, and send a personal introduction to the recruiters based on the page information.
 Output result:
 <root>
   <name>Submit resume</name>
@@ -98,8 +101,10 @@ Output result:
       </nodes>
     </agent>
   </agents>
-</root>`,
-  `User: Help me collect the latest AI news, summarize it, and send it to the "AI news information" group chat on WeChat.
+</root>
+
+## Example 2
+User: Help me collect the latest AI news, summarize it, and send it to the "AI news information" group chat on WeChat.
 Output result:
 <root>
   <name>Latest AI News</name>
@@ -125,8 +130,10 @@ Output result:
       </nodes>
     </agent>
   </agents>
-</root>`,
-  `User: Access the Google team's organization page on GitHub, extract all developer accounts from the team, and compile statistics on the countries and regions where these developers are located.
+</root>
+
+## Example 3
+User: Access the Google team's organization page on GitHub, extract all developer accounts from the team, and compile statistics on the countries and regions where these developers are located.
 Output result:
 <root>
   <name>Statistics of Google Team Developers' Geographic Distribution</name>
@@ -147,8 +154,10 @@ Output result:
       </nodes>
     </agent>
   </agents>
-</root>`,
-  `User: Open Discord to monitor messages in Group A, and automatically reply when new messages are received.
+</root>
+
+## Example 4
+User: Open Discord to monitor messages in Group A, and automatically reply when new messages are received.
 Output result:
 <root>
   <name>Automatic reply to Discord messages</name>
@@ -169,8 +178,10 @@ Output result:
       </nodes>
     </agent>
   </agents>
-</root>`,
-  `User: Search for information about "fellou," compile the results into a summary profile, then share it across social media platforms including Twitter, Facebook, and Reddit. Finally, export the platform sharing operation results to an Excel file.
+</root>
+
+## Example 5
+User: Search for information about "fellou" compile the results into a summary profile, then share it across social media platforms including Twitter, Facebook, and Reddit. Finally, export the platform sharing operation results to an Excel file.
 Output result:
 <root>
 <name>Fellou Research and Social Media Campaign</name>
@@ -222,29 +233,70 @@ Output result:
     </agent>
   </agents>
 </agents>
-</root>`,
-];
-
-const PLAN_USER_TEMPLATE = `
-User Platform: {platform}
-Current datetime: {datetime}
-Task Description: {task_prompt}
+</root>
 `;
 
-const PLAN_USER_TASK_WEBSITE_TEMPLATE = `
-User Platform: {platform}
-Task Website: {task_website}
-Current datetime: {datetime}
-Task Description: {task_prompt}
+const PLAN_USER_TEMPLATE = `
+<if language>
+Language: {{language}}
+</if>
+User Platform: {{platform}}
+<if taskWebsite>
+Task Websites:
+{{taskWebsite}}
+</if>
+<if dependentVariables>
+Dependent Variables: {{dependentVariables}}
+</if>
+Current datetime: {{datetime}}
+User Task Description: {{taskPrompt}}
+<if attachments>
+Attachments:
+{{attachments}}
+</if>
+<if extPrompt>
+{{extPrompt}}
+</if>
 `;
 
 export async function getPlanSystemPrompt(
-  context: Context,
-  planTaskDescription?: string,
-  planExampleList?: string[]
+  context: TaskContext
+): Promise<string> {
+  const agents_prompt = await buildAgentsPrompt(context.agents, context);
+  const planSysPrompt =
+    global.prompts.get(GlobalPromptKey.planner_system) || PLAN_SYSTEM_TEMPLATE;
+  const planExamplePrompt =
+    global.prompts.get(GlobalPromptKey.planner_example) || EXAMPLE_TEMPLATE;
+  return PromptTemplate.render(planSysPrompt, {
+    name: config.name,
+    agents: agents_prompt.trim(),
+    examples: planExamplePrompt.trim(),
+  }).trim();
+}
+
+export function getPlanUserPrompt(
+  context: TaskContext,
+  taskPrompt: string
+): string {
+  const planUserPrompt =
+    global.prompts.get(GlobalPromptKey.planner_user) || PLAN_USER_TEMPLATE;
+  return PromptTemplate.render(planUserPrompt, {
+    taskPrompt: taskPrompt,
+    platform: config.platform,
+    taskWebsite: context.variables.get("taskWebsite"),
+    language: context.variables.get("language"),
+    attachments: context.variables.get("attachments"),
+    dependentVariables: context.variables.get("dependentVariables"),
+    datetime: context.variables.get("datetime") || new Date().toLocaleString(),
+    extPrompt: context.variables.get("planExtPrompt"),
+  }).trim();
+}
+
+async function buildAgentsPrompt(
+  agents: Agent[],
+  context: TaskContext
 ): Promise<string> {
   let agents_prompt = "";
-  let agents = context.agents;
   for (let i = 0; i < agents.length; i++) {
     let agent = agents[i];
     let tools = await agent.loadTools(context);
@@ -272,46 +324,5 @@ export async function getPlanSystemPrompt(
         .join("\n") +
       "\n</agent>\n\n";
   }
-  const task_description =
-    planTaskDescription ||
-    context.variables.get("plan_task_description") ||
-    PLAN_TASK_DESCRIPTION;
-  const plan_example_list =
-    planExampleList ||
-    context.variables.get("plan_example_list") ||
-    PLAN_EXAMPLE_LIST;
-  let example_prompt = "";
-  for (let i = 0; i < plan_example_list.length; i++) {
-    example_prompt += `## Example ${i + 1}\n${plan_example_list[i]}\n\n`;
-  }
-  return PLAN_SYSTEM_TEMPLATE.replace("{name}", config.name)
-    .replace("{task_description}", task_description)
-    .replace("{agents}", agents_prompt.trim())
-    .replace("{example_prompt}", example_prompt)
-    .trim();
-}
-
-export function getPlanUserPrompt(
-  task_prompt: string,
-  task_website?: string,
-  ext_prompt?: string
-): string {
-  let prompt = "";
-  if (task_website) {
-    prompt = PLAN_USER_TASK_WEBSITE_TEMPLATE.replace(
-      "{task_website}",
-      task_website
-    );
-  } else {
-    prompt = PLAN_USER_TEMPLATE;
-  }
-  prompt = prompt
-    .replace("{task_prompt}", task_prompt)
-    .replace("{platform}", config.platform)
-    .replace("{datetime}", new Date().toLocaleString())
-    .trim();
-  if (ext_prompt) {
-    prompt += `\n${ext_prompt.trim()}`;
-  }
-  return prompt;
+  return agents_prompt.trim();
 }
