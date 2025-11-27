@@ -43,7 +43,7 @@ body {
   }
 }
 
-.tool-params-pre {
+.tool-json-pre {
   margin: 0;
   font-size: 12px;
   overflow-x: auto;
@@ -51,7 +51,7 @@ body {
   -ms-overflow-style: none;
 }
 
-.tool-params-pre::-webkit-scrollbar {
+.tool-json-pre::-webkit-scrollbar {
   display: none;
 }
 

@@ -64,7 +64,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 >
                   {isImage ? (
                     <Image
-                      src={`data:${file.mimeType};base64,${file.base64Data}`}
+                      src={
+                        file.url
+                          ? file.url
+                          : `data:${file.mimeType};base64,${file.base64Data}`
+                      }
                       alt={file.filename}
                       style={{
                         width: 40,

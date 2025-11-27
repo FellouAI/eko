@@ -101,7 +101,7 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
   contentItems: ChatContentItem[]; // All content in order
-  files?: UploadedFile[]; // Files in user message
+  uploadedFiles?: UploadedFile[]; // Files in user message
   loading?: boolean; // Loading state while waiting for callback
   error?: any;
   usage?: {

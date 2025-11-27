@@ -123,7 +123,11 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
               return (
                 <Image
                   key={`file-${index}`}
-                  src={`data:${item.mimeType};base64,${item.data}`}
+                  src={
+                    item.data.startsWith("http")
+                      ? item.data
+                      : `data:${item.mimeType};base64,${item.data}`
+                  }
                   alt="Agent file"
                   style={{ maxWidth: "100%", marginTop: 8, marginBottom: 8 }}
                 />

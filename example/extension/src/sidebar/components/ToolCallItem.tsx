@@ -4,7 +4,9 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from "@ant-design/icons";
+import { isJsonStr } from "../utils";
 import type { ChatContentItem } from "../types";
+import { MarkdownRenderer } from "../MarkdownRenderer";
 import { Card, Space, Typography, Tag, Collapse, Spin, Image } from "antd";
 
 const { Text, Paragraph } = Typography;
@@ -55,7 +57,7 @@ export const ToolCallItem: React.FC<ToolCallItemProps> = ({ item }) => {
               key: "params",
               label: "Parameters",
               children: (
-                <pre className="tool-params-pre">
+                <pre className="tool-json-pre">
                   {JSON.stringify(item.params, null, 2)}
                 </pre>
               ),
@@ -65,8 +67,7 @@ export const ToolCallItem: React.FC<ToolCallItemProps> = ({ item }) => {
       )}
       {item.running && item.runningText && (
         <Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-          {item.runningText}
-          {!item.running && <span className="streaming-cursor">|</span>}
+          <MarkdownRenderer content={item.runningText} />
         </Paragraph>
       )}
       {item.result && (
@@ -91,18 +92,27 @@ export const ToolCallItem: React.FC<ToolCallItemProps> = ({ item }) => {
                 <div>
                   {item.result.content.map((part, index) => {
                     if (part.type === "text") {
-                      return (
-                        <Paragraph key={index} style={{ margin: 0 }}>
-                          {part.text}
-                        </Paragraph>
+                      return isJsonStr(part.text) ? (
+                        <pre key={index} className="tool-json-pre">
+                          {JSON.stringify(JSON.parse(part.text), null, 2)}
+                        </pre>
+                      ) : (
+                        // <Paragraph key={index} style={{ margin: 0 }}>
+                        //   {part.text}
+                        // </Paragraph>
+                        <MarkdownRenderer key={index} content={part.text} />
                       );
                     } else if (part.type === "image") {
                       return (
                         <Image
                           key={index}
-                          src={`data:${part.mimeType || "image/png"};base64,${
-                            part.data
-                          }`}
+                          src={
+                            part.data.startsWith("http")
+                              ? part.data
+                              : `data:${part.mimeType || "image/png"};base64,${
+                                  part.data
+                                }`
+                          }
                           alt="Tool result"
                           style={{ maxWidth: "100%", marginTop: 8 }}
                         />

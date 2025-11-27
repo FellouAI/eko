@@ -127,7 +127,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           }}
         >
           <Space direction="vertical" size="small" style={{ width: "100%" }}>
-            {(message.content || message.files?.length) && (
+            {(message.content || message.uploadedFiles?.length) && (
               <Space>
                 <UserOutlined />
                 {message.content && (
@@ -140,9 +140,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                 )}
               </Space>
             )}
-            {message.files && message.files.length > 0 && (
+            {message.uploadedFiles && message.uploadedFiles.length > 0 && (
               <div style={{ marginTop: 8 }}>
-                {message.files.map((file) => {
+                {message.uploadedFiles.map((file) => {
                   const isImage = file.mimeType.startsWith("image/");
                   return (
                     <div
@@ -156,7 +156,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                     >
                       {isImage ? (
                         <Image
-                          src={`data:${file.mimeType};base64,${file.base64Data}`}
+                          src={
+                            file.url
+                              ? file.url
+                              : `data:${file.mimeType};base64,${file.base64Data}`
+                          }
                           alt={file.filename}
                           style={{
                             maxWidth: "100%",
@@ -231,7 +235,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                 return (
                   <Image
                     key={`chat-file-${index}`}
-                    src={`data:${item.mimeType};base64,${item.data}`}
+                    src={
+                      item.data.startsWith("http")
+                        ? item.data
+                        : `data:${item.mimeType};base64,${item.data}`
+                    }
                     alt="Message file"
                     style={{ maxWidth: "100%", marginTop: 8, marginBottom: 8 }}
                   />

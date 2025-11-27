@@ -82,7 +82,7 @@ const AppRun = () => {
           fileId,
           filename: file.filename,
           mimeType: file.mimeType,
-          data: file.base64Data,
+          data: url.startsWith("http") ? url : file.base64Data,
         });
       } catch (error) {
         console.error("Error uploading file:", error);
@@ -111,7 +111,7 @@ const AppRun = () => {
       content: inputValue,
       timestamp: Date.now(),
       contentItems: [],
-      files: [...uploadedFiles],
+      uploadedFiles: [...uploadedFiles],
       loading: true,
     };
 
