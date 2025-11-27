@@ -191,11 +191,13 @@ export async function compressImageData(
   const hasCreateImageBitmap = typeof createImageBitmap !== "undefined";
   const hasDOM =
     typeof document !== "undefined" && typeof Image !== "undefined";
-  // @ts-ignore
   const isNode =
     typeof window === "undefined" &&
+    // @ts-ignore
     typeof process !== "undefined" &&
+    // @ts-ignore
     !!process.versions &&
+    // @ts-ignore
     !!process.versions.node;
 
   const loadImageAny = async () => {
@@ -263,10 +265,12 @@ export async function compressImageData(
         ctx: canvas.getContext("2d"),
         exportBase64: async (mime: string, q?: number) => {
           const buffer: any = canvas.toBuffer(mime, { quality: q });
-          // @ts-ignore
           return (
-            typeof Buffer !== "undefined" ? Buffer.from(buffer) : buffer
-          ).toString("base64");
+            (
+              // @ts-ignore
+              typeof Buffer !== "undefined" ? Buffer.from(buffer) : buffer
+            ).toString("base64")
+          );
         },
       };
     }
