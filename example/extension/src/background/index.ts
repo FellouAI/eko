@@ -288,6 +288,13 @@ async function handleStop(requestId: string, data: any): Promise<void> {
   }
 }
 
+// Handle clear messages request
+async function handleClearMessages(requestId: string, data: any): Promise<void> {
+  if (chatAgent) {
+    chatAgent.getMemory().clear();
+  }
+}
+
 // Handle get tabs request
 async function handleGetTabs(requestId: string, data: any): Promise<void> {
   try {
@@ -338,6 +345,7 @@ const eventHandlers: Record<
   human_callback: handleHumanCallback,
   uploadFile: handleUploadFile,
   stop: handleStop,
+  clear_messages: handleClearMessages,
   getTabs: handleGetTabs,
 };
 

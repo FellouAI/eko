@@ -218,6 +218,14 @@ export class ChatAgent {
     return tools;
   }
 
+  public getMemory(): EkoMemory {
+    return this.memory;
+  }
+
+  public getTools(): DialogueTool[] {
+    return this.tools;
+  }
+
   public getChatContext(): ChatContext {
     return this.chatContext;
   }

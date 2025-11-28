@@ -2,7 +2,8 @@ import "./index.css";
 import { uuidv4 } from "@eko-ai/eko";
 import { createRoot } from "react-dom/client";
 import { ChatInput } from "./components/ChatInput";
-import { Empty, message as AntdMessage } from "antd";
+import { Empty, message as AntdMessage, Button, Tooltip } from "antd";
+import { ClearOutlined } from "@ant-design/icons";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { MessageItem } from "./components/MessageItem";
 import type { ChatMessage, UploadedFile } from "./types";
@@ -197,6 +198,15 @@ const AppRun = () => {
     }
   }, [currentMessageId, stopMessage]);
 
+  // Clear all messages
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+    setCurrentMessageId(null);
+    chrome.runtime.sendMessage({
+      type: "clear_messages",
+    });
+  }, []);
+
   return (
     <div
       style={{
@@ -215,8 +225,30 @@ const AppRun = () => {
           overflowX: "hidden",
           padding: "16px",
           backgroundColor: "#f5f5f5",
+          position: "relative",
         }}
       >
+        {messages.length > 0 && (
+          <Tooltip title="Clear messages" placement="left">
+            <Button
+              type="text"
+              size="small"
+              icon={<ClearOutlined />}
+              onClick={clearMessages}
+              style={{
+                position: "absolute",
+                top: "6px",
+                zIndex: 999,
+                width: "32px",
+                height: "32px",
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            />
+          </Tooltip>
+        )}
         {messages.length === 0 ? (
           <Empty
             description="Start a conversation!"
