@@ -5,35 +5,37 @@ import global from "./config/global";
 import { Planner } from "./agent/plan";
 import { RetryLanguageModel } from "./llm";
 import { EkoMemory } from "./memory/memory";
-import { ChatAgent, ChatContext } from "./chat";
 import Chain, { AgentChain } from "./agent/chain";
-import { ChatService } from "./service/chat-service";
-import { BrowserService } from "./service/browser-service";
 import { SimpleSseMcpClient, SimpleHttpMcpClient } from "./mcp";
 import TaskContext, { AgentContext } from "./agent/agent-context";
 
 export default Eko;
 
-export type { ChatService, BrowserService };
-
 export {
   Eko,
-  ChatAgent,
-  ChatContext,
   EkoMemory,
   Log,
   config,
   global,
-  TaskContext,
-  TaskContext as Context,
-  Planner,
-  AgentContext,
   Chain,
+  Planner,
   AgentChain,
+  TaskContext,
+  AgentContext,
   SimpleSseMcpClient,
   SimpleHttpMcpClient,
   RetryLanguageModel,
+  TaskContext as Context,
 };
+
+export {
+  ChatAgent,
+  ChatContext,
+  WebSearchTool,
+  WebpageQaTool,
+  DeepActionTool,
+  TaskVariableStorageTool,
+} from "./chat";
 
 export {
   Agent,
@@ -44,36 +46,38 @@ export {
 } from "./agent";
 
 export {
+  ForeachTaskTool,
+  WatchTriggerTool,
   HumanInteractTool,
   TaskNodeStatusTool,
   VariableStorageTool,
-  ForeachTaskTool,
-  WatchTriggerTool,
 } from "./tools";
+
+export type { ChatService, BrowserService } from "./service";
 
 export {
   type LLMs,
   type LLMRequest,
   type HumanCallback,
-  type EkoConfig,
   type Workflow,
-  type WorkflowAgent,
+  type EkoConfig,
   type WorkflowNode,
-  type AgentStreamCallback,
+  type WorkflowAgent,
   type AgentStreamMessage,
+  type AgentStreamCallback,
   type AgentStreamCallback as StreamCallback,
   type AgentStreamMessage as StreamCallbackMessage,
 } from "./types";
 
 export {
   sub,
+  uuidv4,
   toFile,
   toImage,
   mergeTools,
+  call_timeout,
   compressImageData,
   convertToolSchema,
-  uuidv4,
-  call_timeout,
 } from "./common/utils";
 
 export {
@@ -83,4 +87,5 @@ export {
 } from "./common/xml";
 
 export { buildAgentTree } from "./common/tree";
+export { PromptTemplate } from "./prompt/prompt-template";
 export { extract_page_content } from "./agent/browser/utils";

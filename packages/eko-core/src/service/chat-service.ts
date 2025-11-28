@@ -1,6 +1,6 @@
 import { EkoMessage, WebSearchResult } from "../types";
 
-export interface ChatService {
+export default interface ChatService {
   loadMessages(chatId: string): Promise<EkoMessage[]>;
 
   addMessage(chatId: string, messages: EkoMessage[]): Promise<void>;
@@ -24,3 +24,5 @@ export interface ChatService {
     maxResults?: number
   ): Promise<WebSearchResult[]>;
 }
+
+export type { ChatService };

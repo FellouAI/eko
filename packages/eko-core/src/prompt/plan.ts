@@ -4,7 +4,7 @@ import { sub } from "../common/utils";
 import global from "../config/global";
 import { GlobalPromptKey } from "../types";
 import TaskContext from "../agent/agent-context";
-import { PromptTemplate } from "./prompt_template";
+import { PromptTemplate } from "./prompt-template";
 
 const PLAN_SYSTEM_TEMPLATE = `
 You are {{name}}, an autonomous AI Agent Planner.

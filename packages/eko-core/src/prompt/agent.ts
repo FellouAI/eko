@@ -4,7 +4,7 @@ import global from "../config/global";
 import { sub } from "../common/utils";
 import TaskContext from "../agent/agent-context";
 import { buildAgentRootXml } from "../common/xml";
-import { PromptTemplate } from "./prompt_template";
+import { PromptTemplate } from "./prompt-template";
 import { WorkflowAgent, Tool, GlobalPromptKey } from "../types";
 import { TOOL_NAME as foreach_task } from "../tools/foreach-task";
 import { TOOL_NAME as watch_trigger } from "../tools/watch-trigger";

@@ -88,3 +88,5 @@ export default class TaskVariableStorageTool implements DialogueTool {
     };
   }
 }
+
+export { TaskVariableStorageTool };

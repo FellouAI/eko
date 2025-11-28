@@ -13,7 +13,7 @@ import {
   LanguageModelV2ToolCallPart,
 } from "../../types";
 import { sub, uuidv4 } from "../../common/utils";
-import { PromptTemplate } from "../../prompt/prompt_template";
+import { PromptTemplate } from "../../prompt/prompt-template";
 
 export const TOOL_NAME = "webpageQa";
 
@@ -170,3 +170,5 @@ export default class WebpageQaTool implements DialogueTool {
       .join("\n");
   }
 }
+
+export { WebpageQaTool };

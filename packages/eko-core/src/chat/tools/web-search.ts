@@ -82,3 +82,5 @@ export default class WebSearchTool implements DialogueTool {
     });
   }
 }
+
+export { WebSearchTool };

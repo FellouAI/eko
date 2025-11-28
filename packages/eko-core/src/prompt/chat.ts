@@ -1,7 +1,7 @@
 import config from "../config";
 import global from "../config/global";
 import { sub } from "../common/utils";
-import { PromptTemplate } from "./prompt_template";
+import { PromptTemplate } from "./prompt-template";
 import { DialogueTool, GlobalPromptKey, PageTab } from "../types";
 import { TOOL_NAME as webpage_qa } from "../chat/tools/webpage-qa";
 import { TOOL_NAME as web_search } from "../chat/tools/web-search";
