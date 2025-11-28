@@ -34,10 +34,7 @@ export class Planner {
       taskPromptStr = taskPrompt;
       userPrompt = {
         type: "text",
-        text: getPlanUserPrompt(
-          this.context,
-          taskPrompt
-        ),
+        text: getPlanUserPrompt(this.context, taskPrompt),
       };
     } else {
       userPrompt = taskPrompt;
@@ -126,7 +123,7 @@ export class Planner {
           }
         }
         if (this.callback) {
-          let workflow = parseWorkflow(
+          const workflow = parseWorkflow(
             this.taskId,
             streamText,
             false,
@@ -162,12 +159,18 @@ export class Planner {
       chain.planRequest = request;
       chain.planResult = streamText;
     }
-    let workflow = parseWorkflow(
+    const workflow = parseWorkflow(
       this.taskId,
       streamText,
       true,
       thinkingText
     ) as Workflow;
+    if (workflow.taskPrompt) {
+      workflow.taskPrompt += "\n" + taskPrompt;
+    } else {
+      workflow.taskPrompt = taskPrompt;
+    }
+    workflow.taskPrompt = workflow.taskPrompt.trim();
     if (this.callback) {
       await this.callback.onMessage({
         streamType: "agent",
@@ -179,12 +182,6 @@ export class Planner {
         workflow: workflow,
       });
     }
-    if (workflow.taskPrompt) {
-      workflow.taskPrompt += "\n" + taskPrompt;
-    } else {
-      workflow.taskPrompt = taskPrompt;
-    }
-    workflow.taskPrompt = workflow.taskPrompt.trim();
     return workflow;
   }
 }
