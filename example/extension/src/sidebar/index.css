@@ -1,25 +1,26 @@
-/* Claude/Anthropic Design System */
+/* Claude/Anthropic-inspired Design System - Warm & Pleasant */
 :root {
-  --color-bg-primary: #FAF9F7;
+  --color-bg-primary: #F7F5F3;
   --color-bg-secondary: #FFFFFF;
-  --color-bg-tertiary: #F5F4F2;
-  --color-text-primary: #1A1A1A;
-  --color-text-secondary: #666666;
-  --color-text-tertiary: #999999;
-  --color-border: #E5E4E2;
-  --color-border-light: #EEEDE9;
-  --color-accent: #D97706;
-  --color-accent-hover: #B45309;
-  --color-send-btn: #CC785C;
-  --color-send-btn-active: #B5684D;
-  --color-error: #DC2626;
+  --color-bg-tertiary: #F0EDE8;
+  --color-text-primary: #2D2A26;
+  --color-text-secondary: #5C574F;
+  --color-text-tertiary: #8A847A;
+  --color-border: #E3DED6;
+  --color-border-light: #EAE6E0;
+  --color-accent: #C4704B;
+  --color-accent-hover: #A85D3D;
+  --color-send-btn: #C4704B;
+  --color-send-btn-active: #A85D3D;
+  --color-error: #C44B4B;
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-serif: "Georgia", "Times New Roman", "Palatino Linotype", serif;
   --font-family-mono: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -35,7 +36,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* App Container */
+/* App Container - Full height, no gaps */
 .app-container {
   display: flex;
   flex-direction: column;
@@ -43,29 +44,60 @@ body {
   background-color: var(--color-bg-primary);
 }
 
-/* Header */
+/* Header - Minimal, integrated into main area */
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  background-color: var(--color-bg-secondary);
-  border-bottom: 1px solid var(--color-border-light);
+  padding: 20px 20px 12px;
+  background-color: var(--color-bg-primary);
+  border-bottom: none;
 }
 
+/* Logo - Rounded serif font */
 .app-logo {
-  font-size: 24px;
-  font-weight: 600;
+  font-family: var(--font-family-serif);
+  font-size: 26px;
+  font-weight: 400;
   color: var(--color-text-primary);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
+  font-style: italic;
 }
 
+/* Header buttons container */
+.header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Common header button style */
+.header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-btn:hover {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+/* Settings button - same size as others */
 .settings-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border: none;
   background: transparent;
   border-radius: var(--radius-sm);
@@ -166,27 +198,26 @@ body {
 .chat-input-container {
   position: relative;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   background-color: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 8px;
+  padding: 10px 12px;
+  padding-bottom: 48px; /* Protected zone for buttons */
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .chat-input-container:focus-within {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+  box-shadow: 0 0 0 3px rgba(196, 112, 75, 0.12);
 }
 
-/* Textarea */
+/* Textarea - Fixed initial height, grows vertically */
 .chat-textarea {
-  flex: 1;
-  min-height: 72px;
-  max-height: 200px;
-  padding: 8px 12px;
-  padding-left: 44px;
-  padding-right: 44px;
+  width: 100%;
+  min-height: 40px;
+  max-height: 160px;
+  padding: 4px 8px;
   border: none;
   background: transparent;
   font-family: var(--font-family);
@@ -206,14 +237,29 @@ body {
   cursor: not-allowed;
 }
 
-/* Input Action Buttons */
-.input-action-btn {
+/* Button protection zone - invisible stripe at bottom */
+.input-buttons-zone {
   position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 10px 10px;
+  pointer-events: none;
+}
+
+.input-buttons-zone > * {
+  pointer-events: auto;
+}
+
+/* Input Action Buttons - Base */
+.input-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -225,12 +271,13 @@ body {
   cursor: not-allowed;
 }
 
-/* Plus Button (left) */
+/* Plus Button (left) - 10% bigger, lowered 10px */
 .plus-btn {
-  left: 12px;
-  bottom: 16px;
+  width: 35px;
+  height: 35px;
   background: transparent;
   color: var(--color-text-secondary);
+  margin-bottom: -3px; /* Lower by adjusting margin */
 }
 
 .plus-btn:hover:not(:disabled) {
@@ -238,12 +285,13 @@ body {
   color: var(--color-text-primary);
 }
 
-/* Send Button (right) */
+/* Send Button (right) - 10% smaller, lowered 5px */
 .send-btn {
-  right: 12px;
-  bottom: 16px;
+  width: 29px;
+  height: 29px;
   background-color: var(--color-bg-tertiary);
   color: var(--color-text-tertiary);
+  margin-bottom: 2px; /* Lower by adjusting margin */
 }
 
 .send-btn.active {
@@ -255,16 +303,17 @@ body {
   background-color: var(--color-send-btn-active);
 }
 
-/* Stop Button */
+/* Stop Button - same size as send */
 .stop-btn {
-  right: 12px;
-  bottom: 16px;
+  width: 29px;
+  height: 29px;
   background-color: var(--color-error);
   color: white;
+  margin-bottom: 2px;
 }
 
 .stop-btn:hover {
-  background-color: #B91C1C;
+  background-color: #A83D3D;
 }
 
 /* Markdown Body */

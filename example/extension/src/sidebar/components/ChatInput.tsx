@@ -57,15 +57,25 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const isProcessing = currentMessageId !== null;
   const canSend = (inputValue.trim() || uploadedFiles.length > 0) && !sending && !isProcessing;
 
-  // Auto-resize textarea
+  // Auto-resize textarea - starts at minimum size, grows as needed
   const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
     if (textarea) {
+      // Reset to auto to get accurate scrollHeight
       textarea.style.height = 'auto';
-      const minHeight = 72; // 3 lines approximately
-      const maxHeight = 200;
+      const minHeight = 40; // Start compact
+      const maxHeight = 160;
       const scrollHeight = textarea.scrollHeight;
-      textarea.style.height = `${Math.min(Math.max(scrollHeight, minHeight), maxHeight)}px`;
+      // Only grow, never start large
+      const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, []);
+
+  // Initial height set on mount
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '40px';
     }
   }, []);
 
@@ -125,7 +135,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       {/* Main input container */}
       <div className="chat-input-container">
-        {/* Plus button for file attachment */}
+        {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -134,16 +144,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onChange={onFileSelect}
           style={{ display: "none" }}
         />
-        <button
-          className="input-action-btn plus-btn"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isProcessing}
-          title="Attach file"
-        >
-          <PlusIcon />
-        </button>
 
-        {/* Textarea */}
+        {/* Textarea - grows vertically */}
         <textarea
           ref={textareaRef}
           className="chat-textarea"
@@ -152,28 +154,41 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onKeyDown={handleKeyDown}
           placeholder="How can I help you today?"
           disabled={isProcessing}
-          rows={3}
+          rows={1}
         />
 
-        {/* Send/Stop button */}
-        {isProcessing ? (
+        {/* Button zone - protected area at bottom */}
+        <div className="input-buttons-zone">
+          {/* Plus button for file attachment */}
           <button
-            className="input-action-btn stop-btn"
-            onClick={onStop}
-            title="Stop"
+            className="input-action-btn plus-btn"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing}
+            title="Attach file"
           >
-            <StopIcon />
+            <PlusIcon />
           </button>
-        ) : (
-          <button
-            className={`input-action-btn send-btn ${canSend ? 'active' : ''}`}
-            onClick={onSend}
-            disabled={!canSend}
-            title="Send message"
-          >
-            <ArrowUpIcon />
-          </button>
-        )}
+
+          {/* Send/Stop button */}
+          {isProcessing ? (
+            <button
+              className="input-action-btn stop-btn"
+              onClick={onStop}
+              title="Stop"
+            >
+              <StopIcon />
+            </button>
+          ) : (
+            <button
+              className={`input-action-btn send-btn ${canSend ? 'active' : ''}`}
+              onClick={onSend}
+              disabled={!canSend}
+              title="Send message"
+            >
+              <ArrowUpIcon />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
