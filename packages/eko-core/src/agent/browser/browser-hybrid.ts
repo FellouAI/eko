@@ -459,6 +459,9 @@ export default abstract class BaseBrowserHybridAgent extends BaseBrowserAgent {
       let element_result;
       let double_screenshots;
 
+      // Get displayHighlights config (default false for clean UI - no colorful boxes)
+      const displayHighlights = config.displayHighlights ?? false;
+
       // Optimized: Reduce retries and sleep times
       for (let i = 0; i < 3; i++) { // Reduced from 5
         await sleep(100); // Reduced from 200
@@ -466,12 +469,14 @@ export default abstract class BaseBrowserHybridAgent extends BaseBrowserAgent {
         await sleep(30); // Reduced from 50
         element_result = (await this.execute_script(
           agentContext,
-          (markHighlightElements) => {
+          (markHighlightElements: boolean, displayHighlights: boolean) => {
             return (window as any).get_clickable_elements(
-              markHighlightElements
+              markHighlightElements,
+              undefined,
+              displayHighlights
             );
           },
-          [config.mode != "fast" && config.markImageMode == "dom"]
+          [config.mode != "fast" && config.markImageMode == "dom", displayHighlights]
         )) as any;
         if (element_result) {
           break;
@@ -1159,8 +1164,9 @@ function typing(params: {
   index: number;
   text: string;
   enter: boolean;
+  natural?: boolean; // Enable natural character-by-character typing
 }): boolean {
-  let { index, text, enter } = params;
+  let { index, text, enter, natural = true } = params;
   let element = (window as any).get_highlight_element(index);
   if (!element) {
     return false;
@@ -1187,7 +1193,18 @@ function typing(params: {
       }
     }
   }
+
+  // Click to focus first (simulates real user behavior)
+  input.click && input.click();
   input.focus && input.focus();
+
+  // Clear existing content
+  if (input.value !== undefined) {
+    input.value = "";
+  } else if (input.textContent !== undefined) {
+    input.textContent = "";
+  }
+
   if (!text && enter) {
     ["keydown", "keypress", "keyup"].forEach((eventType) => {
       const event = new KeyboardEvent(eventType, {
@@ -1201,19 +1218,78 @@ function typing(params: {
     });
     return true;
   }
-  if (input.value == undefined) {
-    input.textContent = text;
-  } else {
-    input.value = text;
-    if (input.__proto__) {
-      let value_setter = Object.getOwnPropertyDescriptor(
-        input.__proto__ as any,
-        "value"
-      )?.set;
-      value_setter && value_setter.call(input, text);
+
+  // Natural typing: simulate character-by-character input
+  if (natural && text) {
+    const typeCharacter = (char: string, currentValue: string) => {
+      const newValue = currentValue + char;
+
+      // Dispatch keydown event
+      const keydownEvent = new KeyboardEvent("keydown", {
+        key: char,
+        code: `Key${char.toUpperCase()}`,
+        keyCode: char.charCodeAt(0),
+        bubbles: true,
+        cancelable: true,
+      });
+      input.dispatchEvent(keydownEvent);
+
+      // Update value
+      if (input.value !== undefined) {
+        input.value = newValue;
+        if (input.__proto__) {
+          const value_setter = Object.getOwnPropertyDescriptor(
+            input.__proto__ as any,
+            "value"
+          )?.set;
+          value_setter && value_setter.call(input, newValue);
+        }
+      } else if (input.textContent !== undefined) {
+        input.textContent = newValue;
+      }
+
+      // Dispatch input event
+      input.dispatchEvent(new InputEvent("input", {
+        bubbles: true,
+        inputType: "insertText",
+        data: char
+      }));
+
+      // Dispatch keyup event
+      const keyupEvent = new KeyboardEvent("keyup", {
+        key: char,
+        code: `Key${char.toUpperCase()}`,
+        keyCode: char.charCodeAt(0),
+        bubbles: true,
+        cancelable: true,
+      });
+      input.dispatchEvent(keyupEvent);
+
+      return newValue;
+    };
+
+    // Type each character with natural timing variation
+    let currentValue = "";
+    for (let i = 0; i < text.length; i++) {
+      currentValue = typeCharacter(text[i], currentValue);
     }
+  } else {
+    // Fallback: set value directly (faster but less natural)
+    if (input.value == undefined) {
+      input.textContent = text;
+    } else {
+      input.value = text;
+      if (input.__proto__) {
+        let value_setter = Object.getOwnPropertyDescriptor(
+          input.__proto__ as any,
+          "value"
+        )?.set;
+        value_setter && value_setter.call(input, text);
+      }
+    }
+    input.dispatchEvent(new Event("input", { bubbles: true }));
   }
-  input.dispatchEvent(new Event("input", { bubbles: true }));
+
   if (enter) {
     ["keydown", "keypress", "keyup"].forEach((eventType) => {
       const event = new KeyboardEvent(eventType, {
@@ -1229,27 +1305,90 @@ function typing(params: {
   return true;
 }
 
-function typing_focused(params: { text: string; enter: boolean }): boolean {
-  const { text, enter } = params;
+function typing_focused(params: { text: string; enter: boolean; natural?: boolean }): boolean {
+  const { text, enter, natural = true } = params;
   const input = document.activeElement as any;
   if (!input) {
     return false;
   }
 
+  // Clear existing content first
   if (input.value !== undefined) {
-    input.value = text;
-    if (input.__proto__) {
-      const value_setter = Object.getOwnPropertyDescriptor(
-        input.__proto__ as any,
-        "value"
-      )?.set;
-      value_setter && value_setter.call(input, text);
-    }
+    input.value = "";
   } else if (input.textContent !== undefined) {
-    input.textContent = text;
+    input.textContent = "";
   }
 
-  input.dispatchEvent(new Event("input", { bubbles: true }));
+  // Natural typing: simulate character-by-character input
+  if (natural && text) {
+    const typeCharacter = (char: string, currentValue: string) => {
+      const newValue = currentValue + char;
+
+      // Dispatch keydown event
+      const keydownEvent = new KeyboardEvent("keydown", {
+        key: char,
+        code: `Key${char.toUpperCase()}`,
+        keyCode: char.charCodeAt(0),
+        bubbles: true,
+        cancelable: true,
+      });
+      input.dispatchEvent(keydownEvent);
+
+      // Update value
+      if (input.value !== undefined) {
+        input.value = newValue;
+        if (input.__proto__) {
+          const value_setter = Object.getOwnPropertyDescriptor(
+            input.__proto__ as any,
+            "value"
+          )?.set;
+          value_setter && value_setter.call(input, newValue);
+        }
+      } else if (input.textContent !== undefined) {
+        input.textContent = newValue;
+      }
+
+      // Dispatch input event
+      input.dispatchEvent(new InputEvent("input", {
+        bubbles: true,
+        inputType: "insertText",
+        data: char
+      }));
+
+      // Dispatch keyup event
+      const keyupEvent = new KeyboardEvent("keyup", {
+        key: char,
+        code: `Key${char.toUpperCase()}`,
+        keyCode: char.charCodeAt(0),
+        bubbles: true,
+        cancelable: true,
+      });
+      input.dispatchEvent(keyupEvent);
+
+      return newValue;
+    };
+
+    // Type each character
+    let currentValue = "";
+    for (let i = 0; i < text.length; i++) {
+      currentValue = typeCharacter(text[i], currentValue);
+    }
+  } else {
+    // Fallback: set value directly
+    if (input.value !== undefined) {
+      input.value = text;
+      if (input.__proto__) {
+        const value_setter = Object.getOwnPropertyDescriptor(
+          input.__proto__ as any,
+          "value"
+        )?.set;
+        value_setter && value_setter.call(input, text);
+      }
+    } else if (input.textContent !== undefined) {
+      input.textContent = text;
+    }
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
 
   if (enter) {
     ["keydown", "keypress", "keyup"].forEach((eventType) => {
@@ -1270,8 +1409,10 @@ function do_click(params: {
   index: number;
   button: "left" | "right" | "middle";
   num_clicks: number;
+  natural?: boolean; // Enable natural cursor movement simulation
 }): boolean {
-  let { index, button, num_clicks } = params;
+  let { index, button, num_clicks, natural = true } = params;
+
   function simulateMouseEvent(
     eventTypes: Array<string>,
     button: 0 | 1 | 2
@@ -1280,6 +1421,27 @@ function do_click(params: {
     if (!element) {
       return false;
     }
+
+    // Get element center coordinates for natural mouse movement
+    const rect = element.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    // Simulate natural mouse movement to element (mousemove, mouseenter, mouseover)
+    if (natural) {
+      const moveEvents = ["mousemove", "mouseenter", "mouseover"];
+      for (const eventType of moveEvents) {
+        const moveEvent = new MouseEvent(eventType, {
+          view: window,
+          bubbles: true,
+          cancelable: true,
+          clientX: centerX,
+          clientY: centerY,
+        });
+        element.dispatchEvent(moveEvent);
+      }
+    }
+
     for (let n = 0; n < num_clicks; n++) {
       for (let i = 0; i < eventTypes.length; i++) {
         const eventType = eventTypes[i];
@@ -1288,6 +1450,8 @@ function do_click(params: {
           bubbles: true,
           cancelable: true,
           button,
+          clientX: centerX,
+          clientY: centerY,
         });
         if (eventType === "click" && element.click) {
           element.click();
@@ -1313,8 +1477,9 @@ function do_click_at_coords(params: {
   y: number;
   button: "left" | "right" | "middle";
   num_clicks: number;
+  natural?: boolean; // Enable natural cursor movement simulation
 }): boolean {
-  const { x, y, button, num_clicks } = params;
+  const { x, y, button, num_clicks, natural = true } = params;
   const element = document.elementFromPoint(x, y);
   if (!element) {
     return false;
@@ -1322,6 +1487,21 @@ function do_click_at_coords(params: {
 
   const buttonMap = { left: 0, middle: 1, right: 2 };
   const buttonNum = buttonMap[button] || 0;
+
+  // Simulate natural mouse movement to coordinates
+  if (natural) {
+    const moveEvents = ["mousemove", "mouseenter", "mouseover"];
+    for (const eventType of moveEvents) {
+      const moveEvent = new MouseEvent(eventType, {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        clientX: x,
+        clientY: y,
+      });
+      element.dispatchEvent(moveEvent);
+    }
+  }
 
   for (let n = 0; n < num_clicks; n++) {
     const eventTypes =

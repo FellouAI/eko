@@ -24,15 +24,17 @@ export function run_build_dom_tree() {
   /**
    * Get clickable elements on the page
    *
-   * @param {*} markHighlightElements Is mark highlighted
+   * @param {*} markHighlightElements Is mark highlighted (visual overlays)
    * @param {*} includeAttributes [attr_names...]
+   * @param {*} displayHighlights Whether to show visible colored overlays (default: false for clean UI)
    * @returns { element_str, client_rect, selector_map, area_map }
    */
-  function get_clickable_elements(markHighlightElements = true, includeAttributes) {
+  function get_clickable_elements(markHighlightElements = true, includeAttributes, displayHighlights = false) {
     window.clickable_elements = {};
     computedStyleCache = new WeakMap();
     document.querySelectorAll("[eko-user-highlight-id]").forEach(ele => ele.removeAttribute("eko-user-highlight-id"));
-    let page_tree = build_dom_tree(markHighlightElements);
+    // Pass displayHighlights to control visual overlays
+    let page_tree = build_dom_tree(markHighlightElements, displayHighlights);
     let element_tree = parse_node(page_tree);
     let element_str = clickable_elements_to_string(element_tree, includeAttributes);
     let client_rect = {
@@ -259,11 +261,20 @@ export function run_build_dom_tree() {
     return element_node;
   }
 
-  function build_dom_tree(markHighlightElements) {
+  function build_dom_tree(markHighlightElements, displayHighlights = false) {
     let highlightIndex = 0; // Reset highlight index
     let duplicates = new Set();
 
     function highlightElement(element, index, parentIframe = null) {
+      // Store reference for element lookup (always needed)
+      element.setAttribute('eko-user-highlight-id', `eko-highlight-${index}`);
+
+      // If displayHighlights is false, don't create visual overlays
+      // This provides a clean browsing experience without colored boxes
+      if (!displayHighlights) {
+        return index + 1;
+      }
+
       // Create or get highlight container
       let container = document.getElementById('eko-highlight-container');
       if (!container) {
@@ -365,9 +376,6 @@ export function run_build_dom_tree() {
       // Add to container
       container.appendChild(overlay);
       container.appendChild(label);
-
-      // Store reference for cleanup
-      element.setAttribute('eko-user-highlight-id', `eko-highlight-${index}`);
 
       return index + 1;
     }

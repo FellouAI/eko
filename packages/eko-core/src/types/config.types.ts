@@ -23,7 +23,7 @@ export type Config = {
   name: string; // product name
   mode: "fast" | "normal" | "expert";
   platform: "windows" | "mac" | "linux";
-  maxReactNum: number;
+  maxReactNum: number; // Max steps per task
   maxOutputTokens: number;
   maxRetryNum: number;
   agentParallel: boolean;
@@ -36,6 +36,8 @@ export type Config = {
   parallelToolCalls: boolean;
   markImageMode: "dom" | "draw";
   expertModeTodoLoopNum: number;
+  displayHighlights: boolean; // Whether to show colored overlay boxes on webpage elements
+  naturalInteractions: boolean; // Whether to use natural cursor movements and typing
   memoryConfig: MemoryConfig;
   fallbackConfig: FallbackConfig; // Configuration for DOM-first fallback behavior
 }
