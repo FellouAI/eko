@@ -1087,7 +1087,7 @@ export default abstract class BaseBrowserHybridAgent extends BaseBrowserAgent {
                 "Authorization": `Bearer ${apiKey}`,
               },
               body: JSON.stringify({
-                model: "perplexity/sonar-pro",
+                model: "perplexity/sonar-pro-search",
                 messages: [
                   {
                     role: "user",
