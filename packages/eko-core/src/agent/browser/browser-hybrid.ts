@@ -1029,7 +1029,7 @@ export default abstract class BaseBrowserHybridAgent extends BaseBrowserAgent {
       {
         name: "search_for_solution",
         description:
-          "Search Perplexity AI for a solution when stuck on a problem. Use this when normal approaches aren't working and you need to find alternative methods or workarounds. Perplexity provides direct, AI-summarized answers that are immediately actionable.",
+          "Search Perplexity AI for a solution when stuck on a problem. Use this when normal approaches aren't working and you need to find alternative methods or workarounds. Perplexity provides direct, AI-summarized answers that are immediately actionable. This search happens in the background without navigating away from the current page.",
         parameters: {
           type: "object",
           properties: {
@@ -1046,70 +1046,87 @@ export default abstract class BaseBrowserHybridAgent extends BaseBrowserAgent {
         ): Promise<ToolResult> => {
           const query = args.query as string;
 
-          // Navigate to Perplexity search - provides direct AI-summarized answers
-          await this.navigate_to(agentContext, `https://www.perplexity.ai/search?q=${encodeURIComponent(query)}`);
-          await sleep(2000); // Give Perplexity time to generate response
+          try {
+            // Use Perplexity API through OpenRouter - no navigation needed
+            const llmsConfig = agentContext.context.config.llms;
 
-          // Extract the AI-generated answer from Perplexity
-          const result = await this.execute_script(agentContext, () => {
-            // Try to get the main answer content
-            const answerSelectors = [
-              '[class*="prose"]', // Main answer prose
-              '[class*="answer"]',
-              '[class*="response"]',
-              'article',
-              'main [class*="text"]'
-            ];
-
-            let answerText = '';
-            for (const selector of answerSelectors) {
-              const el = document.querySelector(selector);
-              if (el && el.textContent && el.textContent.length > 100) {
-                answerText = el.textContent.trim();
+            // Find an OpenRouter-configured LLM to get the API key
+            let apiKey: string | undefined;
+            for (const [name, llmConfig] of Object.entries(llmsConfig)) {
+              if (llmConfig.provider === "openrouter" ||
+                  (llmConfig.config?.baseURL && String(llmConfig.config.baseURL).includes("openrouter"))) {
+                apiKey = typeof llmConfig.apiKey === "string"
+                  ? llmConfig.apiKey
+                  : await llmConfig.apiKey();
                 break;
               }
             }
 
-            // Also try to get source links
-            const sources: Array<{title: string; url: string}> = [];
-            const sourceLinks = document.querySelectorAll('a[href^="http"]');
-            sourceLinks.forEach((link, idx) => {
-              if (idx < 5) {
-                const href = (link as HTMLAnchorElement).href;
-                const text = link.textContent?.trim() || '';
-                if (href && !href.includes('perplexity.ai') && text.length > 5) {
-                  sources.push({ title: text.substring(0, 100), url: href });
-                }
+            if (!apiKey) {
+              // Fallback: try default LLM's API key
+              const defaultLlm = llmsConfig["default"];
+              if (defaultLlm) {
+                apiKey = typeof defaultLlm.apiKey === "string"
+                  ? defaultLlm.apiKey
+                  : await defaultLlm.apiKey();
               }
+            }
+
+            if (!apiKey) {
+              return {
+                content: [{ type: "text", text: "Could not find API key for Perplexity search. Please ensure OpenRouter is configured." }],
+                isError: true,
+              };
+            }
+
+            // Call Perplexity via OpenRouter API
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                model: "perplexity/sonar-pro",
+                messages: [
+                  {
+                    role: "user",
+                    content: query,
+                  },
+                ],
+                temperature: 0.5,
+                top_p: 0.9,
+                max_tokens: 2048,
+              }),
             });
 
-            return { answer: answerText.substring(0, 3000), sources };
-          }, []);
+            if (!response.ok) {
+              const errorText = await response.text();
+              return {
+                content: [{ type: "text", text: `Perplexity search failed: ${response.status} - ${errorText}` }],
+                isError: true,
+              };
+            }
 
-          // Reset stuck counter since we're trying something new
-          this.loopState.stuckCounter = Math.max(0, this.loopState.stuckCounter - 2);
-          this.loopState.consecutiveFailures = Math.max(0, this.loopState.consecutiveFailures - 3);
+            const data = await response.json();
+            const answer = data.choices?.[0]?.message?.content || "No answer received";
 
-          const answer = result?.answer || '';
-          const sources = result?.sources || [];
+            // Reset stuck counter since we're trying something new
+            this.loopState.stuckCounter = Math.max(0, this.loopState.stuckCounter - 2);
+            this.loopState.consecutiveFailures = Math.max(0, this.loopState.consecutiveFailures - 3);
 
-          let responseText = `Perplexity AI answer for "${query}":\n\n`;
-
-          if (answer) {
-            responseText += answer + '\n\n';
-          } else {
-            responseText += 'Answer is still loading. You can scroll to see more or wait briefly.\n\n';
+            return {
+              content: [{
+                type: "text",
+                text: `Perplexity AI answer for "${query}":\n\n${answer}\n\nUse this information to find alternative approaches for your task.`
+              }],
+            };
+          } catch (error: any) {
+            return {
+              content: [{ type: "text", text: `Perplexity search error: ${error.message}` }],
+              isError: true,
+            };
           }
-
-          if (sources.length > 0) {
-            responseText += 'Sources:\n' + sources.map((s: any) => `- ${s.title}: ${s.url}`).join('\n');
-          }
-
-          responseText += '\n\nUse this information to find alternative approaches for your task.';
-
-          return {
-            content: [{ type: "text", text: responseText }],
-          };
         },
       },
       {
