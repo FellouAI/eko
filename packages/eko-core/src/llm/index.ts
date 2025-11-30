@@ -20,6 +20,14 @@ import {
 } from "../types/llm.types";
 import { defaultLLMProviderOptions } from "../agent/agent-llm";
 import TaskContext, { AgentContext } from "../agent/agent-context";
+import {
+  ModuleType,
+  AdaptiveRetryConfig,
+  MODULE_RETRY_CONFIGS,
+  applyRetryAdjustment,
+  detectModuleType,
+  logRetryAttempt,
+} from "./adaptive-retry";
 
 export class RetryLanguageModel {
   private llms: LLMs;
@@ -28,6 +36,8 @@ export class RetryLanguageModel {
   private stream_token_timeout: number;
   private context?: TaskContext;
   private agentContext?: AgentContext;
+  private moduleType: ModuleType;
+  private adaptiveRetryConfig: AdaptiveRetryConfig;
 
   constructor(
     llms: LLMs,
@@ -35,6 +45,7 @@ export class RetryLanguageModel {
     stream_first_timeout?: number,
     stream_token_timeout?: number,
     context?: TaskContext | AgentContext,
+    moduleType?: ModuleType,
   ) {
     this.llms = llms;
     this.names = names || [];
@@ -44,6 +55,14 @@ export class RetryLanguageModel {
     if (this.names.indexOf("default") == -1) {
       this.names.push("default");
     }
+    // Set module type from parameter or detect from first LLM name
+    this.moduleType = moduleType || detectModuleType(this.names[0] || "default");
+    this.adaptiveRetryConfig = MODULE_RETRY_CONFIGS[this.moduleType];
+  }
+
+  setModuleType(moduleType: ModuleType) {
+    this.moduleType = moduleType;
+    this.adaptiveRetryConfig = MODULE_RETRY_CONFIGS[moduleType];
   }
 
   setContext(context?: TaskContext | AgentContext) {
@@ -96,30 +115,48 @@ export class RetryLanguageModel {
       if (llmConfig.handler) {
         _options = await llmConfig.handler(_options, this.context, this.agentContext);
       }
-      try {
-        let result = (await llm.doGenerate(_options)) as GenerateResult;
-        if (Log.isEnableDebug()) {
-          Log.debug(
-            `LLM nonstream body, name: ${name} => `,
-            result.request?.body
-          );
+
+      // Adaptive retry: try with adjusted parameters before switching LLMs
+      const maxAttempts = this.adaptiveRetryConfig.enabled
+        ? 1 + this.adaptiveRetryConfig.maxRetries
+        : 1;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        let attemptOptions = _options;
+
+        // Apply parameter adjustments for retry attempts
+        if (attempt > 0 && this.adaptiveRetryConfig.adjustments[attempt - 1]) {
+          const adjustment = this.adaptiveRetryConfig.adjustments[attempt - 1];
+          logRetryAttempt(attempt, this.moduleType, adjustment);
+          attemptOptions = applyRetryAdjustment(_options, adjustment, llmConfig.config);
         }
-        result.llm = name;
-        result.llmConfig = llmConfig;
-        result.text = result.content.find((c) => c.type === "text")?.text;
-        return result;
-      } catch (e: any) {
-        if (e?.name === "AbortError") {
-          throw e;
+
+        try {
+          let result = (await llm.doGenerate(attemptOptions)) as GenerateResult;
+          if (Log.isEnableDebug()) {
+            Log.debug(
+              `LLM nonstream body, name: ${name}, attempt: ${attempt} => `,
+              result.request?.body
+            );
+          }
+          result.llm = name;
+          result.llmConfig = llmConfig;
+          result.text = result.content.find((c) => c.type === "text")?.text;
+          return result;
+        } catch (e: any) {
+          if (e?.name === "AbortError") {
+            throw e;
+          }
+          lastError = e;
+          if (Log.isEnableInfo()) {
+            Log.info(`LLM nonstream request, name: ${name}, attempt: ${attempt} => `, {
+              tools: attemptOptions.tools,
+              messages: attemptOptions.prompt,
+            });
+          }
+          Log.error(`LLM error, name: ${name}, attempt: ${attempt} => `, e);
+          // Continue to next retry attempt
         }
-        lastError = e;
-        if (Log.isEnableInfo()) {
-          Log.info(`LLM nonstream request, name: ${name} => `, {
-            tools: _options.tools,
-            messages: _options.prompt,
-          });
-        }
-        Log.error(`LLM error, name: ${name} => `, e);
       }
     }
     return Promise.reject(
@@ -165,59 +202,77 @@ export class RetryLanguageModel {
       if (llmConfig.handler) {
         _options = await llmConfig.handler(_options, this.context, this.agentContext);
       }
-      try {
-        const controller = new AbortController();
-        const signal = _options.abortSignal
-          ? AbortSignal.any([_options.abortSignal, controller.signal])
-          : controller.signal;
-        const result = (await call_timeout(
-          async () => await llm.doStream({ ..._options, abortSignal: signal }),
-          this.stream_first_timeout,
-          (e) => {
-            controller.abort();
-          }
-        )) as StreamResult;
-        const stream = result.stream;
-        const reader = stream.getReader();
-        const { done, value } = await call_timeout(
-          async () => await reader.read(),
-          this.stream_first_timeout,
-          (e) => {
-            reader.cancel();
+
+      // Adaptive retry: try with adjusted parameters before switching LLMs
+      const maxAttempts = this.adaptiveRetryConfig.enabled
+        ? 1 + this.adaptiveRetryConfig.maxRetries
+        : 1;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        let attemptOptions = _options;
+
+        // Apply parameter adjustments for retry attempts
+        if (attempt > 0 && this.adaptiveRetryConfig.adjustments[attempt - 1]) {
+          const adjustment = this.adaptiveRetryConfig.adjustments[attempt - 1];
+          logRetryAttempt(attempt, this.moduleType, adjustment);
+          attemptOptions = applyRetryAdjustment(_options, adjustment, llmConfig.config);
+        }
+
+        try {
+          const controller = new AbortController();
+          const signal = attemptOptions.abortSignal
+            ? AbortSignal.any([attemptOptions.abortSignal, controller.signal])
+            : controller.signal;
+          const result = (await call_timeout(
+            async () => await llm.doStream({ ...attemptOptions, abortSignal: signal }),
+            this.stream_first_timeout,
+            (e) => {
+              controller.abort();
+            }
+          )) as StreamResult;
+          const stream = result.stream;
+          const reader = stream.getReader();
+          const { done, value } = await call_timeout(
+            async () => await reader.read(),
+            this.stream_first_timeout,
+            (e) => {
+              reader.cancel();
+              reader.releaseLock();
+              controller.abort();
+            }
+          );
+          if (done) {
+            Log.warn(`LLM stream done, name: ${name}, attempt: ${attempt} => `, { done, value });
             reader.releaseLock();
-            controller.abort();
+            continue; // Try next attempt
           }
-        );
-        if (done) {
-          Log.warn(`LLM stream done, name: ${name} => `, { done, value });
-          reader.releaseLock();
-          continue;
+          if (Log.isEnableDebug()) {
+            Log.debug(`LLM stream body, name: ${name}, attempt: ${attempt} => `, result.request?.body);
+          }
+          let chunk = value as LanguageModelV2StreamPart;
+          if (chunk.type == "error") {
+            Log.error(`LLM stream error, name: ${name}, attempt: ${attempt}`, chunk);
+            reader.releaseLock();
+            continue; // Try next attempt
+          }
+          result.llm = name;
+          result.llmConfig = llmConfig;
+          result.stream = this.streamWrapper([chunk], reader, controller);
+          return result;
+        } catch (e: any) {
+          if (e?.name === "AbortError") {
+            throw e;
+          }
+          lastError = e;
+          if (Log.isEnableInfo()) {
+            Log.info(`LLM stream request, name: ${name}, attempt: ${attempt} => `, {
+              tools: attemptOptions.tools,
+              messages: attemptOptions.prompt,
+            });
+          }
+          Log.error(`LLM error, name: ${name}, attempt: ${attempt} => `, e);
+          // Continue to next retry attempt
         }
-        if (Log.isEnableDebug()) {
-          Log.debug(`LLM stream body, name: ${name} => `, result.request?.body);
-        }
-        let chunk = value as LanguageModelV2StreamPart;
-        if (chunk.type == "error") {
-          Log.error(`LLM stream error, name: ${name}`, chunk);
-          reader.releaseLock();
-          continue;
-        }
-        result.llm = name;
-        result.llmConfig = llmConfig;
-        result.stream = this.streamWrapper([chunk], reader, controller);
-        return result;
-      } catch (e: any) {
-        if (e?.name === "AbortError") {
-          throw e;
-        }
-        lastError = e;
-        if (Log.isEnableInfo()) {
-          Log.info(`LLM stream request, name: ${name} => `, {
-            tools: _options.tools,
-            messages: _options.prompt,
-          });
-        }
-        Log.error(`LLM error, name: ${name} => `, e);
       }
     }
     return Promise.reject(

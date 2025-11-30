@@ -1,0 +1,133 @@
+import { LanguageModelV2CallOptions } from "@ai-sdk/provider";
+import Log from "../common/log";
+
+/**
+ * Adaptive retry strategy for LLM calls.
+ * Adjusts parameters on failure to improve success rate.
+ */
+
+export type ModuleType = "planning" | "navigation" | "compression" | "default";
+
+export interface RetryAdjustment {
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  maxOutputTokens?: number;
+}
+
+export interface AdaptiveRetryConfig {
+  enabled: boolean;
+  maxRetries: number;
+  adjustments: RetryAdjustment[];
+}
+
+/**
+ * Default retry configurations for each module type.
+ * Each adjustment is applied progressively on each retry attempt.
+ */
+export const MODULE_RETRY_CONFIGS: Record<ModuleType, AdaptiveRetryConfig> = {
+  planning: {
+    enabled: true,
+    maxRetries: 2,
+    adjustments: [
+      // First retry: reduce temperature for more focused output
+      { temperature: -0.1, topP: -0.05 },
+      // Second retry: further reduce, increase tokens
+      { temperature: -0.2, topP: -0.1, maxOutputTokens: 2048 },
+    ],
+  },
+  navigation: {
+    enabled: true,
+    maxRetries: 2,
+    adjustments: [
+      // First retry: make more deterministic
+      { temperature: -0.1, topK: -5 },
+      // Second retry: very deterministic
+      { temperature: -0.15, topK: -10, topP: -0.1 },
+    ],
+  },
+  compression: {
+    enabled: true,
+    maxRetries: 2,
+    adjustments: [
+      // First retry: increase output tokens (compression might need more space)
+      { maxOutputTokens: 1024 },
+      // Second retry: further increase tokens, slightly adjust temperature
+      { maxOutputTokens: 2048, temperature: 0.1 },
+    ],
+  },
+  default: {
+    enabled: true,
+    maxRetries: 1,
+    adjustments: [
+      // Default: slight temperature reduction
+      { temperature: -0.1 },
+    ],
+  },
+};
+
+/**
+ * Apply retry adjustment to options
+ */
+export function applyRetryAdjustment(
+  options: LanguageModelV2CallOptions,
+  adjustment: RetryAdjustment,
+  baseConfig?: { temperature?: number; topP?: number; topK?: number; maxOutputTokens?: number }
+): LanguageModelV2CallOptions {
+  const newOptions = { ...options };
+
+  // Get base values from config or use defaults
+  const baseTemp = baseConfig?.temperature ?? 0.7;
+  const baseTopP = baseConfig?.topP ?? 0.9;
+  const baseTopK = baseConfig?.topK ?? 40;
+  const baseMaxTokens = baseConfig?.maxOutputTokens ?? 8192;
+
+  // Apply adjustments (clamped to valid ranges)
+  if (adjustment.temperature !== undefined) {
+    const currentTemp = (options as any).temperature ?? baseTemp;
+    (newOptions as any).temperature = Math.max(0, Math.min(2, currentTemp + adjustment.temperature));
+  }
+
+  if (adjustment.topP !== undefined) {
+    const currentTopP = (options as any).topP ?? baseTopP;
+    (newOptions as any).topP = Math.max(0, Math.min(1, currentTopP + adjustment.topP));
+  }
+
+  if (adjustment.topK !== undefined) {
+    const currentTopK = (options as any).topK ?? baseTopK;
+    (newOptions as any).topK = Math.max(1, currentTopK + adjustment.topK);
+  }
+
+  if (adjustment.maxOutputTokens !== undefined) {
+    const currentMaxTokens = options.maxOutputTokens ?? baseMaxTokens;
+    newOptions.maxOutputTokens = currentMaxTokens + adjustment.maxOutputTokens;
+  }
+
+  return newOptions;
+}
+
+/**
+ * Detect module type from context or LLM name
+ */
+export function detectModuleType(llmName: string): ModuleType {
+  const name = llmName.toLowerCase();
+  if (name.includes("plan")) return "planning";
+  if (name.includes("nav") || name.includes("browser")) return "navigation";
+  if (name.includes("compress") || name.includes("summary")) return "compression";
+  return "default";
+}
+
+/**
+ * Log retry attempt with adjusted parameters
+ */
+export function logRetryAttempt(
+  attempt: number,
+  moduleType: ModuleType,
+  adjustment: RetryAdjustment
+): void {
+  if (Log.isEnableInfo()) {
+    Log.info(`Adaptive retry attempt ${attempt} for ${moduleType} module`, {
+      adjustments: adjustment,
+    });
+  }
+}

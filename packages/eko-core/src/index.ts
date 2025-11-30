@@ -8,6 +8,12 @@ import { EkoMemory } from "./memory/memory";
 import Chain, { AgentChain } from "./agent/chain";
 import { SimpleSseMcpClient, SimpleHttpMcpClient } from "./mcp";
 import TaskContext, { AgentContext } from "./agent/agent-context";
+import {
+  type ModuleType,
+  type AdaptiveRetryConfig,
+  type RetryAdjustment,
+  MODULE_RETRY_CONFIGS,
+} from "./llm/adaptive-retry";
 
 export default Eko;
 
@@ -25,8 +31,11 @@ export {
   SimpleSseMcpClient,
   SimpleHttpMcpClient,
   RetryLanguageModel,
+  MODULE_RETRY_CONFIGS,
   TaskContext as Context,
 };
+
+export type { ModuleType, AdaptiveRetryConfig, RetryAdjustment };
 
 export {
   ChatAgent,
