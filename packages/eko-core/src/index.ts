@@ -43,6 +43,7 @@ export {
   BaseBrowserAgent,
   BaseBrowserLabelsAgent,
   BaseBrowserScreenAgent,
+  BaseBrowserHybridAgent,
 } from "./agent";
 
 export {

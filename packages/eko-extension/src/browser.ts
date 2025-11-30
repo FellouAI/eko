@@ -1,6 +1,15 @@
-import { AgentContext, BaseBrowserLabelsAgent } from "@eko-ai/eko";
+import { AgentContext, BaseBrowserHybridAgent } from "@eko-ai/eko";
 
-export default class BrowserAgent extends BaseBrowserLabelsAgent {
+/**
+ * Chrome Extension Browser Agent
+ *
+ * Uses DOM-first navigation with visual/coordinate fallback:
+ * - Primary: Fast DOM-based element interactions (click_element, input_text)
+ * - Fallback: Coordinate-based interactions when DOM fails or loops detected
+ *
+ * The agent automatically detects stuck states and enables fallback mode.
+ */
+export default class BrowserAgent extends BaseBrowserHybridAgent {
   protected async screenshot(
     agentContext: AgentContext
   ): Promise<{ imageBase64: string; imageType: "image/jpeg" | "image/png" }> {

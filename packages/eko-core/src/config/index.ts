@@ -24,6 +24,13 @@ const config: Config = {
     compressionThreshold: 10,
     compressionMaxLength: 6000,
   },
+  fallbackConfig: {
+    loopThreshold: 3, // Same action repeated 3 times = loop detected
+    stuckThreshold: 5, // 5 consecutive failures triggers fallback mode
+    historySize: 20, // Track last 20 actions for loop detection
+    recoveryActions: 3, // 3 successful actions exits fallback mode
+    enableAutoFallback: true, // Enable automatic fallback to coordinate-based clicks
+  },
 };
 
 export default config;

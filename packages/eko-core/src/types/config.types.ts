@@ -11,6 +11,14 @@ export interface MemoryConfig {
   compressionMaxLength: number; // Maximum length for compression of text content
 }
 
+export interface FallbackConfig {
+  loopThreshold: number; // Same action repeated this many times = loop (default: 3)
+  stuckThreshold: number; // Consecutive failures before switching to fallback (default: 5)
+  historySize: number; // How many actions to track for loop detection (default: 20)
+  recoveryActions: number; // Successful actions before exiting fallback mode (default: 3)
+  enableAutoFallback: boolean; // Whether to enable automatic fallback mode (default: true)
+}
+
 export type Config = {
   name: string; // product name
   mode: "fast" | "normal" | "expert";
@@ -29,6 +37,7 @@ export type Config = {
   markImageMode: "dom" | "draw";
   expertModeTodoLoopNum: number;
   memoryConfig: MemoryConfig;
+  fallbackConfig: FallbackConfig; // Configuration for DOM-first fallback behavior
 }
 
 export const GlobalPromptKey = {

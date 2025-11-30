@@ -4,6 +4,7 @@ import {
   BaseBrowserAgent,
   BaseBrowserLabelsAgent,
   BaseBrowserScreenAgent,
+  BaseBrowserHybridAgent,
 } from "./browser";
 
 export default Eko;
@@ -13,5 +14,6 @@ export {
   BaseBrowserAgent,
   BaseBrowserLabelsAgent,
   BaseBrowserScreenAgent,
+  BaseBrowserHybridAgent,
   type AgentParams,
 };
