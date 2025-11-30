@@ -2,12 +2,19 @@ import "./index.css";
 import { uuidv4 } from "@eko-ai/eko";
 import { createRoot } from "react-dom/client";
 import { ChatInput } from "./components/ChatInput";
-import { Empty, message as AntdMessage } from "antd";
+import { message as AntdMessage } from "antd";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { MessageItem } from "./components/MessageItem";
 import type { ChatMessage, UploadedFile } from "./types";
 import { useChatCallbacks } from "./hooks/useChatCallbacks";
 import React, { useState, useRef, useEffect, useCallback } from "react";
+
+const SettingsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+  </svg>
+);
 
 const AppRun = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -197,31 +204,30 @@ const AppRun = () => {
     }
   }, [currentMessageId, stopMessage]);
 
+  const openSettings = useCallback(() => {
+    chrome.runtime.openOptionsPage();
+  }, []);
+
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        backgroundColor: "#ffffff",
-      }}
-    >
+    <div className="app-container">
+      {/* Header */}
+      <div className="app-header">
+        <div className="app-logo">Browseless</div>
+        <button
+          className="settings-button"
+          onClick={openSettings}
+          title="Settings"
+        >
+          <SettingsIcon />
+        </button>
+      </div>
+
       {/* Message area */}
-      <div
-        ref={messagesContainerRef}
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
-          padding: "16px",
-          backgroundColor: "#f5f5f5",
-        }}
-      >
+      <div ref={messagesContainerRef} className="messages-container">
         {messages.length === 0 ? (
-          <Empty
-            description="Start a conversation!"
-            style={{ marginTop: "20vh" }}
-          />
+          <div className="empty-state">
+            <span className="empty-text">Start a conversation</span>
+          </div>
         ) : (
           messages.map((message) => (
             <MessageItem key={message.id} message={message} />

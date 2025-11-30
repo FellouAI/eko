@@ -1,16 +1,32 @@
-import React, { useRef } from "react";
-import {
-  SendOutlined,
-  StopOutlined,
-  FileOutlined,
-  DeleteOutlined,
-  PaperClipOutlined,
-} from "@ant-design/icons";
+import React, { useRef, useCallback, useEffect } from "react";
+import { FileOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { UploadedFile } from "../types";
-import { Button, Space, Image, Typography } from "antd";
-import { WebpageMentionInput } from "./WebpageMentionInput";
+import { Image, Typography } from "antd";
 
 const { Text } = Typography;
+
+// Plus icon for file attachment
+const PlusIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+);
+
+// Arrow up icon for send
+const ArrowUpIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="19" x2="12" y2="5"></line>
+    <polyline points="5 12 12 5 19 12"></polyline>
+  </svg>
+);
+
+// Stop icon
+const StopIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+  </svg>
+);
 
 interface ChatInputProps {
   inputValue: string;
@@ -36,79 +52,80 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   currentMessageId,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isProcessing = currentMessageId !== null;
+  const canSend = (inputValue.trim() || uploadedFiles.length > 0) && !sending && !isProcessing;
+
+  // Auto-resize textarea
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const minHeight = 72; // 3 lines approximately
+      const maxHeight = 200;
+      const scrollHeight = textarea.scrollHeight;
+      textarea.style.height = `${Math.min(Math.max(scrollHeight, minHeight), maxHeight)}px`;
+    }
+  }, []);
+
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [inputValue, adjustTextareaHeight]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (canSend) {
+        onSend();
+      }
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onInputChange(e.target.value);
+  };
 
   return (
-    <div
-      style={{
-        padding: "16px",
-        backgroundColor: "#ffffff",
-        borderTop: "1px solid #e8e8e8",
-      }}
-    >
+    <div className="chat-input-wrapper">
+      {/* Uploaded files preview */}
       {uploadedFiles.length > 0 && (
-        <div style={{ marginBottom: 8 }}>
-          <Space wrap>
-            {uploadedFiles.map((file) => {
-              const isImage = file.mimeType.startsWith("image/");
-              return (
-                <div
-                  key={file.id}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "4px 8px",
-                    backgroundColor: "#f5f5f5",
-                    borderRadius: 4,
-                    border: "1px solid #d9d9d9",
-                  }}
-                >
-                  {isImage ? (
-                    <Image
-                      src={
-                        file.url
-                          ? file.url
-                          : `data:${file.mimeType};base64,${file.base64Data}`
-                      }
-                      alt={file.filename}
-                      style={{
-                        width: 40,
-                        height: 40,
-                        objectFit: "cover",
-                        borderRadius: 4,
-                        marginRight: 8,
-                      }}
-                      preview={false}
-                    />
-                  ) : (
-                    <FileOutlined style={{ marginRight: 8, fontSize: 16 }} />
-                  )}
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      marginRight: 8,
-                      maxWidth: 150,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {file.filename}
-                  </Text>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    onClick={() => onRemoveFile(file.id)}
-                    style={{ padding: 0, width: 20, height: 20 }}
+        <div className="uploaded-files-preview">
+          {uploadedFiles.map((file) => {
+            const isImage = file.mimeType.startsWith("image/");
+            return (
+              <div key={file.id} className="uploaded-file-item">
+                {isImage ? (
+                  <Image
+                    src={file.url || `data:${file.mimeType};base64,${file.base64Data}`}
+                    alt={file.filename}
+                    style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 8 }}
+                    preview={false}
                   />
-                </div>
-              );
-            })}
-          </Space>
+                ) : (
+                  <div className="file-icon-wrapper">
+                    <FileOutlined style={{ fontSize: 20, color: '#666' }} />
+                  </div>
+                )}
+                <Text className="file-name" ellipsis={{ tooltip: file.filename }}>
+                  {file.filename}
+                </Text>
+                <button
+                  className="remove-file-btn"
+                  onClick={() => onRemoveFile(file.id)}
+                  title="Remove file"
+                >
+                  <DeleteOutlined />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      <Space.Compact style={{ width: "100%", alignItems: "center" }}>
+      {/* Main input container */}
+      <div className="chat-input-container">
+        {/* Plus button for file attachment */}
         <input
           ref={fileInputRef}
           type="file"
@@ -117,38 +134,47 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onChange={onFileSelect}
           style={{ display: "none" }}
         />
-        <Button
-          icon={<PaperClipOutlined />}
+        <button
+          className="input-action-btn plus-btn"
           onClick={() => fileInputRef.current?.click()}
-          disabled={sending || currentMessageId !== null}
-        />
+          disabled={isProcessing}
+          title="Attach file"
+        >
+          <PlusIcon />
+        </button>
 
-        <WebpageMentionInput
+        {/* Textarea */}
+        <textarea
+          ref={textareaRef}
+          className="chat-textarea"
           value={inputValue}
-          onChange={onInputChange}
-          disabled={sending || currentMessageId !== null}
-          onSend={onSend}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder="How can I help you today?"
+          disabled={isProcessing}
+          rows={3}
         />
 
-        {currentMessageId ? (
-          <Button danger icon={<StopOutlined />} onClick={onStop}>
-            Stop
-          </Button>
-        ) : (
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            onClick={onSend}
-            loading={sending}
-            disabled={
-              (!inputValue.trim() && uploadedFiles.length === 0) || sending
-            }
-            style={{ padding: "0 10px" }}
+        {/* Send/Stop button */}
+        {isProcessing ? (
+          <button
+            className="input-action-btn stop-btn"
+            onClick={onStop}
+            title="Stop"
           >
-            Send
-          </Button>
+            <StopIcon />
+          </button>
+        ) : (
+          <button
+            className={`input-action-btn send-btn ${canSend ? 'active' : ''}`}
+            onClick={onSend}
+            disabled={!canSend}
+            title="Send message"
+          >
+            <ArrowUpIcon />
+          </button>
         )}
-      </Space.Compact>
+      </div>
     </div>
   );
 };
