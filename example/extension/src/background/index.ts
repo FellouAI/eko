@@ -20,6 +20,62 @@ var chatAgent: ChatAgent | null = null;
 const humanCallbackIdMap = new Map<string, Function>();
 const abortControllers = new Map<string, AbortController>();
 
+// Module config interface (matches options page)
+interface ModuleConfig {
+  enabled: boolean;
+  useDefaultModel: boolean;
+  llm: string;
+  modelName: string;
+  apiKey: string;
+  options: {
+    baseURL: string;
+  };
+  parameters: {
+    temperature: number;
+    topP: number;
+    topK: number;
+    maxOutputTokens: number;
+  };
+}
+
+interface FullLLMConfig {
+  default: {
+    llm: string;
+    modelName: string;
+    apiKey: string;
+    options: {
+      baseURL: string;
+    };
+  };
+  modules: {
+    planning: ModuleConfig;
+    navigation: ModuleConfig;
+    compression: ModuleConfig;
+  };
+}
+
+// Default module presets (fallback if not configured)
+const DEFAULT_MODULE_PRESETS = {
+  planning: {
+    temperature: 0.7,
+    topP: 0.9,
+    topK: 40,
+    maxOutputTokens: 8192,
+  },
+  navigation: {
+    temperature: 0.2,
+    topP: 0.8,
+    topK: 20,
+    maxOutputTokens: 16000,
+  },
+  compression: {
+    temperature: 0.5,
+    topP: 0.85,
+    topK: 30,
+    maxOutputTokens: 4096,
+  },
+};
+
 // Chat callback
 const chatCallback = {
   onMessage: async (message: ChatStreamMessage) => {
@@ -151,9 +207,15 @@ const taskCallback: AgentStreamCallback & HumanCallback = {
 };
 
 export async function init(): Promise<ChatAgent | void> {
-  const storageKey = "llmConfig";
-  const llmConfig = (await chrome.storage.sync.get([storageKey]))[storageKey];
-  if (!llmConfig || !llmConfig.apiKey) {
+  // Try to load v2 config first, fall back to v1
+  const storage = await chrome.storage.sync.get(["llmConfig", "llmConfigV2"]);
+  const v2Config = storage.llmConfigV2 as FullLLMConfig | undefined;
+  const v1Config = storage.llmConfig;
+
+  // Determine the default config
+  const defaultConfig = v2Config?.default || v1Config;
+
+  if (!defaultConfig || !defaultConfig.apiKey) {
     printLog(
       "Please configure apiKey, configure in the eko extension options of the browser extensions.",
       "error"
@@ -166,21 +228,137 @@ export async function init(): Promise<ChatAgent | void> {
 
   initAgentServices();
 
+  // Build LLMs config with module-specific settings
   const llms: LLMs = {
     default: {
-      provider: llmConfig.llm as any,
-      model: llmConfig.modelName,
-      apiKey: llmConfig.apiKey,
+      provider: defaultConfig.llm as any,
+      model: defaultConfig.modelName,
+      apiKey: defaultConfig.apiKey,
       config: {
-        baseURL: llmConfig.options.baseURL,
+        baseURL: defaultConfig.options?.baseURL,
       },
     },
   };
 
-  const agents = [new BrowserAgent()];
-  chatAgent = new ChatAgent({ llms, agents });
+  // Track which LLM names to use for each module
+  const planLlms: string[] = [];
+  const compressLlms: string[] = [];
+
+  // Add module-specific LLM configurations if v2 config exists
+  if (v2Config?.modules) {
+    // Planning module
+    const planningConfig = v2Config.modules.planning;
+    if (planningConfig && !planningConfig.useDefaultModel) {
+      llms["planning"] = {
+        provider: planningConfig.llm as any,
+        model: planningConfig.modelName,
+        apiKey: planningConfig.apiKey || defaultConfig.apiKey,
+        config: {
+          baseURL: planningConfig.options?.baseURL,
+          temperature: planningConfig.parameters?.temperature ?? DEFAULT_MODULE_PRESETS.planning.temperature,
+          topP: planningConfig.parameters?.topP ?? DEFAULT_MODULE_PRESETS.planning.topP,
+          topK: planningConfig.parameters?.topK ?? DEFAULT_MODULE_PRESETS.planning.topK,
+          maxOutputTokens: planningConfig.parameters?.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.planning.maxOutputTokens,
+        },
+      };
+      planLlms.push("planning");
+    } else if (planningConfig?.parameters) {
+      // Use default model but with custom parameters for planning
+      llms["planning"] = {
+        ...llms.default,
+        config: {
+          ...llms.default.config,
+          temperature: planningConfig.parameters.temperature ?? DEFAULT_MODULE_PRESETS.planning.temperature,
+          topP: planningConfig.parameters.topP ?? DEFAULT_MODULE_PRESETS.planning.topP,
+          topK: planningConfig.parameters.topK ?? DEFAULT_MODULE_PRESETS.planning.topK,
+          maxOutputTokens: planningConfig.parameters.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.planning.maxOutputTokens,
+        },
+      };
+      planLlms.push("planning");
+    }
+
+    // Navigation module (browser agent)
+    const navigationConfig = v2Config.modules.navigation;
+    if (navigationConfig && !navigationConfig.useDefaultModel) {
+      llms["navigation"] = {
+        provider: navigationConfig.llm as any,
+        model: navigationConfig.modelName,
+        apiKey: navigationConfig.apiKey || defaultConfig.apiKey,
+        config: {
+          baseURL: navigationConfig.options?.baseURL,
+          temperature: navigationConfig.parameters?.temperature ?? DEFAULT_MODULE_PRESETS.navigation.temperature,
+          topP: navigationConfig.parameters?.topP ?? DEFAULT_MODULE_PRESETS.navigation.topP,
+          topK: navigationConfig.parameters?.topK ?? DEFAULT_MODULE_PRESETS.navigation.topK,
+          maxOutputTokens: navigationConfig.parameters?.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.navigation.maxOutputTokens,
+        },
+      };
+    } else if (navigationConfig?.parameters) {
+      // Use default model but with custom parameters for navigation
+      llms["navigation"] = {
+        ...llms.default,
+        config: {
+          ...llms.default.config,
+          temperature: navigationConfig.parameters.temperature ?? DEFAULT_MODULE_PRESETS.navigation.temperature,
+          topP: navigationConfig.parameters.topP ?? DEFAULT_MODULE_PRESETS.navigation.topP,
+          topK: navigationConfig.parameters.topK ?? DEFAULT_MODULE_PRESETS.navigation.topK,
+          maxOutputTokens: navigationConfig.parameters.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.navigation.maxOutputTokens,
+        },
+      };
+    }
+
+    // Compression module
+    const compressionConfig = v2Config.modules.compression;
+    if (compressionConfig && !compressionConfig.useDefaultModel) {
+      llms["compression"] = {
+        provider: compressionConfig.llm as any,
+        model: compressionConfig.modelName,
+        apiKey: compressionConfig.apiKey || defaultConfig.apiKey,
+        config: {
+          baseURL: compressionConfig.options?.baseURL,
+          temperature: compressionConfig.parameters?.temperature ?? DEFAULT_MODULE_PRESETS.compression.temperature,
+          topP: compressionConfig.parameters?.topP ?? DEFAULT_MODULE_PRESETS.compression.topP,
+          topK: compressionConfig.parameters?.topK ?? DEFAULT_MODULE_PRESETS.compression.topK,
+          maxOutputTokens: compressionConfig.parameters?.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.compression.maxOutputTokens,
+        },
+      };
+      compressLlms.push("compression");
+    } else if (compressionConfig?.parameters) {
+      // Use default model but with custom parameters for compression
+      llms["compression"] = {
+        ...llms.default,
+        config: {
+          ...llms.default.config,
+          temperature: compressionConfig.parameters.temperature ?? DEFAULT_MODULE_PRESETS.compression.temperature,
+          topP: compressionConfig.parameters.topP ?? DEFAULT_MODULE_PRESETS.compression.topP,
+          topK: compressionConfig.parameters.topK ?? DEFAULT_MODULE_PRESETS.compression.topK,
+          maxOutputTokens: compressionConfig.parameters.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.compression.maxOutputTokens,
+        },
+      };
+      compressLlms.push("compression");
+    }
+  }
+
+  // Create browser agent with navigation-specific LLM if configured
+  const browserAgentLlms = llms["navigation"] ? ["navigation"] : undefined;
+  const agents = [new BrowserAgent(browserAgentLlms)];
+
+  // Create ChatAgent with module-specific LLM configurations
+  chatAgent = new ChatAgent({
+    llms,
+    agents,
+    planLlms: planLlms.length > 0 ? planLlms : undefined,
+    compressLlms: compressLlms.length > 0 ? compressLlms : undefined,
+  });
+
   chatAgent.initMessages().catch((e) => {
     printLog("init messages error: " + e, "error");
+  });
+
+  console.log("Eko initialized with LLM configs:", {
+    default: llms.default.model,
+    planning: llms["planning"]?.model || "using default",
+    navigation: llms["navigation"]?.model || "using default",
+    compression: llms["compression"]?.model || "using default",
   });
 
   return chatAgent;
