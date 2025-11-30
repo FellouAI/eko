@@ -228,31 +228,16 @@ const AppRun = () => {
 
   return (
     <div className="app-container">
-      {/* Header */}
+      {/* Header - minimal since Chrome provides pin/close in side panel */}
       <div className="app-header">
         <div className="app-logo">Browseless.ai</div>
-        <div className="header-buttons">
-          <button
-            className="header-btn"
-            onClick={openSettings}
-            title="Settings"
-          >
-            <SettingsIcon />
-          </button>
-          <button
-            className="header-btn"
-            title="Pin sidebar"
-          >
-            <PinIcon />
-          </button>
-          <button
-            className="header-btn"
-            onClick={closeSidebar}
-            title="Close"
-          >
-            <CloseIcon />
-          </button>
-        </div>
+        <button
+          className="header-btn"
+          onClick={openSettings}
+          title="Settings"
+        >
+          <SettingsIcon />
+        </button>
       </div>
 
       {/* Message area */}

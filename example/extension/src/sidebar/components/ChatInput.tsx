@@ -57,13 +57,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const isProcessing = currentMessageId !== null;
   const canSend = (inputValue.trim() || uploadedFiles.length > 0) && !sending && !isProcessing;
 
-  // Auto-resize textarea - starts at minimum size, grows as needed
+  // Auto-resize textarea - starts compact, grows as needed
   const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
     if (textarea) {
       // Reset to auto to get accurate scrollHeight
       textarea.style.height = 'auto';
-      const minHeight = 40; // Start compact
+      const minHeight = 24; // Very compact start
       const maxHeight = 160;
       const scrollHeight = textarea.scrollHeight;
       // Only grow, never start large
@@ -72,10 +72,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }, []);
 
-  // Initial height set on mount
+  // Initial height set on mount - start compact
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = '40px';
+      textareaRef.current.style.height = '24px';
     }
   }, []);
 

@@ -54,14 +54,13 @@ body {
   border-bottom: none;
 }
 
-/* Logo - Rounded serif font */
+/* Logo - Soft rounded serif font, no italic */
 .app-logo {
   font-family: var(--font-family-serif);
   font-size: 26px;
   font-weight: 400;
   color: var(--color-text-primary);
   letter-spacing: -0.3px;
-  font-style: italic;
 }
 
 /* Header buttons container */
@@ -202,8 +201,8 @@ body {
   background-color: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 10px 12px;
-  padding-bottom: 48px; /* Protected zone for buttons */
+  padding: 8px 12px;
+  padding-bottom: 44px; /* Protected zone for buttons */
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -212,12 +211,12 @@ body {
   box-shadow: 0 0 0 3px rgba(196, 112, 75, 0.12);
 }
 
-/* Textarea - Fixed initial height, grows vertically */
+/* Textarea - Compact, grows vertically as needed */
 .chat-textarea {
   width: 100%;
-  min-height: 40px;
+  min-height: 24px;
   max-height: 160px;
-  padding: 4px 8px;
+  padding: 2px 4px;
   border: none;
   background: transparent;
   font-family: var(--font-family);
@@ -243,11 +242,11 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 48px;
+  height: 44px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  padding: 0 10px 10px;
+  padding: 0 10px 8px;
   pointer-events: none;
 }
 
