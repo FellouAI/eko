@@ -96,7 +96,7 @@ export default abstract class BaseBrowserHybridAgent extends BaseBrowserAgent {
 
 * Recovery Strategy (when stuck):
   1. Try alternative DOM selectors or coordinate-based fallback
-  2. Use \`search_for_solution\` to find workarounds from Google
+  2. Use \`search_for_solution\` to get AI-powered answers from Perplexity
   3. If still stuck after multiple attempts, use \`skip_and_continue\` to preserve partial results and move on
   4. Never stop and ask the human for help mid-task unless facing authentication barriers
 
@@ -1029,7 +1029,7 @@ export default abstract class BaseBrowserHybridAgent extends BaseBrowserAgent {
       {
         name: "search_for_solution",
         description:
-          "Search Google for a solution when stuck on a problem. Use this when normal approaches aren't working and you need to find alternative methods or workarounds. The search will help you discover new approaches to complete the task.",
+          "Search Perplexity AI for a solution when stuck on a problem. Use this when normal approaches aren't working and you need to find alternative methods or workarounds. Perplexity provides direct, AI-summarized answers that are immediately actionable.",
         parameters: {
           type: "object",
           properties: {
@@ -1045,44 +1045,70 @@ export default abstract class BaseBrowserHybridAgent extends BaseBrowserAgent {
           agentContext: AgentContext
         ): Promise<ToolResult> => {
           const query = args.query as string;
-          // Navigate to Google search
-          await this.navigate_to(agentContext, `https://www.google.com/search?q=${encodeURIComponent(query)}`);
-          await sleep(1000);
 
-          // Extract search results
-          const results = await this.execute_script(agentContext, () => {
-            const searchResults: Array<{title: string; snippet: string; url: string}> = [];
-            const resultElements = document.querySelectorAll('div.g');
-            resultElements.forEach((el, idx) => {
-              if (idx < 5) { // Top 5 results
-                const titleEl = el.querySelector('h3');
-                const snippetEl = el.querySelector('.VwiC3b, .IsZvec');
-                const linkEl = el.querySelector('a');
-                if (titleEl && linkEl) {
-                  searchResults.push({
-                    title: titleEl.textContent || '',
-                    snippet: snippetEl?.textContent || '',
-                    url: (linkEl as HTMLAnchorElement).href || ''
-                  });
+          // Navigate to Perplexity search - provides direct AI-summarized answers
+          await this.navigate_to(agentContext, `https://www.perplexity.ai/search?q=${encodeURIComponent(query)}`);
+          await sleep(2000); // Give Perplexity time to generate response
+
+          // Extract the AI-generated answer from Perplexity
+          const result = await this.execute_script(agentContext, () => {
+            // Try to get the main answer content
+            const answerSelectors = [
+              '[class*="prose"]', // Main answer prose
+              '[class*="answer"]',
+              '[class*="response"]',
+              'article',
+              'main [class*="text"]'
+            ];
+
+            let answerText = '';
+            for (const selector of answerSelectors) {
+              const el = document.querySelector(selector);
+              if (el && el.textContent && el.textContent.length > 100) {
+                answerText = el.textContent.trim();
+                break;
+              }
+            }
+
+            // Also try to get source links
+            const sources: Array<{title: string; url: string}> = [];
+            const sourceLinks = document.querySelectorAll('a[href^="http"]');
+            sourceLinks.forEach((link, idx) => {
+              if (idx < 5) {
+                const href = (link as HTMLAnchorElement).href;
+                const text = link.textContent?.trim() || '';
+                if (href && !href.includes('perplexity.ai') && text.length > 5) {
+                  sources.push({ title: text.substring(0, 100), url: href });
                 }
               }
             });
-            return searchResults;
+
+            return { answer: answerText.substring(0, 3000), sources };
           }, []);
 
           // Reset stuck counter since we're trying something new
           this.loopState.stuckCounter = Math.max(0, this.loopState.stuckCounter - 2);
           this.loopState.consecutiveFailures = Math.max(0, this.loopState.consecutiveFailures - 3);
 
+          const answer = result?.answer || '';
+          const sources = result?.sources || [];
+
+          let responseText = `Perplexity AI answer for "${query}":\n\n`;
+
+          if (answer) {
+            responseText += answer + '\n\n';
+          } else {
+            responseText += 'Answer is still loading. You can scroll to see more or wait briefly.\n\n';
+          }
+
+          if (sources.length > 0) {
+            responseText += 'Sources:\n' + sources.map((s: any) => `- ${s.title}: ${s.url}`).join('\n');
+          }
+
+          responseText += '\n\nUse this information to find alternative approaches for your task.';
+
           return {
-            content: [{
-              type: "text",
-              text: `Search results for "${query}":\n\n${
-                results && results.length > 0
-                  ? results.map((r: any, i: number) => `${i + 1}. ${r.title}\n   ${r.snippet}\n   URL: ${r.url}`).join('\n\n')
-                  : 'No results found. Try a different search query.'
-              }\n\nUse these results to find alternative approaches. You can navigate to a result URL for more details.`
-            }],
+            content: [{ type: "text", text: responseText }],
           };
         },
       },
