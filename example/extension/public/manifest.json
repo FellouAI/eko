@@ -1,6 +1,6 @@
 {
-  "name": "Eko agent",
-  "description": "Eko Agent Extension",
+  "name": "Browseless.ai",
+  "description": "Browseless.ai Browser Agent Extension",
   "version": "4.0",
   "manifest_version": 3,
   "background": {

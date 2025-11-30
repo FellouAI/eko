@@ -217,7 +217,7 @@ export async function init(): Promise<ChatAgent | void> {
 
   if (!defaultConfig || !defaultConfig.apiKey) {
     printLog(
-      "Please configure apiKey, configure in the eko extension options of the browser extensions.",
+      "Please configure apiKey, configure in the Browseless.ai extension options of the browser extensions.",
       "error"
     );
     setTimeout(() => {
@@ -354,7 +354,7 @@ export async function init(): Promise<ChatAgent | void> {
     printLog("init messages error: " + e, "error");
   });
 
-  console.log("Eko initialized with LLM configs:", {
+  console.log("Browseless.ai initialized with LLM configs:", {
     default: llms.default.model,
     planning: llms["planning"]?.model || "using default",
     navigation: llms["navigation"]?.model || "using default",

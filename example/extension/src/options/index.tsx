@@ -676,7 +676,7 @@ const OptionsPage = () => {
   return (
     <div style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
       <Title level={3} style={{ marginBottom: 24 }}>
-        <SettingOutlined /> Eko LLM Settings
+        <SettingOutlined /> Browseless.ai LLM Settings
       </Title>
 
       <Form
