@@ -20,42 +20,8 @@ var chatAgent: ChatAgent | null = null;
 const humanCallbackIdMap = new Map<string, Function>();
 const abortControllers = new Map<string, AbortController>();
 
-// Module config interface (matches options page)
-interface ModuleConfig {
-  enabled: boolean;
-  useDefaultModel: boolean;
-  llm: string;
-  modelName: string;
-  apiKey: string;
-  options: {
-    baseURL: string;
-  };
-  parameters: {
-    temperature: number;
-    topP: number;
-    topK: number;
-    maxOutputTokens: number;
-  };
-}
-
-interface FullLLMConfig {
-  default: {
-    llm: string;
-    modelName: string;
-    apiKey: string;
-    options: {
-      baseURL: string;
-    };
-  };
-  modules: {
-    planning: ModuleConfig;
-    navigation: ModuleConfig;
-    compression: ModuleConfig;
-  };
-}
-
-// Default module presets (fallback if not configured)
-const DEFAULT_MODULE_PRESETS = {
+// Optimal presets for each module (parameters only - model is auto-selected by OpenRouter)
+const MODULE_PRESETS = {
   planning: {
     temperature: 0.7,
     topP: 0.9,
@@ -207,17 +173,13 @@ const taskCallback: AgentStreamCallback & HumanCallback = {
 };
 
 export async function init(): Promise<ChatAgent | void> {
-  // Try to load v2 config first, fall back to v1
-  const storage = await chrome.storage.sync.get(["llmConfig", "llmConfigV2"]);
-  const v2Config = storage.llmConfigV2 as FullLLMConfig | undefined;
-  const v1Config = storage.llmConfig;
+  // Load OpenRouter API key
+  const storage = await chrome.storage.sync.get(["openRouterApiKey"]);
+  const apiKey = storage.openRouterApiKey;
 
-  // Determine the default config
-  const defaultConfig = v2Config?.default || v1Config;
-
-  if (!defaultConfig || !defaultConfig.apiKey) {
+  if (!apiKey) {
     printLog(
-      "Please configure apiKey, configure in the Browseless.ai extension options of the browser extensions.",
+      "Please configure your OpenRouter API key in the Browseless.ai extension settings.",
       "error"
     );
     setTimeout(() => {
@@ -228,137 +190,77 @@ export async function init(): Promise<ChatAgent | void> {
 
   initAgentServices();
 
-  // Build LLMs config with module-specific settings
+  // Build LLMs config using OpenRouter auto-routing for all modules
+  // OpenRouter's "openrouter/auto" automatically selects the best model for each prompt
   const llms: LLMs = {
     default: {
-      provider: defaultConfig.llm as any,
-      model: defaultConfig.modelName,
-      apiKey: defaultConfig.apiKey,
+      provider: "openrouter",
+      model: "openrouter/auto",
+      apiKey: apiKey,
       config: {
-        baseURL: defaultConfig.options?.baseURL,
+        baseURL: "https://openrouter.ai/api/v1",
+        temperature: MODULE_PRESETS.navigation.temperature,
+        topP: MODULE_PRESETS.navigation.topP,
+        topK: MODULE_PRESETS.navigation.topK,
+        maxOutputTokens: MODULE_PRESETS.navigation.maxOutputTokens,
+      },
+    },
+    planning: {
+      provider: "openrouter",
+      model: "openrouter/auto",
+      apiKey: apiKey,
+      config: {
+        baseURL: "https://openrouter.ai/api/v1",
+        temperature: MODULE_PRESETS.planning.temperature,
+        topP: MODULE_PRESETS.planning.topP,
+        topK: MODULE_PRESETS.planning.topK,
+        maxOutputTokens: MODULE_PRESETS.planning.maxOutputTokens,
+      },
+    },
+    navigation: {
+      provider: "openrouter",
+      model: "openrouter/auto",
+      apiKey: apiKey,
+      config: {
+        baseURL: "https://openrouter.ai/api/v1",
+        temperature: MODULE_PRESETS.navigation.temperature,
+        topP: MODULE_PRESETS.navigation.topP,
+        topK: MODULE_PRESETS.navigation.topK,
+        maxOutputTokens: MODULE_PRESETS.navigation.maxOutputTokens,
+      },
+    },
+    compression: {
+      provider: "openrouter",
+      model: "openrouter/auto",
+      apiKey: apiKey,
+      config: {
+        baseURL: "https://openrouter.ai/api/v1",
+        temperature: MODULE_PRESETS.compression.temperature,
+        topP: MODULE_PRESETS.compression.topP,
+        topK: MODULE_PRESETS.compression.topK,
+        maxOutputTokens: MODULE_PRESETS.compression.maxOutputTokens,
       },
     },
   };
 
-  // Track which LLM names to use for each module
-  const planLlms: string[] = [];
-  const compressLlms: string[] = [];
-
-  // Add module-specific LLM configurations if v2 config exists
-  if (v2Config?.modules) {
-    // Planning module
-    const planningConfig = v2Config.modules.planning;
-    if (planningConfig && !planningConfig.useDefaultModel) {
-      llms["planning"] = {
-        provider: planningConfig.llm as any,
-        model: planningConfig.modelName,
-        apiKey: planningConfig.apiKey || defaultConfig.apiKey,
-        config: {
-          baseURL: planningConfig.options?.baseURL,
-          temperature: planningConfig.parameters?.temperature ?? DEFAULT_MODULE_PRESETS.planning.temperature,
-          topP: planningConfig.parameters?.topP ?? DEFAULT_MODULE_PRESETS.planning.topP,
-          topK: planningConfig.parameters?.topK ?? DEFAULT_MODULE_PRESETS.planning.topK,
-          maxOutputTokens: planningConfig.parameters?.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.planning.maxOutputTokens,
-        },
-      };
-      planLlms.push("planning");
-    } else if (planningConfig?.parameters) {
-      // Use default model but with custom parameters for planning
-      llms["planning"] = {
-        ...llms.default,
-        config: {
-          ...llms.default.config,
-          temperature: planningConfig.parameters.temperature ?? DEFAULT_MODULE_PRESETS.planning.temperature,
-          topP: planningConfig.parameters.topP ?? DEFAULT_MODULE_PRESETS.planning.topP,
-          topK: planningConfig.parameters.topK ?? DEFAULT_MODULE_PRESETS.planning.topK,
-          maxOutputTokens: planningConfig.parameters.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.planning.maxOutputTokens,
-        },
-      };
-      planLlms.push("planning");
-    }
-
-    // Navigation module (browser agent)
-    const navigationConfig = v2Config.modules.navigation;
-    if (navigationConfig && !navigationConfig.useDefaultModel) {
-      llms["navigation"] = {
-        provider: navigationConfig.llm as any,
-        model: navigationConfig.modelName,
-        apiKey: navigationConfig.apiKey || defaultConfig.apiKey,
-        config: {
-          baseURL: navigationConfig.options?.baseURL,
-          temperature: navigationConfig.parameters?.temperature ?? DEFAULT_MODULE_PRESETS.navigation.temperature,
-          topP: navigationConfig.parameters?.topP ?? DEFAULT_MODULE_PRESETS.navigation.topP,
-          topK: navigationConfig.parameters?.topK ?? DEFAULT_MODULE_PRESETS.navigation.topK,
-          maxOutputTokens: navigationConfig.parameters?.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.navigation.maxOutputTokens,
-        },
-      };
-    } else if (navigationConfig?.parameters) {
-      // Use default model but with custom parameters for navigation
-      llms["navigation"] = {
-        ...llms.default,
-        config: {
-          ...llms.default.config,
-          temperature: navigationConfig.parameters.temperature ?? DEFAULT_MODULE_PRESETS.navigation.temperature,
-          topP: navigationConfig.parameters.topP ?? DEFAULT_MODULE_PRESETS.navigation.topP,
-          topK: navigationConfig.parameters.topK ?? DEFAULT_MODULE_PRESETS.navigation.topK,
-          maxOutputTokens: navigationConfig.parameters.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.navigation.maxOutputTokens,
-        },
-      };
-    }
-
-    // Compression module
-    const compressionConfig = v2Config.modules.compression;
-    if (compressionConfig && !compressionConfig.useDefaultModel) {
-      llms["compression"] = {
-        provider: compressionConfig.llm as any,
-        model: compressionConfig.modelName,
-        apiKey: compressionConfig.apiKey || defaultConfig.apiKey,
-        config: {
-          baseURL: compressionConfig.options?.baseURL,
-          temperature: compressionConfig.parameters?.temperature ?? DEFAULT_MODULE_PRESETS.compression.temperature,
-          topP: compressionConfig.parameters?.topP ?? DEFAULT_MODULE_PRESETS.compression.topP,
-          topK: compressionConfig.parameters?.topK ?? DEFAULT_MODULE_PRESETS.compression.topK,
-          maxOutputTokens: compressionConfig.parameters?.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.compression.maxOutputTokens,
-        },
-      };
-      compressLlms.push("compression");
-    } else if (compressionConfig?.parameters) {
-      // Use default model but with custom parameters for compression
-      llms["compression"] = {
-        ...llms.default,
-        config: {
-          ...llms.default.config,
-          temperature: compressionConfig.parameters.temperature ?? DEFAULT_MODULE_PRESETS.compression.temperature,
-          topP: compressionConfig.parameters.topP ?? DEFAULT_MODULE_PRESETS.compression.topP,
-          topK: compressionConfig.parameters.topK ?? DEFAULT_MODULE_PRESETS.compression.topK,
-          maxOutputTokens: compressionConfig.parameters.maxOutputTokens ?? DEFAULT_MODULE_PRESETS.compression.maxOutputTokens,
-        },
-      };
-      compressLlms.push("compression");
-    }
-  }
-
-  // Create browser agent with navigation-specific LLM if configured
-  const browserAgentLlms = llms["navigation"] ? ["navigation"] : undefined;
-  const agents = [new BrowserAgent(browserAgentLlms)];
+  // Create browser agent with navigation-specific LLM
+  const agents = [new BrowserAgent(["navigation"])];
 
   // Create ChatAgent with module-specific LLM configurations
   chatAgent = new ChatAgent({
     llms,
     agents,
-    planLlms: planLlms.length > 0 ? planLlms : undefined,
-    compressLlms: compressLlms.length > 0 ? compressLlms : undefined,
+    planLlms: ["planning"],
+    compressLlms: ["compression"],
   });
 
   chatAgent.initMessages().catch((e) => {
     printLog("init messages error: " + e, "error");
   });
 
-  console.log("Browseless.ai initialized with LLM configs:", {
-    default: llms.default.model,
-    planning: llms["planning"]?.model || "using default",
-    navigation: llms["navigation"]?.model || "using default",
-    compression: llms["compression"]?.model || "using default",
+  console.log("Browseless.ai initialized with OpenRouter auto-routing:", {
+    model: "openrouter/auto",
+    modules: ["planning", "navigation", "compression"],
   });
 
   return chatAgent;
