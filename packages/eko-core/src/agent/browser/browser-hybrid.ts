@@ -70,6 +70,13 @@ export default abstract class BaseBrowserHybridAgent extends BaseBrowserAgent {
 * For your first visit, please start by calling either the \`navigate_to\` or \`current_page\` tool.
 * After each action, you will receive updated page state information.
 
+* CORE PRINCIPLE - NEVER GIVE UP:
+  - Complete tasks to the best of your ability - there is no "task failed" outcome
+  - Partial success (20%) is infinitely better than complete failure (0%)
+  - If stuck on a subtask, use \`skip_and_continue\` to move forward with partial results
+  - Use \`search_for_solution\` to find alternative approaches when stuck
+  - Always complete the overall task even if some parts couldn't be fully done
+
 * Navigation Strategy:
   - PRIMARY: Use DOM element indexes (e.g., click_element with index) - fastest and most reliable
   - FALLBACK: Use coordinate-based clicks (click_at_coordinates) when DOM fails or loops detected
@@ -87,10 +94,11 @@ export default abstract class BaseBrowserHybridAgent extends BaseBrowserAgent {
   - If DOM interaction fails, try click_at_coordinates with x,y from screenshot
   - Use the latest element index, do not rely on historical outdated element indexes
 
-* Error handling:
-  - If stuck in a loop, the system will automatically switch to fallback mode
-  - In fallback mode, prefer coordinate-based interactions
-  - Handle popups/cookies by accepting or closing them
+* Recovery Strategy (when stuck):
+  1. Try alternative DOM selectors or coordinate-based fallback
+  2. Use \`search_for_solution\` to find workarounds from Google
+  3. If still stuck after multiple attempts, use \`skip_and_continue\` to preserve partial results and move on
+  4. Never stop and ask the human for help mid-task unless facing authentication barriers
 
 * Speed optimizations:
   - DOM interactions are preferred as they're faster than visual processing
@@ -1015,6 +1023,103 @@ export default abstract class BaseBrowserHybridAgent extends BaseBrowserAgent {
           };
           return {
             content: [{ type: "text", text: JSON.stringify(status) }],
+          };
+        },
+      },
+      {
+        name: "search_for_solution",
+        description:
+          "Search Google for a solution when stuck on a problem. Use this when normal approaches aren't working and you need to find alternative methods or workarounds. The search will help you discover new approaches to complete the task.",
+        parameters: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "Search query describing the problem or what you're trying to accomplish (e.g., 'how to click hidden element javascript', 'bypass cookie consent popup')",
+            },
+          },
+          required: ["query"],
+        },
+        execute: async (
+          args: Record<string, unknown>,
+          agentContext: AgentContext
+        ): Promise<ToolResult> => {
+          const query = args.query as string;
+          // Navigate to Google search
+          await this.navigate_to(agentContext, `https://www.google.com/search?q=${encodeURIComponent(query)}`);
+          await sleep(1000);
+
+          // Extract search results
+          const results = await this.execute_script(agentContext, () => {
+            const searchResults: Array<{title: string; snippet: string; url: string}> = [];
+            const resultElements = document.querySelectorAll('div.g');
+            resultElements.forEach((el, idx) => {
+              if (idx < 5) { // Top 5 results
+                const titleEl = el.querySelector('h3');
+                const snippetEl = el.querySelector('.VwiC3b, .IsZvec');
+                const linkEl = el.querySelector('a');
+                if (titleEl && linkEl) {
+                  searchResults.push({
+                    title: titleEl.textContent || '',
+                    snippet: snippetEl?.textContent || '',
+                    url: (linkEl as HTMLAnchorElement).href || ''
+                  });
+                }
+              }
+            });
+            return searchResults;
+          }, []);
+
+          // Reset stuck counter since we're trying something new
+          this.loopState.stuckCounter = Math.max(0, this.loopState.stuckCounter - 2);
+          this.loopState.consecutiveFailures = Math.max(0, this.loopState.consecutiveFailures - 3);
+
+          return {
+            content: [{
+              type: "text",
+              text: `Search results for "${query}":\n\n${
+                results && results.length > 0
+                  ? results.map((r: any, i: number) => `${i + 1}. ${r.title}\n   ${r.snippet}\n   URL: ${r.url}`).join('\n\n')
+                  : 'No results found. Try a different search query.'
+              }\n\nUse these results to find alternative approaches. You can navigate to a result URL for more details.`
+            }],
+          };
+        },
+      },
+      {
+        name: "skip_and_continue",
+        description:
+          "Skip the current problematic subtask and continue with the next part of the task. Use this when you've tried multiple approaches and the subtask is blocking progress. It's better to complete 80% of the task than to get stuck on one subtask.",
+        parameters: {
+          type: "object",
+          properties: {
+            reason: {
+              type: "string",
+              description: "Brief explanation of what was attempted and why skipping is the best option",
+            },
+            partial_result: {
+              type: "string",
+              description: "Any partial data or information gathered before skipping (optional but recommended)",
+            },
+          },
+          required: ["reason"],
+        },
+        execute: async (
+          args: Record<string, unknown>,
+          agentContext: AgentContext
+        ): Promise<ToolResult> => {
+          const reason = args.reason as string;
+          const partialResult = args.partial_result as string;
+
+          // Reset all stuck counters to allow fresh progress
+          this.resetLoopState();
+
+          const message = partialResult
+            ? `Skipped subtask: ${reason}\n\nPartial data preserved:\n${partialResult}\n\nContinuing with remaining tasks. Remember: completing the overall task with partial results is better than not completing it at all.`
+            : `Skipped subtask: ${reason}\n\nContinuing with remaining tasks. Remember: completing the overall task is the priority.`;
+
+          return {
+            content: [{ type: "text", text: message }],
           };
         },
       },

@@ -24,44 +24,62 @@ export interface AdaptiveRetryConfig {
 /**
  * Default retry configurations for each module type.
  * Each adjustment is applied progressively on each retry attempt.
+ * SLOW ESCALATION: Parameters change gradually to give the model
+ * multiple chances before making drastic changes.
  */
 export const MODULE_RETRY_CONFIGS: Record<ModuleType, AdaptiveRetryConfig> = {
   planning: {
     enabled: true,
-    maxRetries: 2,
+    maxRetries: 4,
     adjustments: [
-      // First retry: reduce temperature for more focused output
+      // First retry: very slight adjustment
+      { temperature: -0.05 },
+      // Second retry: reduce temperature more
       { temperature: -0.1, topP: -0.05 },
-      // Second retry: further reduce, increase tokens
-      { temperature: -0.2, topP: -0.1, maxOutputTokens: 2048 },
+      // Third retry: further reduce, add tokens
+      { temperature: -0.15, topP: -0.1, maxOutputTokens: 1024 },
+      // Fourth retry: most conservative, maximum tokens
+      { temperature: -0.2, topP: -0.15, maxOutputTokens: 2048 },
     ],
   },
   navigation: {
     enabled: true,
-    maxRetries: 2,
+    maxRetries: 5,
     adjustments: [
-      // First retry: make more deterministic
+      // First retry: minimal adjustment - give another chance
+      { temperature: -0.03 },
+      // Second retry: slightly more deterministic
+      { temperature: -0.07, topK: -3 },
+      // Third retry: make more deterministic
       { temperature: -0.1, topK: -5 },
-      // Second retry: very deterministic
+      // Fourth retry: more conservative
+      { temperature: -0.13, topK: -8, topP: -0.05 },
+      // Fifth retry: very deterministic as last resort
       { temperature: -0.15, topK: -10, topP: -0.1 },
     ],
   },
   compression: {
     enabled: true,
-    maxRetries: 2,
+    maxRetries: 3,
     adjustments: [
-      // First retry: increase output tokens (compression might need more space)
+      // First retry: slight increase in tokens
+      { maxOutputTokens: 512 },
+      // Second retry: more tokens
       { maxOutputTokens: 1024 },
-      // Second retry: further increase tokens, slightly adjust temperature
+      // Third retry: maximum tokens with slight temp adjustment
       { maxOutputTokens: 2048, temperature: 0.1 },
     ],
   },
   default: {
     enabled: true,
-    maxRetries: 1,
+    maxRetries: 3,
     adjustments: [
-      // Default: slight temperature reduction
-      { temperature: -0.1 },
+      // First retry: very slight adjustment
+      { temperature: -0.03 },
+      // Second retry: moderate adjustment
+      { temperature: -0.07 },
+      // Third retry: conservative
+      { temperature: -0.1, maxOutputTokens: 1024 },
     ],
   },
 };

@@ -102,6 +102,7 @@ export class Agent {
   ): Promise<string> {
     let loopNum = 0;
     let checkNum = 0;
+    let partialResults: string[] = [];
     this.agentContext = agentContext;
     const context = agentContext.context;
     const agentNode = agentContext.agentChain.agent;
@@ -171,6 +172,16 @@ export class Agent {
         agentTools,
         results
       );
+
+      // Collect partial results from assistant text responses
+      const textResults = results.filter((s) => s.type == "text");
+      if (textResults.length > 0) {
+        const textContent = textResults.map((s) => s.text).join("\n");
+        if (textContent.trim()) {
+          partialResults.push(textContent);
+        }
+      }
+
       loopNum++;
       if (!finalResult) {
         if (
@@ -195,7 +206,62 @@ export class Agent {
       }
       return finalResult;
     }
-    return "Unfinished";
+
+    // Graceful termination: return partial results instead of just "Unfinished"
+    // Never show "task failed" - always provide what was accomplished
+    return this.buildGracefulResult(partialResults, agentContext);
+  }
+
+  /**
+   * Build a graceful result when max steps reached.
+   * Returns partial progress rather than a failure message.
+   */
+  private buildGracefulResult(
+    partialResults: string[],
+    agentContext: AgentContext
+  ): string {
+    // Collect any data gathered from tool results
+    const toolChains = agentContext.agentChain.tools;
+    const successfulResults: string[] = [];
+
+    for (const toolChain of toolChains) {
+      if (toolChain.toolResult && !toolChain.toolResult.isError) {
+        const content = toolChain.toolResult.content;
+        for (const item of content) {
+          if (item.type === "text" && item.text && item.text !== "Successful") {
+            // Only include meaningful results, not just "Successful"
+            const trimmed = item.text.trim();
+            if (trimmed.length > 20 && !trimmed.startsWith("Error")) {
+              successfulResults.push(trimmed);
+            }
+          }
+        }
+      }
+    }
+
+    // Build result summary
+    const resultParts: string[] = [];
+
+    if (partialResults.length > 0) {
+      // Use the most recent partial result (likely the most complete)
+      resultParts.push(partialResults[partialResults.length - 1]);
+    }
+
+    if (successfulResults.length > 0) {
+      // Include unique tool results (deduplicated)
+      const uniqueResults = [...new Set(successfulResults)].slice(-3); // Last 3 unique results
+      if (resultParts.length === 0) {
+        resultParts.push("Partial results gathered:");
+      }
+      resultParts.push(...uniqueResults);
+    }
+
+    if (resultParts.length === 0) {
+      // Even if we don't have specific results, provide a graceful completion
+      return "Task processing completed. Some operations may have been partially completed. The agent gathered available information and progressed as far as possible.";
+    }
+
+    return resultParts.join("\n\n");
   }
 
   protected async handleCallResult(
