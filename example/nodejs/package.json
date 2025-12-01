@@ -5,9 +5,9 @@
   "main": "dist/index.cjs",
   "scripts": {
     "build": "rollup -c",
+    "init": "pnpm playwright install",
     "start": "node dist/index.cjs",
-    "dev": "pnpm run build && pnpm run start",
-    "playwright": "pnpm playwright install"
+    "dev": "pnpm run build && pnpm run start"
   },
   "author": "FellouAI",
   "license": "MIT",

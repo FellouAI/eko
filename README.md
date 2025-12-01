@@ -147,7 +147,7 @@ Configure your API key in the extension options before running the automation ta
 ```bash
 cd example/nodejs
 pnpm install
-pnpm run playwright   # first time only, installs browsers
+pnpm playwright install   # first time only, installs browsers
 pnpm run build
 OPENAI_API_KEY=... ANTHROPIC_API_KEY=... pnpm run start
 ```
