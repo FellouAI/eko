@@ -1,15 +1,21 @@
 import config from "../../config";
-import { AgentContext } from "../agent-context";
-import { run_build_dom_tree } from "./build-dom-tree";
-import { BaseBrowserAgent, AGENT_NAME } from "./browser-base";
+import Log from "../../common/log";
 import {
   LanguageModelV2Prompt,
   LanguageModelV2FilePart,
   LanguageModelV2ToolCallPart,
 } from "@ai-sdk/provider";
+import {
+  sleep,
+  toImage,
+  mergeTools,
+  compressImageData,
+} from "../../common/utils";
+import { AgentContext } from "../agent-context";
+import { run_build_dom_tree } from "./build-dom-tree";
 import { Tool, ToolResult, IMcpClient } from "../../types";
 import { mark_screenshot_highlight_elements } from "./utils";
-import { mergeTools, sleep, toImage, compressImageData } from "../../common/utils";
+import { BaseBrowserAgent, AGENT_NAME } from "./browser-base";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
@@ -633,54 +639,61 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     messages: LanguageModelV2Prompt,
     tools: Tool[]
   ): Promise<void> {
-    const pseudoHtmlDescription =
-      "This is the environmental information after the operation, including the latest browser screenshot and page elements. Please perform the next operation based on the environmental information. Do not output the following elements and index information in your response.\n\nIndex and elements:\n";
-    let lastTool = this.lastToolResult(messages);
-    if (
-      lastTool &&
-      lastTool.toolName !== "extract_page_content" &&
-      lastTool.toolName !== "get_all_tabs" &&
-      lastTool.toolName !== "variable_storage"
-    ) {
-      await sleep(300);
-      const image_contents: LanguageModelV2FilePart[] = [];
-      const result = await this.screenshot_and_html(agentContext);
-      if (await this.double_screenshots(agentContext, messages, tools)) {
-        const imageResult = result.double_screenshots
-          ? result.double_screenshots
-          : await this.screenshot_and_compress(
-              agentContext,
-              result.client_rect
-            );
-        const image = toImage(imageResult.imageBase64);
-        image_contents.push({
-          type: "file",
-          data: image,
-          mediaType: imageResult.imageType,
+    try {
+      const pseudoHtmlDescription =
+        "This is the environmental information after the operation, including the latest browser screenshot and page elements. Please perform the next operation based on the environmental information. Do not output the following elements and index information in your response.\n\nIndex and elements:\n";
+      let lastTool = this.lastToolResult(messages);
+      if (
+        lastTool &&
+        lastTool.toolName !== "extract_page_content" &&
+        lastTool.toolName !== "get_all_tabs" &&
+        lastTool.toolName !== "variable_storage"
+      ) {
+        await sleep(300);
+        const image_contents: LanguageModelV2FilePart[] = [];
+        const result = await this.screenshot_and_html(agentContext);
+        if (await this.double_screenshots(agentContext, messages, tools)) {
+          const imageResult = result.double_screenshots
+            ? result.double_screenshots
+            : await this.screenshot_and_compress(
+                agentContext,
+                result.client_rect
+              );
+          const image = toImage(imageResult.imageBase64);
+          image_contents.push({
+            type: "file",
+            data: image,
+            mediaType: imageResult.imageType,
+          });
+        }
+        if (result.imageBase64) {
+          const image = toImage(result.imageBase64);
+          image_contents.push({
+            type: "file",
+            data: image,
+            mediaType: result.imageType || "image/png",
+          });
+        }
+        messages.push({
+          role: "user",
+          content: [
+            ...image_contents,
+            {
+              type: "text",
+              text:
+                pseudoHtmlDescription +
+                "```html\n" +
+                result.pseudoHtml +
+                "\n```",
+            },
+          ],
         });
       }
-      if (result.imageBase64) {
-        const image = toImage(result.imageBase64);
-        image_contents.push({
-          type: "file",
-          data: image,
-          mediaType: result.imageType || "image/png",
-        });
-      }
-      messages.push({
-        role: "user",
-        content: [
-          ...image_contents,
-          {
-            type: "text",
-            text:
-              pseudoHtmlDescription + "```html\n" + result.pseudoHtml + "\n```",
-          },
-        ],
-      });
+      super.handleMessages(agentContext, messages, tools);
+      this.handlePseudoHtmlText(messages, pseudoHtmlDescription);
+    } catch (error) {
+      Log.error("browser handleMessages error: ", error);
     }
-    super.handleMessages(agentContext, messages, tools);
-    this.handlePseudoHtmlText(messages, pseudoHtmlDescription);
   }
 
   private handlePseudoHtmlText(

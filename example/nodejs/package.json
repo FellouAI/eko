@@ -20,7 +20,8 @@
     "@eko-ai/eko-nodejs": "workspace:*",
     "canvas": "^3.2.0",
     "glob": "^11.0.2",
-    "playwright": "^1.52.0"
+    "merge-deep": "^3.0.3",
+    "playwright": "^1.57.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",

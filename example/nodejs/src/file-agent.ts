@@ -1,4 +1,5 @@
 import { glob } from "glob";
+import * as os from "os";
 import * as path from "path";
 import * as fs from "fs/promises";
 import { Tool, ToolResult, IMcpClient } from "@eko-ai/eko/types";
@@ -179,6 +180,13 @@ export default class FileAgent extends Agent {
     return fileDetails;
   }
 
+  protected handlePath(filePath: string): string {
+    if (filePath && filePath.startsWith("~")) {
+      filePath = path.join(os.homedir(), filePath.substring(1));
+    }
+    return filePath;
+  }
+
   protected formatFileSize(size: number): string {
     if (size < 1024) {
       return size + " B";
@@ -209,7 +217,7 @@ export default class FileAgent extends Agent {
           agentContext: AgentContext
         ): Promise<ToolResult> => {
           return await this.callInnerTool(() =>
-            this.file_list(agentContext, args.path as string)
+            this.file_list(agentContext, this.handlePath(args.path as string))
           );
         },
       },
@@ -239,7 +247,7 @@ export default class FileAgent extends Agent {
           return await this.callInnerTool(() =>
             this.do_file_read(
               agentContext,
-              args.path as string,
+              this.handlePath(args.path as string),
               args.write_variable as string
             )
           );
@@ -280,7 +288,7 @@ export default class FileAgent extends Agent {
           return await this.callInnerTool(() =>
             this.do_file_write(
               agentContext,
-              args.path as string,
+              this.handlePath(args.path as string),
               (args.append || false) as boolean,
               args.content as string,
               args.from_variable as string
@@ -317,7 +325,7 @@ export default class FileAgent extends Agent {
           return await this.callInnerTool(() =>
             this.file_str_replace(
               agentContext,
-              args.path as string,
+              this.handlePath(args.path as string),
               args.old_str as string,
               args.new_str as string
             )
@@ -350,7 +358,7 @@ export default class FileAgent extends Agent {
           return await this.callInnerTool(() =>
             this.file_find_by_name(
               agentContext,
-              args.path as string,
+              this.handlePath(args.path as string),
               args.glob as string
             )
           );

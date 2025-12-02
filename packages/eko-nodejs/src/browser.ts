@@ -1,12 +1,7 @@
+import { chromium } from "playwright-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { AgentContext, BaseBrowserLabelsAgent } from "@eko-ai/eko";
-import {
-  chromium,
-  Browser,
-  Page,
-  ElementHandle,
-  BrowserContext,
-} from "playwright";
-import { getDefaultChromeUserDataDir } from "./utils";
+import { Page, Browser, ElementHandle, BrowserContext } from "playwright";
 
 export default class BrowserAgent extends BaseBrowserLabelsAgent {
   private cdpWsEndpoint?: string;
@@ -25,12 +20,8 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     this.cdpWsEndpoint = cdpWsEndpoint;
   }
 
-  public initUserDataDir(userDataDir?: string): string | undefined {
-    if (userDataDir) {
-      this.userDataDir = userDataDir;
-    } else {
-      this.userDataDir = getDefaultChromeUserDataDir(true);
-    }
+  public initUserDataDir(userDataDir: string): string | undefined {
+    this.userDataDir = userDataDir;
     return this.userDataDir;
   }
 
@@ -41,13 +32,13 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   protected async screenshot(
     agentContext: AgentContext
   ): Promise<{ imageBase64: string; imageType: "image/jpeg" | "image/png" }> {
-    let page = await this.currentPage();
-    let screenshotBuffer = await page.screenshot({
+    const page = await this.currentPage();
+    const screenshotBuffer = await page.screenshot({
       fullPage: false,
       type: "jpeg",
       quality: 60,
     });
-    let base64 = screenshotBuffer.toString("base64");
+    const base64 = screenshotBuffer.toString("base64");
     return {
       imageType: "image/jpeg",
       imageBase64: base64,
@@ -62,7 +53,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     title?: string;
     tabId?: number;
   }> {
-    let page = await this.open_url(agentContext, url);
+    const page = await this.open_url(agentContext, url);
     await this.sleep(200);
     return {
       url: page.url(),
@@ -76,7 +67,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     if (!this.browser_context) {
       return [];
     }
-    let result: Array<{ tabId: number; url: string; title: string }> = [];
+    const result: Array<{ tabId: number; url: string; title: string }> = [];
     const pages = await this.browser_context.pages();
     for (let i = 0; i < pages.length; i++) {
       let page = pages[i];
@@ -116,7 +107,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     enter: boolean
   ): Promise<any> {
     try {
-      let elementHandle = await this.get_element(index, true);
+      const elementHandle = await this.get_element(index, true);
       await elementHandle.fill("");
       await elementHandle.fill(text);
       if (enter) {
@@ -135,11 +126,21 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     button: "left" | "right" | "middle"
   ): Promise<any> {
     try {
-      let elementHandle = await this.get_element(index, true);
+      const elementHandle = await this.get_element(index, true);
+      const box = await elementHandle.boundingBox();
+      if (box) {
+        const page = await this.currentPage();
+        page.mouse.move(
+          box.x + box.width / 2 + (Math.random() * 10 - 5),
+          box.y + box.height / 2 + (Math.random() * 10 - 5),
+          { steps: Math.floor(Math.random() * 5) + 3 }
+        );
+      }
       await elementHandle.click({
         button,
         clickCount: num_clicks,
-        force: true,
+        force: false,
+        delay: Math.random() * 50 + 20,
       });
     } catch (e) {
       await super.click_element(agentContext, index, num_clicks, button);
@@ -151,7 +152,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     index: number
   ): Promise<void> {
     try {
-      let elementHandle = await this.get_element(index, true);
+      const elementHandle = await this.get_element(index, true);
       elementHandle.hover({ force: true });
     } catch (e) {
       await super.hover_to_element(agentContext, index);
@@ -163,7 +164,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     func: (...args: any[]) => void,
     args: any[]
   ): Promise<any> {
-    let page = await this.currentPage();
+    const page = await this.currentPage();
     return await page.evaluate(func, ...args);
   }
 
@@ -171,16 +172,16 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     agentContext: AgentContext,
     url: string
   ): Promise<Page> {
-    let browser_context = await this.getBrowserContext();
+    const browser_context = await this.getBrowserContext();
     const page: Page = await browser_context.newPage();
     // await page.setViewportSize({ width: 1920, height: 1080 });
     await page.setViewportSize({ width: 1536, height: 864 });
     try {
       await page.goto(url, {
-        waitUntil: "networkidle",
+        waitUntil: "domcontentloaded",
         timeout: 10000,
       });
-      await page.waitForLoadState("load", { timeout: 8000 });
+      await page.waitForLoadState("networkidle", { timeout: 5000 });
     } catch (e) {
       if ((e + "").indexOf("Timeout") == -1) {
         throw e;
@@ -194,7 +195,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     if (this.current_page == null) {
       throw new Error("There is no page, please call navigate_to first");
     }
-    let page = this.current_page as Page;
+    const page = this.current_page as Page;
     try {
       await page.waitForLoadState("domcontentloaded", { timeout: 10000 });
     } catch (e) {}
@@ -205,7 +206,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     index: number,
     findInput?: boolean
   ): Promise<ElementHandle> {
-    let page = await this.currentPage();
+    const page = await this.currentPage();
     return await page.evaluateHandle(
       (params: any) => {
         let element = (window as any).get_highlight_element(params.index);
@@ -236,93 +237,77 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       this.current_page = null;
       this.browser_context = null;
       if (this.cdpWsEndpoint) {
-        this.browser = await chromium.connectOverCDP(
+        this.browser = (await chromium.connectOverCDP(
           this.cdpWsEndpoint,
           this.options
-        );
-        this.browser_context = await this.browser.newContext();
+        )) as unknown as Browser;
+        this.browser_context = await this.browser.newContext({
+          userAgent: this.getUserAgent(),
+          viewport: { width: 1536, height: 864 },
+        });
       } else if (this.userDataDir) {
-        this.browser_context = await chromium.launchPersistentContext(
+        this.browser_context = (await chromium.launchPersistentContext(
           this.userDataDir,
           {
             headless: this.headless,
-            // channel: 'chrome',
-            args: [
-              "--no-sandbox",
-              "--remote-allow-origins=*",
-              "--disable-dev-shm-usage",
-              "--disable-popup-blocking",
-              "--enable-automation",
-              "--ignore-ssl-errors",
-              "--ignore-certificate-errors",
-              "--ignore-certificate-errors-spki-list",
-              "--disable-blink-features=AutomationControlled",
-            ],
+            channel: "chrome",
+            args: this.getChromiumArgs(),
             ...this.options,
           }
-        );
+        )) as unknown as BrowserContext;
       } else {
-        this.browser = await chromium.launch({
+        this.browser = (await chromium.launch({
           headless: this.headless,
-          args: [
-            "--no-sandbox",
-            "--remote-allow-origins=*",
-            "--disable-dev-shm-usage",
-            "--disable-popup-blocking",
-            "--enable-automation",
-            "--ignore-ssl-errors",
-            "--ignore-certificate-errors",
-            "--ignore-certificate-errors-spki-list",
-            "--disable-blink-features=AutomationControlled",
-          ],
+          args: this.getChromiumArgs(),
           ...this.options,
+        })) as unknown as Browser;
+        this.browser_context = await this.browser.newContext({
+          userAgent: this.getUserAgent(),
+          viewport: { width: 1536, height: 864 },
         });
-        this.browser_context = await this.browser.newContext();
       }
       // Anti-crawling detection website:
       // https://bot.sannysoft.com/
-      let init_script = await this.initScript();
-      this.browser_context.addInitScript(init_script);
+      // https://www.browserscan.net/
+      chromium.use(StealthPlugin());
+      const init_script = await this.initScript();
+      if (init_script.content || init_script.path) {
+        this.browser_context.addInitScript(init_script);
+      }
     }
     return this.browser_context;
   }
 
+  protected getChromiumArgs(): string[] {
+    return [
+      "--no-sandbox",
+      "--remote-allow-origins=*",
+      "--disable-dev-shm-usage",
+      "--disable-popup-blocking",
+      "--ignore-ssl-errors",
+      "--ignore-certificate-errors",
+      "--ignore-certificate-errors-spki-list",
+      "--disable-blink-features=AutomationControlled",
+      "--disable-infobars",
+      "--disable-notifications",
+      "--disable-web-security",
+      "--disable-features=IsolateOrigins,site-per-process",
+    ];
+  }
+
+  protected getUserAgent(): string | undefined {
+    // const userAgents = [
+    //   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    //   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    //   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    //   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    // ];
+    // return userAgents[Math.floor(Math.random() * userAgents.length)];
+    return undefined;
+  }
+
   protected async initScript(): Promise<{ path?: string; content?: string }> {
-    return {
-      content: `
-      // Webdriver property
-			Object.defineProperty(navigator, 'webdriver', {
-				get: () => undefined
-			});
-
-			// Languages
-			Object.defineProperty(navigator, 'languages', {
-				get: () => ['en-US']
-			});
-
-			// Plugins
-			Object.defineProperty(navigator, 'plugins', {
-				get: () => [{name:"1"}, {name:"2"}, {name:"3"}, {name:"4"}, {name:"5"}]
-			});
-
-			// Chrome runtime
-			window.chrome = { runtime: {} };
-
-			// Permissions
-			const originalQuery = window.navigator.permissions.query;
-			window.navigator.permissions.query = (parameters) => (
-				parameters.name === 'notifications' ?
-					Promise.resolve({ state: Notification.permission }) :
-					originalQuery(parameters)
-			);
-			(function () {
-				const originalAttachShadow = Element.prototype.attachShadow;
-				Element.prototype.attachShadow = function attachShadow(options) {
-					return originalAttachShadow.call(this, { ...options, mode: "open" });
-				};
-			})();
-      `,
-    };
+    return {};
   }
 }
 
