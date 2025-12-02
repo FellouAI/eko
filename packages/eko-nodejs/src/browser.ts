@@ -1,12 +1,13 @@
 import { chromium } from "playwright-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import { AgentContext, BaseBrowserLabelsAgent } from "@eko-ai/eko";
+import { AgentContext, BaseBrowserLabelsAgent, Log } from "@eko-ai/eko";
 import { Page, Browser, ElementHandle, BrowserContext } from "playwright";
 
 export default class BrowserAgent extends BaseBrowserLabelsAgent {
   private cdpWsEndpoint?: string;
   private userDataDir?: string;
   private options?: Record<string, any>;
+  private cookies?: Array<any>;
   protected browser: Browser | null = null;
   private browser_context: BrowserContext | null = null;
   private current_page: Page | null = null;
@@ -23,6 +24,20 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   public initUserDataDir(userDataDir: string): string | undefined {
     this.userDataDir = userDataDir;
     return this.userDataDir;
+  }
+
+  public setCookies(
+    cookies: Array<{
+      name: string;
+      value: string;
+      url?: string;
+      domain?: string;
+      path?: string;
+      expires?: number;
+      httpOnly?: boolean;
+    }>
+  ) {
+    this.cookies = cookies;
   }
 
   public setOptions(options?: Record<string, any>) {
@@ -177,6 +192,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     // await page.setViewportSize({ width: 1920, height: 1080 });
     await page.setViewportSize({ width: 1536, height: 864 });
     try {
+      await this.autoLoadCookies(url);
       await page.goto(url, {
         waitUntil: "domcontentloaded",
         timeout: 10000,
@@ -274,8 +290,49 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       if (init_script.content || init_script.path) {
         this.browser_context.addInitScript(init_script);
       }
+      this.browser_context.on("page", async (page) => {
+        page.on("framenavigated", async (frame) => {
+          if (frame === page.mainFrame()) {
+            const url = frame.url();
+            if (url.startsWith("http")) {
+              await this.autoLoadCookies(url);
+            }
+          }
+        });
+      });
+    }
+    if (this.cookies) {
+      this.browser_context?.addCookies(this.cookies);
     }
     return this.browser_context;
+  }
+
+  private async autoLoadCookies(url: string): Promise<void> {
+    try {
+      const cookies = await this.loadCookiesWithUrl(url);
+      if (cookies && cookies.length > 0) {
+        this.browser_context?.addCookies(cookies);
+      }
+    } catch (e) {
+      Log.error("Failed to auto load cookies: " + url, e);
+    }
+  }
+
+  protected async loadCookiesWithUrl(url: string): Promise<
+    Array<{
+      name: string;
+      value: string;
+      url?: string;
+      domain?: string;
+      path?: string;
+      expires?: number;
+      httpOnly?: boolean;
+      secure?: boolean;
+      sameSite?: "Strict" | "Lax" | "None";
+      partitionKey?: string;
+    }>
+  > {
+    return [];
   }
 
   protected getChromiumArgs(): string[] {

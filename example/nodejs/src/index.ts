@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import FileAgent from "./file-agent";
+import LocalCookiesBrowserAgent from "./browser";
 import { BrowserAgent } from "@eko-ai/eko-nodejs";
 import { Eko, Agent, Log, LLMs, AgentStreamMessage } from "@eko-ai/eko";
 
@@ -37,7 +38,11 @@ const callback = {
 
 async function run() {
   Log.setLevel(1);
-  const agents: Agent[] = [new BrowserAgent(), new FileAgent()];
+  const agents: Agent[] = [
+    // new LocalCookiesBrowserAgent(),
+    new BrowserAgent(),
+    new FileAgent(),
+  ];
   const eko = new Eko({ llms, agents, callback });
   const result = await eko.run(
     "Search for the latest news about Musk, summarize and save to the desktop as Musk.md"
