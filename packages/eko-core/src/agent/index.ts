@@ -1,18 +1,15 @@
+import { Eko } from "./eko";
 import { Agent, AgentParams } from "./base";
-import BaseFileAgent from "./file";
-import BaseShellAgent from "./shell";
-import BaseComputerAgent from "./computer";
 import {
   BaseBrowserAgent,
   BaseBrowserLabelsAgent,
   BaseBrowserScreenAgent,
 } from "./browser";
 
+export default Eko;
+
 export {
   Agent,
-  BaseFileAgent,
-  BaseShellAgent,
-  BaseComputerAgent,
   BaseBrowserAgent,
   BaseBrowserLabelsAgent,
   BaseBrowserScreenAgent,

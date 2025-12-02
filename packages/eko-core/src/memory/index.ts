@@ -8,10 +8,10 @@ import config from "../config";
 import { Tool } from "../types";
 import Log from "../common/log";
 import TaskSnapshotTool from "./snapshot";
-import { callAgentLLM } from "../agent/llm";
+import { callAgentLLM } from "../agent/agent-llm";
 import { RetryLanguageModel } from "../llm";
 import { fixJson, mergeTools, sub } from "../common/utils";
-import { AgentContext } from "../core/context";
+import { AgentContext } from "../agent/agent-context";
 
 export function extractUsedTool<T extends Tool | LanguageModelV2FunctionTool>(
   messages: LanguageModelV2Prompt,
@@ -140,11 +140,13 @@ async function doCompressAgentMessages(
   if (callback) {
     await callback.onMessage(
       {
+        streamType: "agent",
+        chatId: agentContext.context.chatId,
         taskId: agentContext.context.taskId,
         agentName: agentContext.agent.Name,
         nodeId: agentContext.agentChain.agent.id,
         type: "tool_result",
-        toolId: toolCall.toolCallId,
+        toolCallId: toolCall.toolCallId,
         toolName: toolCall.toolName,
         params: args,
         toolResult: toolResult,

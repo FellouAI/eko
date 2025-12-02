@@ -1,0 +1,107 @@
+body {
+  margin: 0 !important;
+}
+
+.streaming-cursor {
+  animation: blink 1s infinite;
+  color: black;
+}
+
+.markdown-body {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.markdown-body p {
+  margin: 0 0 8px 0;
+  white-space: pre-wrap;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0 0 8px 16px;
+}
+
+.markdown-body code {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.markdown-body pre code {
+  display: block;
+  padding: 12px;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.tool-json-pre {
+  margin: 0;
+  font-size: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tool-json-pre::-webkit-scrollbar {
+  display: none;
+}
+
+.chat-input-rich-container {
+  position: relative;
+  flex: 1;
+  margin: 0 4px;
+}
+
+.chat-input-editor {
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 6px 11px;
+  font-size: 14px;
+  line-height: 1.5715;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-input-editor:focus {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
+  outline: none;
+}
+
+.chat-input-editor:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(0, 0, 0, 0.25);
+}
+
+.webpage-reference-display {
+  color: #1677ff;
+  background: rgba(22, 119, 255, 0.12);
+  border-radius: 4px;
+  padding: 0 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.user-webpage-reference {
+  color: white;
+  background: #4CAF50;
+}
+
+.webpage-reference-display::before {
+  content: "@";
+  margin-right: 2px;
+}
+

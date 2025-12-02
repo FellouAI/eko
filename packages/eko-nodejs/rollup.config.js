@@ -14,7 +14,7 @@ export default [
         sourcemap: 'inline'
       }
     ],
-    external: ["dotenv", "@eko-ai/eko", "canvas", "playwright"],
+    external: ["dotenv", "@eko-ai/eko", "canvas", "playwright", "playwright-extra", "puppeteer-extra-plugin-stealth"],
     plugins: [
       json(),
       commonjs(),

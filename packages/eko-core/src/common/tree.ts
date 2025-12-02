@@ -3,7 +3,7 @@ import {
   AgentNode,
   NormalAgentNode,
   ParallelAgentNode,
-} from "../types/core.types";
+} from "../types/agent.types";
 
 export function buildAgentTree(agents: WorkflowAgent[]): AgentNode {
   // Detect and handle circular dependencies

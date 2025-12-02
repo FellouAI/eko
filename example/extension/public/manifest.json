@@ -1,7 +1,7 @@
 {
   "name": "Eko agent",
   "description": "Eko Agent Extension",
-  "version": "3.0",
+  "version": "4.0",
   "manifest_version": 3,
   "background": {
     "type": "module",

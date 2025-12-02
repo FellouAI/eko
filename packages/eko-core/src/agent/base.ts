@@ -4,12 +4,12 @@ import * as memory from "../memory";
 import { RetryLanguageModel } from "../llm";
 import { mergeTools } from "../common/utils";
 import { ToolWrapper } from "../tools/wrapper";
-import { AgentChain, ToolChain } from "../core/chain";
-import Context, { AgentContext } from "../core/context";
+import { AgentChain, ToolChain } from "./chain";
 import {
   McpTool,
   ForeachTaskTool,
   WatchTriggerTool,
+  HumanInteractTool,
   VariableStorageTool,
 } from "../tools";
 import {
@@ -21,7 +21,7 @@ import {
   ToolExecuter,
   WorkflowAgent,
   HumanCallback,
-  StreamCallback,
+  AgentStreamCallback,
 } from "../types";
 import { ICapability } from "../capabilities/base";
 import { createCapability } from "../capabilities/registry";
@@ -38,9 +38,10 @@ import {
   callAgentLLM,
   convertToolResult,
   defaultMessageProviderOptions,
-} from "./llm";
-import { doTaskResultCheck } from "../tools/task_result_check";
-import { doTodoListManager } from "../tools/todo_list_manager";
+} from "./agent-llm";
+import TaskContext, { AgentContext } from "./agent-context";
+import { doTaskResultCheck } from "../tools/task-result-check";
+import { doTodoListManager } from "../tools/todo-list-manager";
 import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
 
 export type AgentParams = {
@@ -72,7 +73,7 @@ export class Agent {
   protected mcpClient?: IMcpClient;
   protected planDescription?: string;
   protected requestHandler?: (request: LLMRequest) => void;
-  protected callback?: StreamCallback & HumanCallback;
+  protected callback?: AgentStreamCallback & HumanCallback;
   protected agentContext?: AgentContext;
   protected serializedSystemPrompt?: string;
 
@@ -166,7 +167,10 @@ export class Agent {
     return agent;
   }
 
-  public async run(context: Context, agentChain: AgentChain): Promise<string> {
+  public async run(
+    context: TaskContext,
+    agentChain: AgentChain
+  ): Promise<string> {
     const mcpClient = this.mcpClient || context.config.defaultMcpClient;
     const agentContext = new AgentContext(context, this, agentChain);
     try {
@@ -198,12 +202,14 @@ export class Agent {
 
     // Build complete tool set (agent tools + capability tools + system auto tools)
     const capabilityTools = this.capabilities.flatMap((cap) => cap.tools);
-    const tools = mergeTools(
-      mergeTools(this.tools, capabilityTools),
-      this.system_auto_tools(agentNode)
-    );
 
     // Build system and user prompts
+    const tools = [
+      ...this.tools,
+      ...this.system_auto_tools(agentNode, agentContext),
+      ...capabilityTools,
+    ];
+
     const systemPrompt = await this.buildSystemPrompt(agentContext, tools);
     const userPrompt = await this.buildUserPrompt(agentContext, tools);
     const messages: LanguageModelV2Prompt = [
@@ -270,12 +276,15 @@ export class Agent {
       );
       loopNum++;
       if (!finalResult) {
-        if ((config.mode == "expert" || config.expertMode) && loopNum % config.expertModeTodoLoopNum == 0) {
+        if (
+          config.mode == "expert" &&
+          loopNum % config.expertModeTodoLoopNum == 0
+        ) {
           await doTodoListManager(agentContext, rlm, messages, llm_tools);
         }
         continue;
       }
-      if ((config.mode == "expert" || config.expertMode) && checkNum == 0) {
+      if (config.mode == "expert" && checkNum == 0) {
         checkNum++;
         const { completionStatus } = await doTaskResultCheck(
           agentContext,
@@ -316,7 +325,8 @@ export class Agent {
       toolCalls.length > 1 &&
       this.canParallelToolCalls(toolCalls) &&
       toolCalls.every(
-        (s) => agentTools.find((t) => t.name == s.toolName)?.supportParallelCalls
+        (s) =>
+          agentTools.find((t) => t.name == s.toolName)?.supportParallelCalls
       )
     ) {
       const results = await Promise.all(
@@ -400,11 +410,13 @@ export class Agent {
     if (callback) {
       await callback.onMessage(
         {
+          streamType: "agent",
+          chatId: context.chatId,
           taskId: context.taskId,
           agentName: agentContext.agent.Name,
           nodeId: agentContext.agentChain.agent.id,
           type: "tool_result",
-          toolId: result.toolCallId,
+          toolCallId: result.toolCallId,
           toolName: result.toolName,
           params: result.input || {},
           toolResult: toolResult,
@@ -415,24 +427,36 @@ export class Agent {
     return convertToolResult(result, toolResult, user_messages);
   }
 
-  protected system_auto_tools(agentNode: WorkflowAgent): Tool[] {
-    let tools: Tool[] = [];
-    let agentNodeXml = agentNode.xml;
-    let hasVariable =
+  protected system_auto_tools(
+    agentNode: WorkflowAgent,
+    agentContext: AgentContext
+  ): Tool[] {
+    const tools: Tool[] = [];
+    const agentNodeXml = agentNode.xml;
+    const hasVariable =
       agentNodeXml.indexOf("input=") > -1 ||
       agentNodeXml.indexOf("output=") > -1;
     if (hasVariable) {
       tools.push(new VariableStorageTool());
     }
-    let hasForeach = agentNodeXml.indexOf("</forEach>") > -1;
+    const hasForeach = agentNodeXml.indexOf("</forEach>") > -1;
     if (hasForeach) {
       tools.push(new ForeachTaskTool());
     }
-    let hasWatch = agentNodeXml.indexOf("</watch>") > -1;
+    const hasWatch = agentNodeXml.indexOf("</watch>") > -1;
     if (hasWatch) {
       tools.push(new WatchTriggerTool());
     }
-    let toolNames = this.tools.map((tool) => tool.name);
+    const callback = this.callback || agentContext.context.config.callback;
+    if (
+      callback?.onHumanConfirm ||
+      callback?.onHumanInput ||
+      callback?.onHumanSelect ||
+      callback?.onHumanHelp
+    ) {
+      tools.push(new HumanInteractTool());
+    }
+    const toolNames = this.tools.map((tool) => tool.name);
     return tools.filter((tool) => toolNames.indexOf(tool.name) == -1);
   }
 
@@ -513,7 +537,7 @@ export class Agent {
   }
 
   private async listTools(
-    context: Context,
+    context: TaskContext,
     mcpClient: IMcpClient,
     agentNode?: WorkflowAgent,
     mcpParams?: Record<string, unknown>
@@ -633,7 +657,7 @@ export class Agent {
     };
   }
 
-  public async loadTools(context: Context): Promise<Tool[]> {
+  public async loadTools(context: TaskContext): Promise<Tool[]> {
     if (this.mcpClient) {
       let mcpTools = await this.listTools(context, this.mcpClient);
       if (mcpTools && mcpTools.length > 0) {

@@ -1,37 +1,45 @@
 import config from "./config";
 import Log from "./common/log";
-import { Planner } from "./core/plan";
+import Eko from "./agent/index";
+import global from "./config/global";
+import { Planner } from "./agent/plan";
 import { RetryLanguageModel } from "./llm";
 import { EkoMemory } from "./memory/memory";
-import { Eko, EkoDialogue } from "./core/index";
-import Chain, { AgentChain } from "./core/chain";
-import Context, { AgentContext } from "./core/context";
+import Chain, { AgentChain } from "./agent/chain";
 import { SimpleSseMcpClient, SimpleHttpMcpClient } from "./mcp";
+import TaskContext, { AgentContext } from "./agent/agent-context";
 
 export default Eko;
 
 export {
   Eko,
-  EkoDialogue,
   EkoMemory,
   Log,
   config,
-  Context,
-  Planner,
-  AgentContext,
+  global,
   Chain,
+  Planner,
   AgentChain,
+  TaskContext,
+  AgentContext,
   SimpleSseMcpClient,
   SimpleHttpMcpClient,
   RetryLanguageModel,
+  TaskContext as Context,
 };
+
+export {
+  ChatAgent,
+  ChatContext,
+  WebSearchTool,
+  WebpageQaTool,
+  DeepActionTool,
+  TaskVariableStorageTool,
+} from "./chat";
 
 export {
   Agent,
   type AgentParams,
-  BaseFileAgent,
-  BaseShellAgent,
-  BaseComputerAgent,
   BaseBrowserAgent,
   BaseBrowserLabelsAgent,
   BaseBrowserScreenAgent,
@@ -53,29 +61,36 @@ export {
 } from "./capabilities";
 
 export {
+  ForeachTaskTool,
+  WatchTriggerTool,
   HumanInteractTool,
   TaskNodeStatusTool,
   VariableStorageTool,
-  ForeachTaskTool,
-  WatchTriggerTool,
 } from "./tools";
+
+export type { ChatService, BrowserService } from "./service";
 
 export {
   type LLMs,
   type LLMRequest,
-  type StreamCallback,
   type HumanCallback,
-  type EkoConfig,
   type Workflow,
-  type WorkflowAgent,
+  type EkoConfig,
   type WorkflowNode,
-  type StreamCallbackMessage,
+  type WorkflowAgent,
+  type AgentStreamMessage,
+  type AgentStreamCallback,
+  type AgentStreamCallback as StreamCallback,
+  type AgentStreamMessage as StreamCallbackMessage,
 } from "./types";
 
 export {
-  mergeTools,
-  toImage,
+  sub,
+  uuidv4,
   toFile,
+  toImage,
+  mergeTools,
+  call_timeout,
   compressImageData,
   convertToolSchema,
   uuidv4,
@@ -91,4 +106,4 @@ export {
 
 export { buildAgentTree } from "./common/tree";
 export { extract_page_content, mark_screenshot_highlight_elements } from "./agent/browser/utils";
-export { run_build_dom_tree } from "./agent/browser/build_dom_tree";
+export { PromptTemplate } from "./prompt/prompt-template";

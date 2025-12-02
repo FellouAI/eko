@@ -1,27 +1,19 @@
 import dotenv from "dotenv";
-import { BrowserAgent, FileAgent } from "@eko-ai/eko-nodejs";
-import { Eko, Agent, Log, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
+import FileAgent from "./file-agent";
+import { BrowserAgent } from "@eko-ai/eko-nodejs";
+import { Eko, Agent, Log, LLMs, AgentStreamMessage } from "@eko-ai/eko";
 
 dotenv.config();
 
 const openaiBaseURL = process.env.OPENAI_BASE_URL;
 const openaiApiKey = process.env.OPENAI_API_KEY;
-const claudeBaseURL = process.env.ANTHROPIC_BASE_URL;
-const claudeApiKey = process.env.ANTHROPIC_API_KEY;
+const openaiModel = process.env.OPENAI_MODEL;
 
 const llms: LLMs = {
   default: {
-    provider: "anthropic",
-    model: "claude-sonnet-4-5-20250929",
-    apiKey: claudeApiKey || "",
-    config: {
-      baseURL: claudeBaseURL,
-    },
-  },
-  openai: {
-    provider: "openai",
-    model: "gpt-5",
-    apiKey: openaiApiKey || "",
+    provider: "openai-compatible",
+    model: openaiModel as string,
+    apiKey: openaiApiKey as string,
     config: {
       baseURL: openaiBaseURL,
     },
@@ -29,7 +21,7 @@ const llms: LLMs = {
 };
 
 const callback = {
-  onMessage: async (message: StreamCallbackMessage) => {
+  onMessage: async (message: AgentStreamMessage) => {
     if (message.type == "workflow" && !message.streamDone) {
       return;
     }

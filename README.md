@@ -17,13 +17,14 @@ Eko (pronounced like 'echo') is a production-ready JavaScript framework that ena
 
 ## News
 
+- **2025-11:** Eko 4.0 supports chat conversations & optimizes agent logic.
 - **2025-09:** Eko 3.0 introduces dependency-aware parallel agent execution.
 - **2025-09:** New pause, resume, and interrupt controls with `task_snapshot` workflow recovery.
 - **2025-09:** Monorepo tooling migrated to pnpm for consistent workspace management.
 
-## Upgrading to Eko 3.0
+## Upgrading to Eko 4.0
 
-Follow these steps when moving an existing Eko 2.x project to 3.0:
+Follow these steps when moving an existing Eko 3.x project to 4.0:
 
 1. Update dependencies with `pnpm up @eko-ai/eko @eko-ai/eko-nodejs @eko-ai/eko-web @eko-ai/eko-extension`.
 2. Regenerate saved workflows or exported plans so they use the v3 schema and dependency graph format.
@@ -146,7 +147,7 @@ Configure your API key in the extension options before running the automation ta
 ```bash
 cd example/nodejs
 pnpm install
-pnpm run playwright   # first time only, installs browsers
+pnpm playwright install   # first time only, installs browsers
 pnpm run build
 OPENAI_API_KEY=... ANTHROPIC_API_KEY=... pnpm run start
 ```
@@ -197,14 +198,6 @@ Eko can be used in multiple environments:
 
 [![Star History Chart](https://api.star-history.com/svg?repos=FellouAI/eko&type=Date)](https://star-history.com/#FellouAI/eko&Date)
 
-
-## Community Spotlight
-
-- **Career Co-Pilot**: https://github.com/wangwangbobo/career_skill_learnig.git
-- **Slides Agent by Eko**: https://github.com/MICAHFANG/slides-agent-by-eko
-- **Universal Sidebar Assistant**: https://github.com/San12341/eko-broser-extension.git
-- **Orbit X Smart Terminal**: https://github.com/Skywang16/OrbitX/tree/main
-- **48 Hour Browser Challenge**: https://github.com/MoonIRL/eko
 
 ## License
 

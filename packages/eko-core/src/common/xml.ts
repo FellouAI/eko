@@ -1,14 +1,14 @@
 import { fixXmlTag } from "./utils";
-import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import {
   Workflow,
-  WorkflowAgent,
-  WorkflowForEachNode,
   WorkflowNode,
+  WorkflowAgent,
   WorkflowTextNode,
   WorkflowWatchNode,
-} from "../types/core.types";
+  WorkflowForEachNode,
+} from "../types/agent.types";
 import { buildAgentTree } from "./tree";
+import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 
 export function parseWorkflow(
   taskId: string,

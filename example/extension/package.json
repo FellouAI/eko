@@ -1,6 +1,6 @@
 {
   "name": "@eko-ai/eko-extension-example",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "eko browser extension",
   "scripts": {
     "build": "webpack --config webpack.config.js"
@@ -12,20 +12,29 @@
     "eko"
   ],
   "dependencies": {
+    "@ant-design/icons": "^5.5.1",
+    "@eko-ai/eko": "workspace:*",
+    "@eko-ai/eko-extension": "workspace:*",
     "antd": "^5.22.4",
+    "katex": "^0.16.11",
+    "pdfjs-dist": "^5.4.394",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@eko-ai/eko": "workspace:*",
-    "@eko-ai/eko-extension": "workspace:*"
+    "react-markdown": "^9.0.1",
+    "rehype-katex": "^7.0.0",
+    "remark-gfm": "^4.0.0",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@types/chrome": "0.0.158",
     "@types/react": "^18.0.29",
     "@types/react-dom": "^18.0.11",
     "copy-webpack-plugin": "^9.0.1",
+    "css-loader": "^7.1.2",
     "glob": "^7.1.6",
     "prettier": "^2.2.1",
     "rimraf": "^3.0.2 ",
+    "style-loader": "^4.0.0",
     "ts-loader": "^8.0.0",
     "typescript": "^5.0.4",
     "webpack": "^5.94.0",

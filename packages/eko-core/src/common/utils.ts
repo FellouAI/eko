@@ -1,4 +1,5 @@
 import { Agent } from "../agent";
+import { DialogueTool } from "../types";
 import { Tool, ToolSchema } from "../types/tools.types";
 import { LanguageModelV2FunctionTool } from "@ai-sdk/provider";
 
@@ -74,10 +75,17 @@ export function toImage(mediaData: string): Uint8Array | string | URL {
   return toFile(mediaData);
 }
 
-export function toFile(mediaData: string, type: "base64|url" | "binary|url" = "base64|url"): Uint8Array | string | URL {
+export function toFile(
+  mediaData: string,
+  type: "base64|url" | "binary|url" = "base64|url"
+): Uint8Array | string | URL {
   if (mediaData.startsWith("http://") || mediaData.startsWith("https://")) {
     return new URL(mediaData);
-  } else if (mediaData.startsWith("//") && mediaData.indexOf(".") > 0 && mediaData.length < 1000) {
+  } else if (
+    mediaData.startsWith("//") &&
+    mediaData.indexOf(".") > 0 &&
+    mediaData.length < 1000
+  ) {
     return new URL("https:" + mediaData);
   }
   if (mediaData.startsWith("data:")) {
@@ -114,11 +122,14 @@ export function getMimeType(data: string): string {
     } else if (data.indexOf(".pdf") > -1) {
       mediaType = "application/pdf";
     } else if (data.indexOf(".docx") > -1) {
-      mediaType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      mediaType =
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
     } else if (data.indexOf(".xlsx") > -1) {
-      mediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      mediaType =
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     } else if (data.indexOf(".pptx") > -1) {
-      mediaType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+      mediaType =
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation";
     } else if (data.indexOf(".txt") > -1) {
       mediaType = "text/plain";
     } else if (data.indexOf(".md") > -1) {
@@ -149,10 +160,11 @@ export async function compressImageData(
   imageType: "image/jpeg" | "image/png";
 }> {
   const base64Data = imageBase64;
-  const binaryString = typeof atob !== "undefined"
-    ? atob(base64Data)
-    // @ts-ignore
-    : Buffer.from(base64Data, "base64").toString("binary");
+  const binaryString =
+    typeof atob !== "undefined"
+      ? atob(base64Data)
+      : // @ts-ignore
+        Buffer.from(base64Data, "base64").toString("binary");
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
@@ -174,12 +186,19 @@ export async function compressImageData(
       ? bitmapHeight * (compress as any).scale
       : (compress as any).resizeHeight,
   });
-  
+
   const hasOffscreen = typeof OffscreenCanvas !== "undefined";
   const hasCreateImageBitmap = typeof createImageBitmap !== "undefined";
-  const hasDOM = typeof document !== "undefined" && typeof Image !== "undefined";
-  // @ts-ignore
-  const isNode = typeof window === "undefined" && typeof process !== "undefined" && !!process.versions && !!process.versions.node;
+  const hasDOM =
+    typeof document !== "undefined" && typeof Image !== "undefined";
+  const isNode =
+    typeof window === "undefined" &&
+    // @ts-ignore
+    typeof process !== "undefined" &&
+    // @ts-ignore
+    !!process.versions &&
+    // @ts-ignore
+    !!process.versions.node;
 
   const loadImageAny = async () => {
     if (hasCreateImageBitmap) {
@@ -219,7 +238,8 @@ export async function compressImageData(
               const url = reader.result as string;
               res(url.substring(url.indexOf("base64,") + 7));
             };
-            reader.onerror = () => rej(new Error("Failed to convert blob to base64"));
+            reader.onerror = () =>
+              rej(new Error("Failed to convert blob to base64"));
             reader.readAsDataURL(blob);
           });
         },
@@ -245,8 +265,12 @@ export async function compressImageData(
         ctx: canvas.getContext("2d"),
         exportBase64: async (mime: string, q?: number) => {
           const buffer: any = canvas.toBuffer(mime, { quality: q });
-          // @ts-ignore
-          return (typeof Buffer !== "undefined" ? Buffer.from(buffer) : buffer).toString("base64");
+          return (
+            (
+              // @ts-ignore
+              typeof Buffer !== "undefined" ? Buffer.from(buffer) : buffer
+            ).toString("base64")
+          );
         },
       };
     }
@@ -276,7 +300,9 @@ export async function compressImageData(
   };
 }
 
-export function mergeTools<T extends Tool | LanguageModelV2FunctionTool>(tools1: T[], tools2: T[]): T[] {
+export function mergeTools<
+  T extends Tool | DialogueTool | LanguageModelV2FunctionTool
+>(tools1: T[], tools2: T[]): T[] {
   let tools: T[] = [];
   let toolMap2 = tools2.reduce((map, tool) => {
     map[tool.name] = tool;
@@ -338,7 +364,9 @@ export function sub(
   }
   if (str.length > maxLength) {
     // return str.substring(0, maxLength) + (appendPoint ? "..." : "");
-    return Array.from(str).slice(0, maxLength).join('') + (appendPoint ? "..." : "");
+    return (
+      Array.from(str).slice(0, maxLength).join("") + (appendPoint ? "..." : "")
+    );
   }
   return str;
 }
@@ -351,7 +379,7 @@ export function fixJson(code: string) {
     return JSON.parse(code);
   } catch (e) {}
   try {
-    return JSON.parse(code + "\"}");
+    return JSON.parse(code + '"}');
   } catch (e) {}
   const stack: string[] = [];
   for (let i = 0; i < code.length; i++) {
@@ -389,8 +417,8 @@ export function fixXmlTag(code: string) {
   if (code.endsWith("<")) {
     code = code.substring(0, code.length - 1);
   }
-  if (code.indexOf('&') > -1) {
-    code = code.replace(/&(?![a-zA-Z0-9#]+;)/g, '&amp;');
+  if (code.indexOf("&") > -1) {
+    code = code.replace(/&(?![a-zA-Z0-9#]+;)/g, "&amp;");
   }
   function fixDoubleChar(code: string) {
     const stack: string[] = [];
@@ -478,7 +506,7 @@ export function fixXmlTag(code: string) {
 
 export async function loadPackage(packageName: string): Promise<any> {
   // @ts-ignore
-  if (typeof require !== 'undefined') {
+  if (typeof require !== "undefined") {
     try {
       return await import(packageName);
     } catch {
