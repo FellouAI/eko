@@ -144,13 +144,22 @@ export async function callChatLLM(
           if (toolPart && toolPart.toolCallId == chunk.id) {
             toolPart.toolName = chunk.toolName;
           } else {
-            toolPart = {
-              type: "tool-call",
-              toolCallId: chunk.id,
-              toolName: chunk.toolName,
-              input: {},
-            };
-            toolParts.push(toolPart);
+            const _toolPart = toolParts.filter(
+              (s) => s.toolCallId == chunk.id
+            )[0];
+            if (_toolPart) {
+              toolPart = _toolPart;
+              toolPart.toolName = _toolPart.toolName || chunk.toolName;
+              toolPart.input = _toolPart.input || {};
+            } else {
+              toolPart = {
+                type: "tool-call",
+                toolCallId: chunk.id,
+                toolName: chunk.toolName,
+                input: {},
+              };
+              toolParts.push(toolPart);
+            }
           }
           break;
         }
@@ -193,12 +202,19 @@ export async function callChatLLM(
           };
           await streamCallback.onMessage(message);
           if (toolPart == null) {
-            toolParts.push({
-              type: "tool-call",
-              toolCallId: chunk.toolCallId,
-              toolName: chunk.toolName,
-              input: message.params || args,
-            });
+            const _toolPart = toolParts.filter(
+              (s) => s.toolCallId == chunk.toolCallId
+            )[0];
+            if (_toolPart) {
+              _toolPart.input = message.params || args;
+            } else {
+              toolParts.push({
+                type: "tool-call",
+                toolCallId: chunk.toolCallId,
+                toolName: chunk.toolName,
+                input: message.params || args,
+              });
+            }
           } else {
             toolPart.input = message.params || args;
             toolPart = null;

@@ -264,11 +264,8 @@ export const useChatCallbacks = (
           taskItem.task.workflowStreamDone = data.streamDone;
         } else if (data.type === "agent_start") {
           const existingAgent = taskItem.task.agents.find(
-            (a) =>
-              a.agentNode.id === (data.nodeId || data.agentName) ||
-              a.agentNode.name === data.agentName
+            (a) => a.agentNode.id === data.nodeId
           );
-
           if (!existingAgent) {
             const agentExecution: AgentExecution = {
               agentNode: data.agentNode,
@@ -279,9 +276,7 @@ export const useChatCallbacks = (
           }
         } else if (data.type === "text" || data.type === "thinking") {
           const agent = taskItem.task.agents.find(
-            (a) =>
-              a.agentNode.id === (data.nodeId || data.agentName) ||
-              a.agentNode.name === data.agentName
+            (a) => a.agentNode.id === data.nodeId
           );
           if (agent) {
             const existingIndex = agent.contentItems.findIndex(
@@ -305,9 +300,7 @@ export const useChatCallbacks = (
           }
         } else if (data.type === "file") {
           const agent = taskItem.task.agents.find(
-            (a) =>
-              a.agentNode.id === (data.nodeId || data.agentName) ||
-              a.agentNode.name === data.agentName
+            (a) => a.agentNode.id === data.nodeId
           );
           if (agent) {
             agent.contentItems.push({
@@ -318,9 +311,7 @@ export const useChatCallbacks = (
           }
         } else if (data.type === "tool_streaming") {
           const agent = taskItem.task.agents.find(
-            (a) =>
-              a.agentNode.id === (data.nodeId || data.agentName) ||
-              a.agentNode.name === data.agentName
+            (a) => a.agentNode.id === data.nodeId
           );
           if (agent) {
             const existingIndex = agent.contentItems.findIndex(
@@ -342,9 +333,7 @@ export const useChatCallbacks = (
           }
         } else if (data.type === "tool_use") {
           const agent = taskItem.task.agents.find(
-            (a) =>
-              a.agentNode.id === (data.nodeId || data.agentName) ||
-              a.agentNode.name === data.agentName
+            (a) => a.agentNode.id === data.nodeId
           );
           if (agent) {
             const existingIndex = agent.contentItems.findIndex(
@@ -365,9 +354,7 @@ export const useChatCallbacks = (
           }
         } else if (data.type === "tool_running") {
           const agent = taskItem.task.agents.find(
-            (a) =>
-              a.agentNode.id === (data.nodeId || data.agentName) ||
-              a.agentNode.name === data.agentName
+            (a) => a.agentNode.id === data.nodeId
           );
           if (agent) {
             const existingIndex = agent.contentItems.findIndex(
@@ -392,9 +379,7 @@ export const useChatCallbacks = (
           }
         } else if (data.type === "tool_result") {
           const agent = taskItem.task.agents.find(
-            (a) =>
-              a.agentNode.id === (data.nodeId || data.agentName) ||
-              a.agentNode.name === data.agentName
+            (a) => a.agentNode.id === data.nodeId
           );
           if (agent) {
             const existingIndex = agent.contentItems.findIndex(
@@ -418,9 +403,7 @@ export const useChatCallbacks = (
           }
         } else if (data.type === "agent_result") {
           const agent = taskItem.task.agents.find(
-            (a) =>
-              a.agentNode.id === (data.nodeId || data.agentName) ||
-              a.agentNode.name === data.agentName
+            (a) => a.agentNode.id === data.nodeId
           );
           if (agent) {
             agent.status = data.error ? "error" : "done";
@@ -429,9 +412,7 @@ export const useChatCallbacks = (
           }
         } else if (data.type === "error") {
           const agent = taskItem.task.agents.find(
-            (a) =>
-              a.agentNode.id === (data.nodeId || data.agentName) ||
-              a.agentNode.name === data.agentName
+            (a) => a.agentNode.id === data.nodeId
           );
           if (agent) {
             agent.status = "error";
@@ -445,17 +426,12 @@ export const useChatCallbacks = (
         ) {
           const humanData = data as any;
           const agent = taskItem.task.agents.find(
-            (a) =>
-              a.agentNode.id === (humanData.nodeId || humanData.agentName) ||
-              a.agentNode.name === humanData.agentName
+            (a) => a.agentNode.id === data.nodeId
           );
           if (agent) {
             const existingIndex = agent.contentItems.findIndex(
               (item) =>
-                (item.type === "human_confirm" ||
-                  item.type === "human_input" ||
-                  item.type === "human_select" ||
-                  item.type === "human_help") &&
+                item.type.startsWith("human_") &&
                 (item as any).callbackId === humanData.callbackId
             );
 

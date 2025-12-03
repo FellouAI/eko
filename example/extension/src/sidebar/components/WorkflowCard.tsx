@@ -1,9 +1,9 @@
 import React from "react";
 import type { TaskData } from "../types";
-import { WorkflowAgent } from "@eko-ai/eko";
 import { RobotOutlined } from "@ant-design/icons";
 import { Card, Space, Typography, Spin } from "antd";
 import { AgentExecutionCard } from "./AgentExecutionCard";
+import { buildAgentTree, WorkflowAgent } from "@eko-ai/eko";
 
 const { Text, Paragraph } = Typography;
 
@@ -19,24 +19,22 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({ task }) => {
 
   // Build agent tree structure
   const buildAgentGroups = () => {
+    if (agents.length === 0) {
+      return [];
+    }
     const groups: WorkflowAgent[][] = [];
-    let currentGroup: WorkflowAgent[] = [];
-
-    for (const agent of agents) {
-      if (agent.parallel) {
-        currentGroup.push(agent);
+    let agentTree = buildAgentTree(agents);
+    while (true) {
+      if (agentTree.type === "normal") {
+        groups.push([agentTree.agent]);
       } else {
-        if (currentGroup.length > 0) {
-          groups.push(currentGroup);
-          currentGroup = [];
-        }
-        groups.push([agent]);
+        groups.push(agentTree.agents.map((a) => a.agent));
       }
+      if (!agentTree.nextAgent) {
+        break;
+      }
+      agentTree = agentTree.nextAgent;
     }
-    if (currentGroup.length > 0) {
-      groups.push(currentGroup);
-    }
-
     return groups;
   };
 

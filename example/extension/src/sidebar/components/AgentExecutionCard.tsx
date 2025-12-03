@@ -20,10 +20,7 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
   agentNode,
   task,
 }) => {
-  const agent = task.agents.find(
-    (a) =>
-      a.agentNode.id === agentNode.id || a.agentNode.name === agentNode.name
-  );
+  const agent = task.agents.find((a) => a.agentNode.id === agentNode.id);
   const status = agent?.status || agentNode.status;
   const [respondedCallbacks, setRespondedCallbacks] = useState<Set<string>>(
     new Set()
@@ -189,14 +186,14 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
             }
             return null;
           })}
-          {agent.result && (
+          {/* {agent.result && (
             <Alert
               message="Execution Result"
               description={<MarkdownRenderer content={agent.result} />}
               type="success"
               style={{ marginTop: 8 }}
             />
-          )}
+          )} */}
           {agent.error && (
             <Alert
               message="Execution Error"

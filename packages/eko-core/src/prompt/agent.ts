@@ -132,10 +132,10 @@ function buildPreTaskResult(context: TaskContext): string {
     if (agentChain.agentResult) {
       preTaskResult += `<subtask_result agent="${
         agentChain.agent.name
-      }">Subtask: ${agentChain.agent.task}\nResult: ${sub(
+      }">\nSubtask: ${agentChain.agent.task}\nResult: ${sub(
         agentChain.agentResult,
         600
-      )}</subtask_result>`;
+      ).trim()}\n</subtask_result>`;
     }
   }
   return preTaskResult.trim();
