@@ -37,17 +37,19 @@ const callback = {
 };
 
 async function run() {
-  Log.setLevel(1);
-  const agents: Agent[] = [
-    // new LocalCookiesBrowserAgent(),
-    new BrowserAgent(),
-    new FileAgent(),
-  ];
-  const eko = new Eko({ llms, agents, callback });
-  const result = await eko.run(
-    "Search for the latest news about Musk, summarize and save to the desktop as Musk.md"
-  );
-  console.log("result: ", result.result);
+  // Log.setLevel(1);
+  // const agents: Agent[] = [
+  //   // new LocalCookiesBrowserAgent(),
+  //   new BrowserAgent(),
+  //   new FileAgent(),
+  // ];
+  // const eko = new Eko({ llms, agents, callback });
+  // const result = await eko.run(
+  //   "Search for the latest news about Musk, summarize and save to the desktop as Musk.md"
+  // );
+  // console.log("result: ", result.result);
+  const browser = new LocalCookiesBrowserAgent();
+  await browser.openUrl("https://www.baidu.com");
 }
 
 run().catch((e) => {

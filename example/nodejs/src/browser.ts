@@ -2,6 +2,7 @@ import os from "os";
 import fs from "fs";
 import chromeCookies from "chrome-cookies-secure";
 import { BrowserAgent } from "@eko-ai/eko-nodejs";
+import { AgentContext } from "@eko-ai/eko";
 
 export default class LocalCookiesBrowserAgent extends BrowserAgent {
   private caches: Record<string, boolean> = {};
@@ -83,6 +84,9 @@ export default class LocalCookiesBrowserAgent extends BrowserAgent {
     } else {
       return "Default";
     }
+  }
+  public async openUrl(url: string): Promise<void> {
+      await this.navigate_to({} as AgentContext, url);
   }
 }
 
