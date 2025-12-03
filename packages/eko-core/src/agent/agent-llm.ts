@@ -11,8 +11,8 @@ import {
   DialogueTool,
   StreamResult,
   HumanCallback,
-  AgentStreamCallback,
   AgentStreamMessage,
+  AgentStreamCallback,
 } from "../types";
 import {
   LanguageModelV2Prompt,
@@ -25,7 +25,6 @@ import {
   LanguageModelV2ToolResultPart,
   LanguageModelV2ToolResultOutput,
 } from "@ai-sdk/provider";
-import global from "../config/global";
 
 export function defaultLLMProviderOptions(): SharedV2ProviderOptions {
   return {
@@ -36,7 +35,7 @@ export function defaultLLMProviderOptions(): SharedV2ProviderOptions {
     },
     openrouter: {
       reasoning: {
-        max_tokens: 10,
+        effort: "low"
       },
     },
   };
@@ -57,14 +56,14 @@ export function defaultMessageProviderOptions(): SharedV2ProviderOptions {
 }
 
 export function convertTools(
-  tools: Tool[] | DialogueTool[]
+  tools: Tool[] | DialogueTool[],
 ): LanguageModelV2FunctionTool[] {
-  return tools.map((tool) => ({
+  return tools.map((tool, index) => ({
     type: "function",
     name: tool.name,
     description: tool.description,
     inputSchema: tool.parameters,
-    // providerOptions: defaultMessageProviderOptions()
+    providerOptions: index < 3 ? defaultMessageProviderOptions() : undefined,
   }));
 }
 

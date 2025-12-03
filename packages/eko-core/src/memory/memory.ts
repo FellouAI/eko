@@ -285,7 +285,6 @@ export class EkoMemory {
                     };
                   }
                 }),
-          providerOptions: defaultMessageProviderOptions(),
         });
       } else if (message.role == "assistant") {
         llmMessages.push({

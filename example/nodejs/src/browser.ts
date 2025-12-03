@@ -84,6 +84,10 @@ export default class LocalCookiesBrowserAgent extends BrowserAgent {
       return "Default";
     }
   }
+
+  public async testOpenUrl(url: string): Promise<void> {
+    await this.navigate_to({} as any, url);
+  }
 }
 
 export { LocalCookiesBrowserAgent };

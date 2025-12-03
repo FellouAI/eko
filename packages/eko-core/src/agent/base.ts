@@ -121,7 +121,6 @@ export class Agent {
       {
         role: "user",
         content: userPrompt,
-        providerOptions: defaultMessageProviderOptions(),
       },
     ];
     agentContext.messages = messages;
