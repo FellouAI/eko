@@ -1,8 +1,16 @@
 import dotenv from "dotenv";
 import FileAgent from "./file-agent";
 import LocalCookiesBrowserAgent from "./browser";
+import os from "os";
 import { BrowserAgent } from "@eko-ai/eko-nodejs";
-import { Eko, Agent, Log, LLMs, AgentStreamMessage } from "@eko-ai/eko";
+import {
+  Eko,
+  Agent,
+  Log,
+  LLMs,
+  AgentStreamMessage,
+  AgentContext,
+} from "@eko-ai/eko";
 
 dotenv.config();
 
@@ -48,9 +56,14 @@ async function run() {
   //   "Search for the latest news about Musk, summarize and save to the desktop as Musk.md"
   // );
   // console.log("result: ", result.result);
+
   const browser = new LocalCookiesBrowserAgent();
-  await browser.openUrl("https://www.baidu.com");
+  //browser.initUserDataDir(`${os.homedir()}/Library/Application Support/Google/Chrome_NotRunning/`);
+  const testUrl = "https://bilibili.com";
+  browser.openUrl(testUrl);
 }
+
+
 
 run().catch((e) => {
   console.log(e);

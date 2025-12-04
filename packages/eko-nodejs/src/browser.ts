@@ -8,7 +8,6 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   private userDataDir?: string;
   private options?: Record<string, any>;
   private cookies?: Array<any>;
-  private localStorage?: Record<string, string>;
   protected browser: Browser | null = null;
   private browser_context: BrowserContext | null = null;
   private current_page: Page | null = null;
@@ -39,10 +38,6 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     }>
   ) {
     this.cookies = cookies;
-  }
-
-  public setLocalStorage(localStorage: Record<string, string>) {
-    this.localStorage = localStorage;
   }
 
   public setOptions(options?: Record<string, any>) {
@@ -198,7 +193,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     await page.setViewportSize({ width: 1536, height: 864 });
     try {
       await this.autoLoadCookies(url);
-      await this.autoLoadLocalStorage(url, page);
+      await this.autoLoadLocalStorage(page, url);
       await page.goto(url, {
         waitUntil: "domcontentloaded",
         timeout: 10000,
@@ -293,17 +288,8 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       // https://www.browserscan.net/
       chromium.use(StealthPlugin());
       const init_script = await this.initScript();
-      const localStorageScript = this.getLocalStorageInitScript();
       if (init_script.content || init_script.path) {
-        const combinedScript = {
-          content: localStorageScript
-            ? `${localStorageScript}\n${init_script.content || ""}`
-            : init_script.content,
-          path: init_script.path,
-        };
-        this.browser_context.addInitScript(combinedScript);
-      } else if (localStorageScript) {
-        this.browser_context.addInitScript({ content: localStorageScript });
+        this.browser_context.addInitScript(init_script);
       }
       this.browser_context.on("page", async (page) => {
         page.on("framenavigated", async (frame) => {
@@ -311,7 +297,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
             const url = frame.url();
             if (url.startsWith("http")) {
               await this.autoLoadCookies(url);
-              await this.autoLoadLocalStorage(url, page);
+              await this.autoLoadLocalStorage(page, url);
             }
           }
         });
@@ -327,23 +313,30 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     try {
       const cookies = await this.loadCookiesWithUrl(url);
       if (cookies && cookies.length > 0) {
-        this.browser_context?.addCookies(cookies);
+        await this.browser_context?.clearCookies();
+        await this.browser_context?.addCookies(cookies);
+        const injected_cookies = await this.browser_context?.cookies(url);
+        console.log("===> Injected Cookies: ", injected_cookies);
       }
     } catch (e) {
       Log.error("Failed to auto load cookies: " + url, e);
     }
   }
 
-  private async autoLoadLocalStorage(url: string, page: Page): Promise<void> {
+  private async autoLoadLocalStorage(page: Page, url: string): Promise<void> {
     try {
       const localStorageData = await this.loadLocalStorageWithUrl(url);
-      if (localStorageData && Object.keys(localStorageData).length > 0) {
-        await page.evaluate((data) => {
-          Object.keys(data).forEach((key) => {
-            localStorage.setItem(key, data[key]);
-          });
-        }, localStorageData);
-      }
+      await page.addInitScript(
+        (storage: Record<string, string>) => {
+        try {
+          for (const [key, value] of Object.entries(storage)) {
+              localStorage.setItem(key, value);
+            }
+          } catch (e) {
+            console.error("Failed to inject localStorage: " + url, e);
+          }
+        }, localStorageData
+      );
     } catch (e) {
       Log.error("Failed to auto load localStorage: " + url, e);
     }
@@ -370,19 +363,6 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     url: string
   ): Promise<Record<string, string>> {
     return {};
-  }
-
-  private getLocalStorageInitScript(): string {
-    if (!this.localStorage || Object.keys(this.localStorage).length === 0) {
-      return "";
-    }
-    const data = JSON.stringify(this.localStorage);
-    return `(function() {
-      const data = ${data};
-      Object.keys(data).forEach(key => {
-        localStorage.setItem(key, data[key]);
-      });
-    })();`;
   }
 
   protected getChromiumArgs(): string[] {
@@ -417,5 +397,4 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     return {};
   }
 }
-
 export { BrowserAgent };
