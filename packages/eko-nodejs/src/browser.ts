@@ -315,8 +315,6 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       if (cookies && cookies.length > 0) {
         await this.browser_context?.clearCookies();
         await this.browser_context?.addCookies(cookies);
-        const injected_cookies = await this.browser_context?.cookies(url);
-        console.log("===> Injected Cookies: ", injected_cookies);
       }
     } catch (e) {
       Log.error("Failed to auto load cookies: " + url, e);
@@ -326,17 +324,15 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   private async autoLoadLocalStorage(page: Page, url: string): Promise<void> {
     try {
       const localStorageData = await this.loadLocalStorageWithUrl(url);
-      await page.addInitScript(
-        (storage: Record<string, string>) => {
+      await page.addInitScript((storage: Record<string, string>) => {
         try {
           for (const [key, value] of Object.entries(storage)) {
-              localStorage.setItem(key, value);
-            }
-          } catch (e) {
-            console.error("Failed to inject localStorage: " + url, e);
+            localStorage.setItem(key, value);
           }
-        }, localStorageData
-      );
+        } catch (e) {
+          Log.error("Failed to inject localStorage: " + url, e);
+        }
+      }, localStorageData);
     } catch (e) {
       Log.error("Failed to auto load localStorage: " + url, e);
     }

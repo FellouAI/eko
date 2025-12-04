@@ -1,15 +1,16 @@
 import os from "os";
 import fs from "fs";
 import path from "path";
-import { promises as fsPromises } from "fs";
+import { Level } from "level";
+import { promises } from "fs";
+import { AgentContext } from "@eko-ai/eko";
 import chromeCookies from "chrome-cookies-secure";
 import { BrowserAgent } from "@eko-ai/eko-nodejs";
-import { AgentContext } from "@eko-ai/eko";
-import { Level } from "level";
 
 export default class LocalCookiesBrowserAgent extends BrowserAgent {
   private caches: Record<string, boolean> = {};
   private localStorageCaches: Record<string, Record<string, string>> = {};
+
   private profileName: string =
     LocalCookiesBrowserAgent.getLastUsedProfileName();
 
@@ -31,11 +32,9 @@ export default class LocalCookiesBrowserAgent extends BrowserAgent {
         return {};
       }
 
-      // 复制 LevelDB 到临时目录（因为 Chrome 可能正在使用）
       tempDir = path.join(os.tmpdir(), `chrome-ls-${Date.now()}`);
       await this.copyDirectory(localStoragePath, tempDir);
 
-      // 打开 LevelDB
       db = new Level(tempDir, {
         valueEncoding: "binary",
         keyEncoding: "binary",
@@ -46,16 +45,15 @@ export default class LocalCookiesBrowserAgent extends BrowserAgent {
       const urlHref = urlObj.href;
       const urlHostname = urlObj.hostname;
 
-      // 遍历所有键值对
       for await (const [rawKey, rawVal] of db.iterator()) {
         const key = rawKey.toString();
 
-        // Chrome localStorage keys format: "_https://example.commyKey" 或 "_https://example.com/^0partitionKeymyKey"
+        // Chrome localStorage keys format: "_https://example.commyKey" or "_https://example.com/^0partitionKeymyKey"
         if (key.startsWith("_")) {
           let storageKey = "";
           let matched = false;
 
-          // 优先精确匹配 origin
+          // Priority precise matching origin
           if (key.startsWith(`_${urlOrigin}`)) {
             storageKey = key.substring(`_${urlOrigin}`.length);
             matched = true;
@@ -63,14 +61,15 @@ export default class LocalCookiesBrowserAgent extends BrowserAgent {
             storageKey = key.substring(`_${urlHref}`.length);
             matched = true;
           } else {
-            // 尝试匹配 hostname（处理不同协议或端口的情况）
-            const hostnamePattern = new RegExp(`^_https?://${urlHostname.replace(/\./g, "\\.")}`);
+            // Attempt to match hostname (handle cases with different protocols or ports)
+            const hostnamePattern = new RegExp(
+              `^_https?://${urlHostname.replace(/\./g, "\\.")}`
+            );
             if (hostnamePattern.test(key)) {
-              // 提取 origin 部分（从 _ 到第一个非 origin 字符）
+              // Extract the "origin" section (from _ to the first non-"origin" character)
               const originMatch = key.match(/^_(https?:\/\/[^/]+)/);
               if (originMatch) {
                 const keyOrigin = originMatch[1];
-                // 如果 hostname 匹配，提取 storageKey
                 if (keyOrigin.includes(urlHostname)) {
                   storageKey = key.substring(originMatch[0].length);
                   matched = true;
@@ -80,44 +79,40 @@ export default class LocalCookiesBrowserAgent extends BrowserAgent {
           }
 
           if (matched && storageKey) {
-            // 处理分区键的情况（格式：/^0partitionKeystorageKey）
-            // 例如：/^0https://google.comyt-remote-connected-devices
+            // Handling partition key cases (format: /^0partitionKeystorageKey)
+            // For example: /^0https://google.comyt-remote-connected-devices
             if (storageKey.startsWith("/^0")) {
               const afterPartition = storageKey.substring(3);
-              // 分区键通常是完整的 URL（如 https://google.com）
-              // storageKey 通常以字母或下划线开头
-              // 从后往前匹配，找到 storageKey 的开始位置
-              // storageKey 模式：字母/下划线开头，包含字母、数字、下划线、连字符、冒号
               const storageKeyPattern = /([a-zA-Z_][a-zA-Z0-9_:-]+)$/;
               const keyMatch = afterPartition.match(storageKeyPattern);
               if (keyMatch) {
                 storageKey = keyMatch[1];
-                // 验证前面确实是 URL 格式
-                const beforeKey = afterPartition.substring(0, afterPartition.length - keyMatch[1].length);
+                const beforeKey = afterPartition.substring(
+                  0,
+                  afterPartition.length - keyMatch[1].length
+                );
                 if (beforeKey.match(/^https?:\/\//)) {
-                  // 确认是有效的分区键格式
+                  // Confirm that it is a valid partition key format
                 } else {
-                  // 如果不是 URL 格式，可能整个都是 storageKey
                   storageKey = afterPartition;
                 }
               } else {
-                // 如果无法匹配，尝试直接使用（可能是特殊格式）
                 storageKey = afterPartition;
               }
             }
 
-            // 清理 storageKey 中的控制字符（\x00, \x01 等）
             storageKey = storageKey.replace(/[\x00-\x1F]/g, "");
 
-            // 解析值（可能是 JSON 格式）
             let rawValue = rawVal.toString();
-            // 清理 value 中的控制字符（\x00, \x01 等）
             rawValue = rawValue.replace(/[\x00-\x1F]/g, "");
-            
+
             try {
               const parsed = JSON.parse(rawValue);
-              // 如果解析成功且是对象，检查是否有 data 字段
-              if (typeof parsed === "object" && parsed !== null && "data" in parsed) {
+              if (
+                typeof parsed === "object" &&
+                parsed !== null &&
+                "data" in parsed
+              ) {
                 result[storageKey] =
                   typeof parsed.data === "string"
                     ? parsed.data
@@ -126,7 +121,6 @@ export default class LocalCookiesBrowserAgent extends BrowserAgent {
                 result[storageKey] = rawValue;
               }
             } catch {
-              // 不是 JSON，直接使用原始值
               result[storageKey] = rawValue;
             }
           }
@@ -136,33 +130,41 @@ export default class LocalCookiesBrowserAgent extends BrowserAgent {
       await db.close();
       db = null;
 
-      // 清理临时目录
-      await fsPromises.rm(tempDir, { recursive: true, force: true });
+      await promises.rm(tempDir, { recursive: true, force: true });
       tempDir = null;
 
       this.localStorageCaches[origin] = result;
 
-      console.log("===> localStorage: ", result);
-
       return result;
     } catch (e) {
       console.error("Failed to load localStorage:", e);
-      // 确保清理资源
       if (db) {
         try {
           await db.close();
-        } catch (closeError) {
-          // 忽略关闭错误
-        }
+        } catch (closeError) {}
       }
       if (tempDir) {
         try {
-          await fsPromises.rm(tempDir, { recursive: true, force: true });
-        } catch (rmError) {
-          // 忽略删除错误
-        }
+          await promises.rm(tempDir, { recursive: true, force: true });
+        } catch (rmError) {}
       }
       return {};
+    }
+  }
+
+  private async copyDirectory(src: string, dest: string): Promise<void> {
+    await promises.mkdir(dest, { recursive: true });
+    const entries = await promises.readdir(src, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+
+      if (entry.isDirectory()) {
+        await this.copyDirectory(srcPath, destPath);
+      } else {
+        await promises.copyFile(srcPath, destPath);
+      }
     }
   }
 
@@ -184,22 +186,6 @@ export default class LocalCookiesBrowserAgent extends BrowserAgent {
       );
     } else {
       throw new Error(`Unsupported platform: ${process.platform}`);
-    }
-  }
-
-  private async copyDirectory(src: string, dest: string): Promise<void> {
-    await fsPromises.mkdir(dest, { recursive: true });
-    const entries = await fsPromises.readdir(src, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const srcPath = path.join(src, entry.name);
-      const destPath = path.join(dest, entry.name);
-
-      if (entry.isDirectory()) {
-        await this.copyDirectory(srcPath, destPath);
-      } else {
-        await fsPromises.copyFile(srcPath, destPath);
-      }
     }
   }
 
@@ -228,26 +214,24 @@ export default class LocalCookiesBrowserAgent extends BrowserAgent {
     );
     this.caches[domain] = true;
     if (cookies && cookies.length > 0) {
-      // Chrome 的 expires_utc 是从 1601-01-01 开始的微秒数（WebKit Time）
-      // 需要转换成 Unix 时间戳（从 1970-01-01 开始的秒数）
-      const WEBKIT_EPOCH_OFFSET_SECONDS = 11644473600; // 1601 到 1970 的秒数差
-      
+      // Chrome's expires_utc is the number of microseconds (WebKit Time) starting from 1601-01-01.
+      // The needs to be converted to a Unix timestamp (the number of seconds since 1970-01-01).
+      const WEBKIT_EPOCH_OFFSET_SECONDS = 11644473600; // The difference in seconds between 1601 and 1970
+
       for (let i = 0; i < cookies.length; i++) {
         if (cookies[i].expires) {
           const expiresValue = Number(cookies[i].expires);
-          
-          // 判断是否是 WebKit Time（通常是 17 位数字的微秒）
-          if (expiresValue > 10000000000000) { // > 10^13，说明是微秒级别
-            // 从 1601 年开始的微秒数，转换为 Unix 时间戳（秒）
-            cookies[i].expires = Math.floor(expiresValue / 1000000) - WEBKIT_EPOCH_OFFSET_SECONDS;
-          } else if (expiresValue > 10000000000) { // 毫秒级
+          // Determine whether it is a WebKit Time (usually a microsecond with 17 digits)
+          if (expiresValue > 10000000000000) {
+            cookies[i].expires =
+              Math.floor(expiresValue / 1000000) - WEBKIT_EPOCH_OFFSET_SECONDS;
+          } else if (expiresValue > 10000000000) {
+            // Millisecond
             cookies[i].expires = Math.floor(expiresValue / 1000);
           }
-          // 否则已经是秒级，保持不变
         }
       }
     }
-    console.log("===> cookies: ", url, cookies);
     const mapped = cookies.map((cookie) => ({
       name: cookie.name,
       value: cookie.value,
@@ -257,7 +241,6 @@ export default class LocalCookiesBrowserAgent extends BrowserAgent {
       secure: cookie.Secure,
       httpOnly: cookie.HttpOnly,
     }));
-    console.log("===> mapped cookies: ", mapped);
     return mapped;
   }
 

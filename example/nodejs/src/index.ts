@@ -1,16 +1,7 @@
 import dotenv from "dotenv";
 import FileAgent from "./file-agent";
 import LocalCookiesBrowserAgent from "./browser";
-import os from "os";
-import { BrowserAgent } from "@eko-ai/eko-nodejs";
-import {
-  Eko,
-  Agent,
-  Log,
-  LLMs,
-  AgentStreamMessage,
-  AgentContext,
-} from "@eko-ai/eko";
+import { Eko, Log, LLMs, Agent, AgentStreamMessage } from "@eko-ai/eko";
 
 dotenv.config();
 
@@ -44,26 +35,21 @@ const callback = {
   },
 };
 
-async function run() {
-  // Log.setLevel(1);
-  // const agents: Agent[] = [
-  //   // new LocalCookiesBrowserAgent(),
-  //   new BrowserAgent(),
-  //   new FileAgent(),
-  // ];
-  // const eko = new Eko({ llms, agents, callback });
-  // const result = await eko.run(
-  //   "Search for the latest news about Musk, summarize and save to the desktop as Musk.md"
-  // );
-  // console.log("result: ", result.result);
-
+function testBrowserLoginStatus() {
   const browser = new LocalCookiesBrowserAgent();
-  //browser.initUserDataDir(`${os.homedir()}/Library/Application Support/Google/Chrome_NotRunning/`);
-  const testUrl = "https://bilibili.com";
+  const testUrl = "https://github.com";
   browser.openUrl(testUrl);
 }
 
-
+async function run() {
+  Log.setLevel(1);
+  const agents: Agent[] = [new LocalCookiesBrowserAgent(), new FileAgent()];
+  const eko = new Eko({ llms, agents, callback });
+  const result = await eko.run(
+    "Open GitHub, search for the FellouAI/eko repository, click star, and summarize the eko introduction information, then save it to the FellouAI.md file on the desktop"
+  );
+  console.log("result: ", result.result);
+}
 
 run().catch((e) => {
   console.log(e);
