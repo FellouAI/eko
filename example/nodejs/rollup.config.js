@@ -12,9 +12,15 @@ export default {
     },
   ],
   external: (id) =>
-    ["chrome-cookies-secure", "sqlite3", "keytar", "bindings"].some(
-      (mod) => id === mod || id.startsWith(mod + "/")
-    ) || id.endsWith(".node"),
+    [
+      "chrome-cookies-secure",
+      "sqlite3",
+      "keytar",
+      "bindings",
+      "level",
+      "leveldown",
+    ].some((mod) => id === mod || id.startsWith(mod + "/")) ||
+    id.endsWith(".node"),
   plugins: [
     json(),
     commonjs({

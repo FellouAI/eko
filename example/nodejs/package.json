@@ -20,18 +20,21 @@
     "@eko-ai/eko-nodejs": "workspace:*",
     "canvas": "^3.2.0",
     "glob": "^11.0.2",
+    "keytar": "^7.9.0",
+    "level": "^10.0.0",
+    "leveldown": "^6.1.1",
     "merge-deep": "^3.0.3",
     "playwright": "^1.57.0",
     "playwright-extra": "^4.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "chrome-cookies-secure": "^3.0.0",
-    "keytar": "^7.9.0"
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-typescript": "^12.1.2",
+    "@types/leveldown": "^4.0.6",
     "@types/node": "^22.15.19",
     "dotenv": "^16.5.0",
     "rollup": "^4.40.0",

@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import FileAgent from "./file-agent";
 import LocalCookiesBrowserAgent from "./browser";
 import { BrowserAgent } from "@eko-ai/eko-nodejs";
-import { Eko, Agent, Log, LLMs, AgentStreamMessage } from "@eko-ai/eko";
+import { Eko, Log, LLMs, Agent, AgentStreamMessage } from "@eko-ai/eko";
 
 dotenv.config();
 
@@ -36,18 +36,27 @@ const callback = {
   },
 };
 
+function testBrowserLoginStatus() {
+  const browser = new LocalCookiesBrowserAgent();
+  const url = "https://github.com";
+  browser.testOpenUrl(url);
+}
+
 async function run() {
   Log.setLevel(1);
+  // Use local browser cookie login state, will read local Chrome's cookie and localStorage information
+  // If a password dialog pops up, please enter your computer password and click "Always Allow"
   const agents: Agent[] = [
-    // new LocalCookiesBrowserAgent(),
-    new BrowserAgent(),
+    // new BrowserAgent(),
+    new LocalCookiesBrowserAgent(),
     new FileAgent(),
   ];
   const eko = new Eko({ llms, agents, callback });
   const result = await eko.run(
-    "Search for the latest news about Musk, summarize and save to the desktop as Musk.md"
+    `Open GitHub, search for the FellouAI/eko repository, click star,
+    and summarize the eko introduction information, then save it to the fellou-eko.md file on the desktop`
   );
-  console.log("result: ", result.result);
+  console.log("Task result: \n", result.result);
 }
 
 run().catch((e) => {

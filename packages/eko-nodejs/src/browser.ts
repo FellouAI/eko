@@ -193,6 +193,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     await page.setViewportSize({ width: 1536, height: 864 });
     try {
       await this.autoLoadCookies(url);
+      await this.autoLoadLocalStorage(page, url);
       await page.goto(url, {
         waitUntil: "domcontentloaded",
         timeout: 10000,
@@ -296,6 +297,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
             const url = frame.url();
             if (url.startsWith("http")) {
               await this.autoLoadCookies(url);
+              await this.autoLoadLocalStorage(page, url);
             }
           }
         });
@@ -311,10 +313,28 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     try {
       const cookies = await this.loadCookiesWithUrl(url);
       if (cookies && cookies.length > 0) {
-        this.browser_context?.addCookies(cookies);
+        await this.browser_context?.clearCookies();
+        await this.browser_context?.addCookies(cookies);
       }
     } catch (e) {
       Log.error("Failed to auto load cookies: " + url, e);
+    }
+  }
+
+  private async autoLoadLocalStorage(page: Page, url: string): Promise<void> {
+    try {
+      const localStorageData = await this.loadLocalStorageWithUrl(url);
+      await page.addInitScript((storage: Record<string, string>) => {
+        try {
+          for (const [key, value] of Object.entries(storage)) {
+            localStorage.setItem(key, value);
+          }
+        } catch (e) {
+          Log.error("Failed to inject localStorage: " + url, e);
+        }
+      }, localStorageData);
+    } catch (e) {
+      Log.error("Failed to auto load localStorage: " + url, e);
     }
   }
 
@@ -333,6 +353,12 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     }>
   > {
     return [];
+  }
+
+  protected async loadLocalStorageWithUrl(
+    url: string
+  ): Promise<Record<string, string>> {
+    return {};
   }
 
   protected getChromiumArgs(): string[] {
@@ -367,5 +393,4 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     return {};
   }
 }
-
 export { BrowserAgent };

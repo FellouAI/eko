@@ -14,6 +14,7 @@ import {
   AgentStreamCallback,
 } from "@eko-ai/eko/types";
 import { initAgentServices } from "./agent";
+import WriteFileAgent from "./agent/file-agent";
 import { BrowserAgent } from "@eko-ai/eko-extension";
 
 var chatAgent: ChatAgent | null = null;
@@ -177,7 +178,7 @@ export async function init(): Promise<ChatAgent | void> {
     },
   };
 
-  const agents = [new BrowserAgent()];
+  const agents = [new BrowserAgent(), new WriteFileAgent()];
   chatAgent = new ChatAgent({ llms, agents });
   chatAgent.initMessages().catch((e) => {
     printLog("init messages error: " + e, "error");
