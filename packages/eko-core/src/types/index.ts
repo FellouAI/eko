@@ -58,6 +58,7 @@ export type { PageTab, PageContent, WebSearchResult } from "./service.types";
 export type {
   JSONSchema7,
   LanguageModelV2Prompt,
+  LanguageModelV2Message,
   LanguageModelV2TextPart,
   LanguageModelV2FilePart,
   LanguageModelV2ToolChoice,

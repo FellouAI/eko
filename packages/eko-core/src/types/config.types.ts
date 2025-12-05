@@ -31,16 +31,16 @@ export type Config = {
   memoryConfig: MemoryConfig;
 }
 
-export const GlobalPromptKey = {
-  planner_system: "planner_system",
-  planner_example: "planner_example",
-  planner_user: "planner_user",
-  agent_system: "agent_system",
-  chat_system: "chat_system",
-  webpage_qa_prompt: "webpage_qa_prompt",
-  deep_action_description: "deep_action_description",
-  deep_action_param_task_description: "deep_action_param_task_description",
-};
+export enum GlobalPromptKey {
+  planner_system = "planner_system",
+  planner_example = "planner_example",
+  planner_user = "planner_user",
+  agent_system = "agent_system",
+  chat_system = "chat_system",
+  webpage_qa_prompt = "webpage_qa_prompt",
+  deep_action_description = "deep_action_description",
+  deep_action_param_task_description = "deep_action_param_task_description",
+}
 
 export type Global = {
   chatMap: Map<string, ChatContext>;
