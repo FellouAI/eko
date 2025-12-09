@@ -14,11 +14,7 @@ export function extract_page_content(
           return;
         }
         const style = window.getComputedStyle(node);
-        if (
-          style.display == "none" ||
-          style.visibility == "hidden" ||
-          style.opacity == "0"
-        ) {
+        if (style.display == "none") {
           return;
         }
       }
