@@ -1,33 +1,36 @@
 import { loadPackage } from "../../common/utils";
 
-export function extract_page_content(
-  max_url_length = 200,
-  max_content_length = 50000,
-  min_image_area = 1600
-) {
-  const IGNORED_TAGS = new Set([
-    "script",
-    "style",
-    "noscript",
-    "svg",
-    "canvas",
-  ]);
+export function extract_page_content(params?: {
+  root_selector?: string;
+  root_element?: HTMLElement;
+  max_url_length?: number;
+  max_content_length?: number;
+  min_image_area?: number;
+  ignored_tags?: string[];
+  key_attributes?: string[];
+}): string {
+  params = params || {};
+  const IGNORED_TAGS = new Set(
+    params.ignored_tags || ["script", "style", "noscript", "svg", "canvas"]
+  );
   const FORM_TAGS = new Set(["input", "select", "textarea"]);
-  const KEY_ATTRIBUTES = new Set([
-    "id",
-    "title",
-    "name",
-    "alt",
-    "src",
-    "url",
-    "href",
-    "value",
-    "checked",
-    "selected",
-  ]);
-  const urlLimit = max_url_length || 200;
-  const contentLimit = max_content_length || 50000;
-  const minImageArea = min_image_area || 1600;
+  const KEY_ATTRIBUTES = new Set(
+    params.key_attributes || [
+      "id",
+      "title",
+      "name",
+      "alt",
+      "src",
+      "url",
+      "href",
+      "value",
+      "checked",
+      "selected",
+    ]
+  );
+  const urlLimit = params.max_url_length || 200;
+  const contentLimit = params.max_content_length || 50000;
+  const minImageArea = params.min_image_area || 1600;
 
   const parts: string[] = [];
   let currentLength = 0;
@@ -331,23 +334,40 @@ export function extract_page_content(
     return innerContent;
   };
 
+  if (!params.root_element) {
+    if (params.root_selector) {
+      params.root_element = document.querySelector(
+        params.root_selector
+      ) as HTMLElement;
+      if (!params.root_element) {
+        return "";
+      }
+    } else {
+      params.root_element = document.body;
+    }
+  }
+
+  const rootTabName = params.root_element.tagName.toLowerCase();
+
   try {
-    if (document.body) {
-      const content = traverse(document.body);
+    if (params.root_element) {
+      const content = traverse(params.root_element);
       if (content) {
         addHtmlContent(content);
       }
     }
   } catch (e) {
     try {
-      const fallbackText = document.body.innerText || "";
+      const fallbackText = params.root_element.innerText || "";
       if (fallbackText) {
         const escaped = escapeHtml(fallbackText);
         const truncated =
           escaped.length > contentLimit
             ? Array.from(escaped).slice(0, contentLimit).join("").trim() + "..."
             : escaped;
-        return `<div>${truncated}</div>`;
+        return truncated.startsWith(`<${rootTabName}`)
+          ? truncated
+          : `<${rootTabName}>${truncated}</${rootTabName}>`;
       }
       return "";
     } catch {
@@ -360,7 +380,9 @@ export function extract_page_content(
     result = Array.from(result).slice(0, contentLimit).join("").trim() + "...";
   }
 
-  return result;
+  return result.startsWith(`<${rootTabName}`)
+    ? result
+    : `<${rootTabName}>${result}</${rootTabName}>`;
 }
 
 export function mark_screenshot_highlight_elements(
