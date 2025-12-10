@@ -265,12 +265,10 @@ export async function compressImageData(
         ctx: canvas.getContext("2d"),
         exportBase64: async (mime: string, q?: number) => {
           const buffer: any = canvas.toBuffer(mime, { quality: q });
-          return (
-            (
-              // @ts-ignore
-              typeof Buffer !== "undefined" ? Buffer.from(buffer) : buffer
-            ).toString("base64")
-          );
+          const _Buffer =
+            // @ts-ignore
+            typeof Buffer !== "undefined" ? Buffer.from(buffer) : buffer;
+          return _Buffer.toString("base64");
         },
       };
     }
@@ -357,15 +355,22 @@ export function mergeAgents(agents1: Agent[], agents2: Agent[]): Agent[] {
 export function sub(
   str: string,
   maxLength: number,
-  appendPoint: boolean = true
+  appendPoint: boolean = true,
+  showTruncated: boolean = true
 ): string {
   if (!str) {
     return "";
   }
   if (str.length > maxLength) {
-    // return str.substring(0, maxLength) + (appendPoint ? "..." : "");
+    const truncatedLength = str.length - maxLength;
+    // return str.substring(0, maxLength) + (appendPoint ? showTruncated ? `...(truncated: +${truncatedLength} chars)` : "..." : "");
     return (
-      Array.from(str).slice(0, maxLength).join("") + (appendPoint ? "..." : "")
+      Array.from(str).slice(0, maxLength).join("") +
+      (appendPoint
+        ? showTruncated
+          ? `...(truncated: +${truncatedLength} chars)`
+          : "..."
+        : "")
     );
   }
   return str;

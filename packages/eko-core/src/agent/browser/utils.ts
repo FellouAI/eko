@@ -2,117 +2,364 @@ import { loadPackage } from "../../common/utils";
 
 export function extract_page_content(
   max_url_length = 200,
-  max_content_length = 50000
+  max_content_length = 50000,
+  min_image_area = 1600
 ) {
-  let result = "";
-  max_url_length = max_url_length || 200;
-  try {
-    function traverse(node: any) {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const tagName = node.tagName.toLowerCase();
-        if (["script", "style", "noscript"].includes(tagName)) {
-          return;
-        }
-        const style = window.getComputedStyle(node);
-        if (style.display == "none") {
-          return;
-        }
-      }
-      if (node.nodeType === Node.TEXT_NODE) {
-        // text
-        const text = node.textContent.trim();
-        if (text) {
-          result += text + " ";
-        }
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const tagName = node.tagName.toLowerCase();
-        if (["input", "select", "textarea"].includes(tagName)) {
-          // input / select / textarea
-          if (tagName == "input" && node.type == "checkbox") {
-            result += node.checked + " ";
-          } else if (tagName == "input" && node.type == "radio") {
-            if (node.checked && node.value) {
-              result += node.value + " ";
-            }
-          } else if (node.value) {
-            result += node.value + " ";
-          }
-        } else if (tagName === "img") {
-          // image
-          const src =
-            node.src ||
-            node.getAttribute("src") ||
-            node.getAttribute("data-src");
-          const alt = node.alt || node.title || "";
-          if (
-            src &&
-            src.length <= max_url_length &&
-            node.width * node.height >= 10000 &&
-            src.startsWith("http")
-          ) {
-            result += `![${alt ? alt : "image"}](${src.trim()}) `;
-          }
-        } else if (tagName === "a" && node.children.length == 0) {
-          // link
-          const href = node.href || node.getAttribute("href");
-          const text = node.innerText.trim() || node.title;
-          if (
-            text &&
-            href &&
-            href.length <= max_url_length &&
-            href.startsWith("http")
-          ) {
-            result += `[${text}](${href.trim()}) `;
-          } else {
-            result += text + " ";
-          }
-        } else if (tagName === "video" || tagName == "audio") {
-          // video / audio
-          let src = node.src || node.getAttribute("src");
-          const sources = node.querySelectorAll("source");
-          if (sources.length > 0 && sources[0].src) {
-            src = sources[0].src;
-            if (src && src.startsWith("http") && sources[0].type) {
-              result += sources[0].type + " ";
-            }
-          }
-          if (src && src.startsWith("http")) {
-            result += src.trim() + " ";
-          }
-        } else if (tagName === "br") {
-          // br
-          result += "\n";
-        } else if (
-          ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6"].includes(tagName)
-        ) {
-          // block
-          result += "\n";
-          for (let child of node.childNodes) {
-            traverse(child);
-          }
-          result += "\n";
-          return;
-        } else if (tagName === "hr") {
-          // hr
-          result += "\n--------\n";
-        } else {
-          // recursive
-          for (let child of node.childNodes) {
-            traverse(child);
-          }
+  const IGNORED_TAGS = new Set([
+    "script",
+    "style",
+    "noscript",
+    "svg",
+    "canvas",
+  ]);
+  const FORM_TAGS = new Set(["input", "select", "textarea"]);
+  const KEY_ATTRIBUTES = new Set([
+    "id",
+    "title",
+    "name",
+    "alt",
+    "src",
+    "url",
+    "href",
+    "value",
+    "checked",
+    "selected",
+  ]);
+  const urlLimit = max_url_length || 200;
+  const contentLimit = max_content_length || 50000;
+  const minImageArea = min_image_area || 1600;
+
+  const parts: string[] = [];
+  let currentLength = 0;
+
+  const escapeHtml = (text: string): string => {
+    const map: Record<string, string> = {
+      "<": "&lt;",
+      ">": "&gt;",
+    };
+    return text.replace(/[<>]/g, (m) => map[m] || m);
+  };
+
+  const getKeyAttributes = (element: HTMLElement): Record<string, string> => {
+    const attrs: Record<string, string> = {};
+    const attributes = element.attributes;
+
+    for (let i = 0; i < attributes.length; i++) {
+      const attr = attributes[i];
+      const name = attr.name.toLowerCase();
+      if (KEY_ATTRIBUTES.has(name)) {
+        const value = attr.value?.trim();
+        if (value) {
+          attrs[name] = value;
         }
       }
     }
 
-    traverse(document.body);
+    if (element instanceof HTMLInputElement) {
+      const inputType = element.type.toLowerCase();
+      if (inputType === "checkbox" || inputType === "radio") {
+        if (element.checked) {
+          attrs.checked = "true";
+        }
+      }
+      if (element.value && !attrs.value) {
+        attrs.value = element.value;
+      }
+      if (element.name && !attrs.name) {
+        attrs.name = element.name;
+      }
+      if (attrs.value || Object.keys(attrs).length > 0) {
+        attrs.type = inputType;
+      }
+    } else if (element instanceof HTMLSelectElement) {
+      if (element.selectedIndex >= 0) {
+        const selectedOption = element.options[element.selectedIndex];
+        if (selectedOption) {
+          attrs.selected = String(element.selectedIndex);
+          if (selectedOption.value && !attrs.value) {
+            attrs.value = selectedOption.value;
+          }
+        }
+      }
+      if (element.name && !attrs.name) {
+        attrs.name = element.name;
+      }
+    } else if (element instanceof HTMLTextAreaElement) {
+      if (element.value && !attrs.value) {
+        attrs.value = element.value;
+      }
+      if (element.name && !attrs.name) {
+        attrs.name = element.name;
+      }
+    } else if (element instanceof HTMLImageElement) {
+      const src =
+        element.src ||
+        element.getAttribute("src") ||
+        element.getAttribute("data-src");
+      if (src && !attrs.src) {
+        attrs.src = src;
+      }
+      if (element.alt && !attrs.alt) {
+        attrs.alt = element.alt;
+      }
+    } else if (element instanceof HTMLAnchorElement) {
+      if (element.href && !attrs.href) {
+        attrs.href = element.href;
+      }
+      if (element.title && !attrs.title) {
+        attrs.title = element.title;
+      }
+    } else if (
+      element instanceof HTMLVideoElement ||
+      element instanceof HTMLAudioElement
+    ) {
+      const src = element.src || element.getAttribute("src");
+      if (src && !attrs.src) {
+        attrs.src = src;
+      }
+    }
+
+    return attrs;
+  };
+
+  const buildAttributesString = (attrs: Record<string, string>): string => {
+    if (Object.keys(attrs).length === 0) {
+      return "";
+    }
+    const attrStrings: string[] = [];
+    for (const [key, value] of Object.entries(attrs)) {
+      if (value) {
+        attrStrings.push(`${key}="${escapeHtml(value)}"`);
+      }
+    }
+    return attrStrings.length > 0 ? " " + attrStrings.join(" ") : "";
+  };
+
+  const hasKeyAttributes = (attrs: Record<string, string>): boolean => {
+    return Object.keys(attrs).length > 0;
+  };
+
+  const addHtmlContent = (content: string): boolean => {
+    if (!content || currentLength >= contentLimit) {
+      return false;
+    }
+    const contentLength = content.length;
+    if (currentLength + contentLength > contentLimit) {
+      const remaining = contentLimit - currentLength;
+      if (remaining > 0) {
+        parts.push(content.slice(0, remaining));
+      }
+      return false;
+    }
+    currentLength += contentLength;
+    parts.push(content);
+    return true;
+  };
+
+  const hasDirectTextChild = (node: Node): boolean => {
+    for (const child of node.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const text = child.textContent || "";
+        if (text.trim()) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  const traverse = (node: Node): string => {
+    if (currentLength >= contentLimit) {
+      return "";
+    }
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || "";
+      const trimmed = text.trim();
+      if (trimmed) {
+        return escapeHtml(trimmed);
+      }
+      return "";
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return "";
+    }
+
+    const element = node as HTMLElement;
+    const tagName = element.tagName.toLowerCase();
+
+    if (IGNORED_TAGS.has(tagName)) {
+      return "";
+    }
+
+    try {
+      const style = window.getComputedStyle(element);
+      if (style.display === "none") {
+        return "";
+      }
+    } catch (e) {}
+
+    const attrs = getKeyAttributes(element);
+    const attrsString = buildAttributesString(attrs);
+    const hasKeyAttrs = hasKeyAttributes(attrs);
+    const hasDirectText = hasDirectTextChild(node);
+
+    if (FORM_TAGS.has(tagName)) {
+      let value = "";
+      if (tagName === "input") {
+        const input = element as HTMLInputElement;
+        const inputType = input.type.toLowerCase();
+        if (inputType === "checkbox" || inputType === "radio") {
+          if (!input.checked) {
+            return "";
+          }
+          value = input.value || String(input.checked);
+        } else if (inputType === "password") {
+          return "";
+        } else {
+          value = input.value || "";
+        }
+      } else if (tagName === "select") {
+        const select = element as HTMLSelectElement;
+        if (select.selectedIndex >= 0) {
+          const selectedOption = select.options[select.selectedIndex];
+          value = selectedOption
+            ? selectedOption.text || selectedOption.value
+            : "";
+        }
+      } else if (tagName === "textarea") {
+        value = (element as HTMLTextAreaElement).value || "";
+      }
+
+      if (value || hasKeyAttrs || tagName === "textarea") {
+        const escapedValue = escapeHtml(value);
+        return `<${tagName}${attrsString}>${escapedValue}</${tagName}>`;
+      }
+      return "";
+    }
+
+    if (tagName === "img") {
+      const img = element as HTMLImageElement;
+      const src =
+        img.src || img.getAttribute("src") || img.getAttribute("data-src");
+
+      if (
+        src &&
+        src.length <= urlLimit &&
+        img.width * img.height >= minImageArea &&
+        src.startsWith("http")
+      ) {
+        if (!attrs.alt && (img.alt || img.title)) {
+          attrs.alt = img.alt || img.title || "";
+        }
+        if (!attrs.src) {
+          attrs.src = src.trim();
+        }
+        const imgAttrsString = buildAttributesString(attrs);
+        return `<img${imgAttrsString} />`;
+      }
+      return "";
+    }
+
+    if (tagName === "a") {
+      const anchor = element as HTMLAnchorElement;
+      const href = anchor.href || anchor.getAttribute("href");
+
+      const childContent: string[] = [];
+      for (const child of node.childNodes) {
+        const content = traverse(child);
+        if (content) {
+          childContent.push(content);
+        }
+      }
+      const innerContent = childContent.join("");
+
+      if (!innerContent && !hasKeyAttrs) {
+        return "";
+      }
+
+      if (href && href.length <= urlLimit && href.startsWith("http")) {
+        if (!attrs.href) {
+          attrs.href = href.trim();
+        }
+        const linkAttrsString = buildAttributesString(attrs);
+        return `<a${linkAttrsString}>${innerContent}</a>`;
+      } else if (hasKeyAttrs || hasDirectText) {
+        return `<a${attrsString}>${innerContent}</a>`;
+      }
+
+      return innerContent;
+    }
+
+    if (tagName === "video" || tagName === "audio") {
+      const media = element as HTMLVideoElement | HTMLAudioElement;
+      let src = media.src || media.getAttribute("src");
+      const sources = element.querySelectorAll("source");
+
+      if (sources.length > 0 && sources[0].src) {
+        src = sources[0].src;
+      }
+
+      if (src && src.startsWith("http") && src.length <= urlLimit) {
+        if (!attrs.src) {
+          attrs.src = src.trim();
+        }
+        const mediaAttrsString = buildAttributesString(attrs);
+        return `<${tagName}${mediaAttrsString}></${tagName}>`;
+      }
+      return "";
+    }
+
+    const childContent: string[] = [];
+    for (const child of node.childNodes) {
+      const content = traverse(child);
+      if (content) {
+        childContent.push(content);
+      }
+    }
+    const innerContent = childContent.join("");
+
+    if (!innerContent) {
+      return "";
+    }
+
+    if (hasKeyAttrs || hasDirectText) {
+      return `<${tagName}${attrsString}>${innerContent}</${tagName}>`;
+    }
+
+    return innerContent;
+  };
+
+  try {
+    if (document.body) {
+      const content = traverse(document.body);
+      if (content) {
+        addHtmlContent(content);
+      }
+    }
   } catch (e) {
-    result = document.body.innerText;
+    try {
+      const fallbackText = document.body.innerText || "";
+      if (fallbackText) {
+        const escaped = escapeHtml(fallbackText);
+        const truncated =
+          escaped.length > contentLimit
+            ? Array.from(escaped).slice(0, contentLimit).join("").trim() + "..."
+            : escaped;
+        return `<div>${truncated}</div>`;
+      }
+      return "";
+    } catch {
+      return "";
+    }
   }
-  result = result.replace(/\s*\n/g, "\n").replace(/\n+/g, "\n").trim();
-  if (result.length > max_content_length) {
-    // result = result.slice(0, max_content_length) + "...";
-    result = Array.from(result).slice(0, max_content_length).join("") + "...";
+
+  let result = parts.join("");
+  if (result.length > contentLimit) {
+    result = Array.from(result).slice(0, contentLimit).join("").trim() + "...";
   }
+
   return result;
 }
 
@@ -131,9 +378,16 @@ export function mark_screenshot_highlight_elements(
     try {
       const hasOffscreen = typeof OffscreenCanvas !== "undefined";
       const hasCreateImageBitmap = typeof createImageBitmap !== "undefined";
-      const hasDOM = typeof document !== "undefined" && typeof Image !== "undefined";
-      // @ts-ignore
-      const isNode = typeof window === "undefined" && typeof process !== "undefined" && !!process.versions && !!process.versions.node;
+      const hasDOM =
+        typeof document !== "undefined" && typeof Image !== "undefined";
+      const isNode =
+        typeof window === "undefined" &&
+        // @ts-ignore
+        typeof process !== "undefined" &&
+        // @ts-ignore
+        !!process.versions &&
+        // @ts-ignore
+        !!process.versions.node;
 
       const loadImageAny = async () => {
         if (hasCreateImageBitmap) {
@@ -233,7 +487,7 @@ export function mark_screenshot_highlight_elements(
           const areaB = b[1].width * b[1].height;
           return areaB - areaA;
         });
-      
+
       const colors = [
         "#FF0000",
         "#00FF00",
