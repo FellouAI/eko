@@ -111,6 +111,7 @@ export default class DeepActionTool implements DialogueTool {
       });
     const taskWebsite = await this.gettaskWebsite(tabIds);
     const workflow = await eko.generate(taskDescription, messageId, {
+      ...(this.params.extra || {}),
       ...globalVariables,
       tabIds: tabIds,
       language: language,

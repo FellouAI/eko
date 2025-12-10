@@ -173,6 +173,10 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     if (windowId) {
       return windowId;
     }
+    windowId = agentContext.context.variables.get("windowId") as number
+    if (windowId) {
+      return windowId
+    }
     let window = await chrome.windows.getLastFocused({
       windowTypes: ["normal"],
     });

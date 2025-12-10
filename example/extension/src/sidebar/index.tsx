@@ -163,8 +163,9 @@ const AppRun = () => {
         requestId: uuidv4(),
         type: "chat",
         data: {
-          messageId: messageId,
           user: userParts,
+          messageId: messageId,
+          windowId: (await chrome.windows.getCurrent()).id,
         },
       });
     } catch (error) {

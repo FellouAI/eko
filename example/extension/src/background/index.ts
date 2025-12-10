@@ -200,6 +200,7 @@ async function handleChat(requestId: string, data: any): Promise<void> {
     return;
   }
 
+  const windowId = data.windowId as number;
   const user = data.user as (MessageTextPart | MessageFilePart)[];
   const abortController = new AbortController();
   abortControllers.set(messageId, abortController);
@@ -211,6 +212,9 @@ async function handleChat(requestId: string, data: any): Promise<void> {
       callback: {
         chatCallback,
         taskCallback,
+      },
+      extra: {
+        windowId: windowId,
       },
       signal: abortController.signal,
     });
