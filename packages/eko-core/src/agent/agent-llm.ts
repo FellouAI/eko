@@ -1,17 +1,14 @@
 import config from "../config";
-import Log from "../common/log";
 import * as memory from "../memory";
-import { RetryLanguageModel } from "../llm";
 import { AgentContext } from "./agent-context";
-import { uuidv4, sleep, toFile, getMimeType } from "../common/utils";
+import { callLLM, RetryLanguageModel } from "../llm";
+import { toFile, getMimeType } from "../common/utils";
 import {
   Tool,
-  LLMRequest,
   ToolResult,
+  LLMRequest,
   DialogueTool,
-  StreamResult,
   HumanCallback,
-  AgentStreamMessage,
   AgentStreamCallback,
 } from "../types";
 import {
@@ -19,7 +16,6 @@ import {
   LanguageModelV2TextPart,
   SharedV2ProviderOptions,
   LanguageModelV2ToolChoice,
-  LanguageModelV2StreamPart,
   LanguageModelV2ToolCallPart,
   LanguageModelV2FunctionTool,
   LanguageModelV2ToolResultPart,
@@ -193,7 +189,6 @@ export async function callAgentLLM(
   tools: LanguageModelV2FunctionTool[],
   noCompress?: boolean,
   toolChoice?: LanguageModelV2ToolChoice,
-  retryNum: number = 0,
   callback?: AgentStreamCallback & HumanCallback,
   requestHandler?: (request: LLMRequest) => void
 ): Promise<Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>> {
@@ -231,368 +226,52 @@ export async function callAgentLLM(
     abortSignal: signal,
   };
   requestHandler && requestHandler(request);
-  let streamText = "";
-  let thinkText = "";
-  let toolArgsText = "";
-  let textStreamId = uuidv4();
-  let thinkStreamId = uuidv4();
-  let textStreamDone = false;
-  const toolParts: LanguageModelV2ToolCallPart[] = [];
-  let reader: ReadableStreamDefaultReader<LanguageModelV2StreamPart> | null =
-    null;
   try {
     agentChain.agentRequest = request;
     context.currentStepControllers.add(stepController);
-    const result: StreamResult = await rlm.callStream(request);
-    reader = result.stream.getReader();
-    let toolPart: LanguageModelV2ToolCallPart | null = null;
-    while (true) {
-      await context.checkAborted();
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      const chunk = value as LanguageModelV2StreamPart;
-      switch (chunk.type) {
-        case "text-start": {
-          textStreamId = uuidv4();
-          break;
+    const result = await callLLM(
+      rlm,
+      request,
+      async (message) => {
+        await context.checkAborted();
+        await streamCallback.onMessage({
+          streamType: "agent",
+          chatId: context.chatId,
+          taskId: context.taskId,
+          agentName: agentNode.name,
+          nodeId: agentNode.id,
+          ...message,
+        });
+      },
+      async (request, error) => {
+        if ((error + "").indexOf("is too long") > -1) {
+          await memory.compressAgentMessages(agentContext, messages, tools);
         }
-        case "text-delta": {
-          if (toolPart && !chunk.delta) {
-            continue;
-          }
-          streamText += chunk.delta || "";
-          await streamCallback.onMessage(
-            {
-              streamType: "agent",
-              chatId: context.chatId,
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "text",
-              streamId: textStreamId,
-              streamDone: false,
-              text: streamText,
-            },
-            agentContext
-          );
-          if (toolPart) {
-            await streamCallback.onMessage(
-              {
-                streamType: "agent",
-                chatId: context.chatId,
-                taskId: context.taskId,
-                agentName: agentNode.name,
-                nodeId: agentNode.id,
-                type: "tool_use",
-                toolCallId: toolPart.toolCallId,
-                toolName: toolPart.toolName,
-                params: toolPart.input || {},
-              },
-              agentContext
-            );
-            toolPart = null;
-          }
-          break;
-        }
-        case "text-end": {
-          textStreamDone = true;
-          if (streamText) {
-            await streamCallback.onMessage(
-              {
-                streamType: "agent",
-                chatId: context.chatId,
-                taskId: context.taskId,
-                agentName: agentNode.name,
-                nodeId: agentNode.id,
-                type: "text",
-                streamId: textStreamId,
-                streamDone: true,
-                text: streamText,
-              },
-              agentContext
-            );
-          }
-          break;
-        }
-        case "reasoning-start": {
-          thinkStreamId = uuidv4();
-          break;
-        }
-        case "reasoning-delta": {
-          thinkText += chunk.delta || "";
-          await streamCallback.onMessage(
-            {
-              streamType: "agent",
-              chatId: context.chatId,
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "thinking",
-              streamId: thinkStreamId,
-              streamDone: false,
-              text: thinkText,
-            },
-            agentContext
-          );
-          break;
-        }
-        case "reasoning-end": {
-          if (thinkText) {
-            await streamCallback.onMessage(
-              {
-                streamType: "agent",
-                chatId: context.chatId,
-                taskId: context.taskId,
-                agentName: agentNode.name,
-                nodeId: agentNode.id,
-                type: "thinking",
-                streamId: thinkStreamId,
-                streamDone: true,
-                text: thinkText,
-              },
-              agentContext
-            );
-          }
-          break;
-        }
-        case "tool-input-start": {
-          if (toolPart && toolPart.toolCallId == chunk.id) {
-            toolPart.toolName = chunk.toolName;
-          } else {
-            const _toolPart = toolParts.filter(
-              (s) => s.toolCallId == chunk.id
-            )[0];
-            if (_toolPart) {
-              toolPart = _toolPart;
-              toolPart.toolName = _toolPart.toolName || chunk.toolName;
-              toolPart.input = _toolPart.input || {};
-            } else {
-              toolPart = {
-                type: "tool-call",
-                toolCallId: chunk.id,
-                toolName: chunk.toolName,
-                input: {},
-              };
-              toolParts.push(toolPart);
-            }
-          }
-          break;
-        }
-        case "tool-input-delta": {
-          if (!textStreamDone) {
-            textStreamDone = true;
-            await streamCallback.onMessage(
-              {
-                streamType: "agent",
-                chatId: context.chatId,
-                taskId: context.taskId,
-                agentName: agentNode.name,
-                nodeId: agentNode.id,
-                type: "text",
-                streamId: textStreamId,
-                streamDone: true,
-                text: streamText,
-              },
-              agentContext
-            );
-          }
-          toolArgsText += chunk.delta || "";
-          await streamCallback.onMessage(
-            {
-              streamType: "agent",
-              chatId: context.chatId,
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "tool_streaming",
-              toolCallId: chunk.id,
-              toolName: toolPart?.toolName || "",
-              paramsText: toolArgsText,
-            },
-            agentContext
-          );
-          break;
-        }
-        case "tool-call": {
-          toolArgsText = "";
-          const args = chunk.input ? JSON.parse(chunk.input) : {};
-          const message: AgentStreamMessage = {
-            streamType: "agent",
-            chatId: context.chatId,
-            taskId: context.taskId,
-            agentName: agentNode.name,
-            nodeId: agentNode.id,
-            type: "tool_use",
-            toolCallId: chunk.toolCallId,
-            toolName: chunk.toolName,
-            params: args,
-          };
-          await streamCallback.onMessage(message, agentContext);
-          if (toolPart == null) {
-            const _toolPart = toolParts.filter(
-              (s) => s.toolCallId == chunk.toolCallId
-            )[0];
-            if (_toolPart) {
-              _toolPart.input = message.params || args;
-            } else {
-              toolParts.push({
-                type: "tool-call",
-                toolCallId: chunk.toolCallId,
-                toolName: chunk.toolName,
-                input: message.params || args,
-              });
-            }
-          } else {
-            toolPart.input = message.params || args;
-            toolPart = null;
-          }
-          break;
-        }
-        case "file": {
-          await streamCallback.onMessage(
-            {
-              streamType: "agent",
-              chatId: context.chatId,
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "file",
-              mimeType: chunk.mediaType,
-              data: chunk.data as string,
-            },
-            agentContext
-          );
-          break;
-        }
-        case "error": {
-          Log.error(`${agentNode.name} agent error: `, chunk);
-          await streamCallback.onMessage(
-            {
-              streamType: "agent",
-              chatId: context.chatId,
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "error",
-              error: chunk.error,
-            },
-            agentContext
-          );
-          throw new Error("LLM Error: " + chunk.error);
-        }
-        case "finish": {
-          if (!textStreamDone) {
-            textStreamDone = true;
-            await streamCallback.onMessage(
-              {
-                streamType: "agent",
-                chatId: context.chatId,
-                taskId: context.taskId,
-                agentName: agentNode.name,
-                nodeId: agentNode.id,
-                type: "text",
-                streamId: textStreamId,
-                streamDone: true,
-                text: streamText,
-              },
-              agentContext
-            );
-          }
-          if (chunk.finishReason === "content-filter") {
-            throw new Error("LLM error: trigger content filtering violation");
-          } else if (chunk.finishReason === "other") {
-            throw new Error("LLM error: terminated due to other reasons");
-          } else if (
-            chunk.finishReason === "length" &&
-            messages.length >= 3 &&
-            !noCompress &&
-            retryNum < config.maxRetryNum
-          ) {
-            await memory.compressAgentMessages(agentContext, messages, tools);
-            return callAgentLLM(
-              agentContext,
-              rlm,
-              messages,
-              tools,
-              noCompress,
-              toolChoice,
-              ++retryNum,
-              streamCallback
-            );
-          }
-          if (toolPart) {
-            await streamCallback.onMessage(
-              {
-                streamType: "agent",
-                chatId: context.chatId,
-                taskId: context.taskId,
-                agentName: agentNode.name,
-                nodeId: agentNode.id,
-                type: "tool_use",
-                toolCallId: toolPart.toolCallId,
-                toolName: toolPart.toolName,
-                params: toolPart.input || {},
-              },
-              agentContext
-            );
-            toolPart = null;
-          }
-          await streamCallback.onMessage(
-            {
-              streamType: "agent",
-              chatId: context.chatId,
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "finish",
-              finishReason: chunk.finishReason,
-              usage: {
-                promptTokens: chunk.usage.inputTokens || 0,
-                completionTokens: chunk.usage.outputTokens || 0,
-                totalTokens:
-                  chunk.usage.totalTokens ||
-                  (chunk.usage.inputTokens || 0) +
-                    (chunk.usage.outputTokens || 0),
-              },
-            },
-            agentContext
-          );
-          break;
+      },
+      async (request, finishReason, value, retryNum) => {
+        if (finishReason === "content-filter") {
+          throw new Error("LLM error: trigger content filtering violation");
+        } else if (finishReason === "other") {
+          throw new Error("LLM error: terminated due to other reasons");
+        } else if (
+          finishReason === "length" &&
+          messages.length >= 3 &&
+          !noCompress &&
+          retryNum < config.maxRetryNum
+        ) {
+          await memory.compressAgentMessages(agentContext, messages, tools);
+          return "retry";
         }
       }
-    }
-  } catch (e: any) {
-    await context.checkAborted();
-    if (retryNum < config.maxRetryNum) {
-      await sleep(300 * (retryNum + 1) * (retryNum + 1));
-      if ((e + "").indexOf("is too long") > -1) {
-        await memory.compressAgentMessages(agentContext, messages, tools);
-      }
-      return callAgentLLM(
-        agentContext,
-        rlm,
-        messages,
-        tools,
-        noCompress,
-        toolChoice,
-        ++retryNum,
-        streamCallback
-      );
-    }
-    throw e;
+    );
+    agentChain.agentResult = result
+      .filter((s) => s.type == "text")
+      .map((s) => s.text)
+      .join("\n\n");
+    return result;
   } finally {
-    reader && reader.releaseLock();
     context.currentStepControllers.delete(stepController);
   }
-  agentChain.agentResult = streamText;
-  return streamText
-    ? [
-        { type: "text", text: streamText } as LanguageModelV2TextPart,
-        ...toolParts,
-      ]
-    : toolParts;
 }
 
 export function estimatePromptTokens(

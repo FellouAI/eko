@@ -3,11 +3,11 @@ import Log from "./common/log";
 import Eko from "./agent/index";
 import global from "./config/global";
 import { Planner } from "./agent/plan";
-import { RetryLanguageModel } from "./llm";
 import { EkoMemory } from "./memory/memory";
 import Chain, { AgentChain } from "./agent/chain";
 import { SimpleSseMcpClient, SimpleHttpMcpClient } from "./mcp";
 import TaskContext, { AgentContext } from "./agent/agent-context";
+import { RetryLanguageModel, callLLM, callWithReAct } from "./llm";
 
 export default Eko;
 
@@ -26,6 +26,8 @@ export {
   SimpleHttpMcpClient,
   RetryLanguageModel,
   TaskContext as Context,
+  callLLM,
+  callWithReAct,
 };
 
 export {

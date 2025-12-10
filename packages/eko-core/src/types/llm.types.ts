@@ -4,6 +4,7 @@ import {
   LanguageModelV2Usage,
   LanguageModelV2Prompt,
   LanguageModelV2Content,
+  LanguageModelV2TextPart,
   SharedV2ProviderMetadata,
   LanguageModelV2ToolChoice,
   LanguageModelV2StreamPart,
@@ -11,8 +12,11 @@ import {
   LanguageModelV2FinishReason,
   LanguageModelV2FunctionTool,
   LanguageModelV2CallOptions,
+  LanguageModelV2ToolCallPart,
+  LanguageModelV2ToolResultOutput,
   LanguageModelV2ResponseMetadata,
 } from "@ai-sdk/provider";
+import { ToolResult } from "./tools.types";
 import TaskContext, { AgentContext } from "../agent/agent-context";
 
 export type LLMprovider =
@@ -39,7 +43,11 @@ export type LLMConfig = {
   };
   options?: Record<string, any>;
   fetch?: typeof globalThis.fetch;
-  handler?: (options: LanguageModelV2CallOptions, context?: TaskContext, agentContext?: AgentContext) => Promise<LanguageModelV2CallOptions>;
+  handler?: (
+    options: LanguageModelV2CallOptions,
+    context?: TaskContext,
+    agentContext?: AgentContext
+  ) => Promise<LanguageModelV2CallOptions>;
 };
 
 export type LLMs = {
@@ -88,3 +96,84 @@ export type LLMRequest = {
   stopSequences?: string[];
   abortSignal?: AbortSignal;
 };
+
+export type ReActStreamMessage =
+  | {
+      type: "text" | "thinking";
+      streamId: string;
+      streamDone: boolean;
+      text: string;
+    }
+  | {
+      type: "file";
+      mimeType: string;
+      data: string;
+    }
+  | {
+      type: "tool_streaming";
+      toolName: string;
+      toolCallId: string;
+      paramsText: string;
+    }
+  | {
+      type: "tool_use";
+      toolName: string;
+      toolCallId: string;
+      params: Record<string, any>;
+    }
+  | {
+      type: "tool_running";
+      toolName: string;
+      toolCallId: string;
+      text: string;
+      streamId: string;
+      streamDone: boolean;
+    }
+  | {
+      type: "tool_result";
+      toolName: string;
+      toolCallId: string;
+      params: Record<string, any>;
+      toolResult: ToolResult;
+    }
+  | {
+      type: "error";
+      error: unknown;
+    }
+  | {
+      type: "finish";
+      finishReason: LanguageModelV2FinishReason;
+      usage: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+      };
+    };
+
+export type ReActStreamCallback = (
+  message: ReActStreamMessage
+) => Promise<void>;
+
+export type ReActErrorHandler = (
+  request: LLMRequest,
+  error: any,
+  retryNum: number
+) => Promise<void>;
+
+export type ReActFinishHandler = (
+  request: LLMRequest,
+  finishReason: LanguageModelV2FinishReason,
+  value: LanguageModelV2StreamPart,
+  retryNum: number
+) => Promise<"retry" | void>;
+
+export type ReActToolCallCallback = (
+  request: LLMRequest,
+  toolUses: LanguageModelV2ToolCallPart[]
+) => Promise<LanguageModelV2ToolResultOutput[]>;
+
+export type ReActLoopControl = (
+  request: LLMRequest,
+  assistantParts: Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>,
+  loopNum: number
+) => Promise<boolean>;

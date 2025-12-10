@@ -74,13 +74,12 @@ export class ChatAgent {
       for (; reactLoopNum < 15; reactLoopNum++) {
         const messages = this.memory.buildMessages();
         const results = await callChatLLM(
+          this.chatContext.getChatId(),
           params.messageId,
-          this.chatContext,
           rlm,
           messages,
           convertTools(chatTools),
           undefined,
-          0,
           params.callback,
           params.signal
         );

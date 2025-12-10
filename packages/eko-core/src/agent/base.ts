@@ -156,7 +156,6 @@ export class Agent {
         llm_tools,
         false,
         undefined,
-        0,
         this.callback,
         this.requestHandler
       );

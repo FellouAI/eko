@@ -38,6 +38,12 @@ export type {
   LLMprovider,
   StreamResult,
   GenerateResult,
+  ReActLoopControl,
+  ReActErrorHandler,
+  ReActFinishHandler,
+  ReActStreamMessage,
+  ReActStreamCallback,
+  ReActToolCallCallback,
 } from "./llm.types";
 
 export type { Tool, ToolSchema, ToolResult, ToolExecuter } from "./tools.types";

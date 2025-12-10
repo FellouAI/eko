@@ -1,11 +1,8 @@
 import { Agent } from "../agent";
-import { LLMs } from "./llm.types";
 import { IMcpClient } from "./mcp.types";
 import { IA2aClient } from "../agent/a2a";
-import { ToolResult } from "./tools.types";
 import { AgentContext } from "../agent/agent-context";
-import { LanguageModelV2FinishReason } from "@ai-sdk/provider";
-
+import { LLMs, ReActStreamMessage } from "./llm.types";
 
 export type EkoConfig = {
   llms: LLMs;
@@ -33,67 +30,20 @@ export type AgentStreamMessage = {
       type: "agent_start";
       agentNode: WorkflowAgent;
     }
-  | {
-      type: "text" | "thinking";
-      streamId: string;
-      streamDone: boolean;
-      text: string;
-    }
-  | {
-      type: "file";
-      mimeType: string;
-      data: string;
-    }
-  | {
-      type: "tool_streaming";
-      toolName: string;
-      toolCallId: string;
-      paramsText: string;
-    }
-  | {
-      type: "tool_use";
-      toolName: string;
-      toolCallId: string;
-      params: Record<string, any>;
-    }
-  | {
-      type: "tool_running";
-      toolName: string;
-      toolCallId: string;
-      text: string;
-      streamId: string;
-      streamDone: boolean;
-    }
-  | {
-      type: "tool_result";
-      toolName: string;
-      toolCallId: string;
-      params: Record<string, any>;
-      toolResult: ToolResult;
-    }
+  | ReActStreamMessage
   | {
       type: "agent_result";
       agentNode: WorkflowAgent;
       error?: any;
       result?: string;
     }
-  | {
-      type: "error";
-      error: unknown;
-    }
-  | {
-      type: "finish";
-      finishReason: LanguageModelV2FinishReason;
-      usage: {
-        promptTokens: number;
-        completionTokens: number;
-        totalTokens: number;
-      };
-    }
 );
 
 export interface AgentStreamCallback {
-  onMessage: (message: AgentStreamMessage, agentContext?: AgentContext | undefined) => Promise<void>;
+  onMessage: (
+    message: AgentStreamMessage,
+    agentContext?: AgentContext | undefined
+  ) => Promise<void>;
 }
 
 export type WorkflowTextNode = {

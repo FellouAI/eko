@@ -1,9 +1,6 @@
-import {
-  JSONSchema7,
-  LanguageModelV2FinishReason,
-  LanguageModelV2ToolCallPart,
-} from "@ai-sdk/provider";
 import { ToolResult } from "./tools.types";
+import { ReActStreamMessage } from "./llm.types";
+import { JSONSchema7, LanguageModelV2ToolCallPart } from "@ai-sdk/provider";
 import { EkoConfig, HumanCallback, AgentStreamCallback } from "./agent.types";
 
 export type MessageTextPart = {
@@ -43,57 +40,7 @@ export type ChatStreamMessage = {
   | {
       type: "chat_start";
     }
-  | {
-      type: "text" | "thinking";
-      streamId: string;
-      streamDone: boolean;
-      text: string;
-    }
-  | {
-      type: "file";
-      mimeType: string;
-      data: string;
-    }
-  | {
-      type: "tool_streaming";
-      toolName: string;
-      toolCallId: string;
-      paramsText: string;
-    }
-  | {
-      type: "tool_use";
-      toolName: string;
-      toolCallId: string;
-      params: Record<string, any>;
-    }
-  | {
-      type: "tool_running";
-      toolName: string;
-      toolCallId: string;
-      text: string;
-      streamId: string;
-      streamDone: boolean;
-    }
-  | {
-      type: "tool_result";
-      toolName: string;
-      toolCallId: string;
-      params: Record<string, any>;
-      toolResult: ToolResult;
-    }
-  | {
-      type: "error";
-      error: unknown;
-    }
-  | {
-      type: "finish";
-      finishReason: LanguageModelV2FinishReason;
-      usage: {
-        promptTokens: number;
-        completionTokens: number;
-        totalTokens: number;
-      };
-    }
+  | ReActStreamMessage
   | {
       type: "chat_end";
       error: string | null;
