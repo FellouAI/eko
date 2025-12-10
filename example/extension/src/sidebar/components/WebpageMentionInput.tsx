@@ -145,6 +145,7 @@ export const WebpageMentionInput: React.FC<WebpageMentionInputProps> = ({
   const [loadingTabs, setLoadingTabs] = useState(false);
   const pendingFocusRefId = useRef<string | null>(null);
   const skipSyncRef = useRef(false);
+  const isComposingRef = useRef(false);
 
   const resetMentionState = useCallback(() => {
     setShowDropdown(false);
@@ -414,7 +415,7 @@ export const WebpageMentionInput: React.FC<WebpageMentionInputProps> = ({
           }
           return;
         }
-        if (event.key === "Enter" && !event.shiftKey) {
+        if (event.key === "Enter" && !event.shiftKey && !isComposingRef.current) {
           event.preventDefault();
           if (highlightedIndex >= 0 && highlightedIndex < filteredTabs.length) {
             insertWebpageReference(filteredTabs[highlightedIndex]);
@@ -423,7 +424,7 @@ export const WebpageMentionInput: React.FC<WebpageMentionInputProps> = ({
         }
       }
 
-      if (event.key === "Enter" && !event.shiftKey && !showDropdown) {
+      if (event.key === "Enter" && !event.shiftKey && !showDropdown && !isComposingRef.current) {
         event.preventDefault();
         onSend();
       } else if (event.key === "Escape" && showDropdown) {
@@ -471,6 +472,12 @@ export const WebpageMentionInput: React.FC<WebpageMentionInputProps> = ({
         onMouseUp={updateMentionState}
         onClick={handleEditorClick}
         onPaste={handleEditorPaste}
+        onCompositionStart={() => {
+          isComposingRef.current = true;
+        }}
+        onCompositionEnd={() => {
+          isComposingRef.current = false;
+        }}
       />
       {showDropdown && (
         <div

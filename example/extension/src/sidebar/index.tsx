@@ -18,6 +18,7 @@ const AppRun = () => {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
 
   const { handleChatCallback, handleTaskCallback } = useChatCallbacks(
     setMessages,
@@ -26,14 +27,33 @@ const AppRun = () => {
   );
   const { fileToBase64, uploadFile } = useFileUpload();
 
-  // Scroll to bottom
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const isNearBottom = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    const threshold = 200;
+    const scrollBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    return scrollBottom < threshold;
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      setAutoScroll(isNearBottom());
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [isNearBottom]);
+
+  useEffect(() => {
+    if (autoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, autoScroll]);
 
   // Listen to background messages
   useEffect(() => {
