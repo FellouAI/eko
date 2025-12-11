@@ -151,7 +151,7 @@ const taskCallback: AgentStreamCallback & HumanCallback = {
   },
 };
 
-export async function init(): Promise<ChatAgent | void> {
+async function loadLLMs(): Promise<LLMs> {
   const storageKey = "llmConfig";
   const llmConfig = (await chrome.storage.sync.get([storageKey]))[storageKey];
   if (!llmConfig || !llmConfig.apiKey) {
@@ -164,9 +164,6 @@ export async function init(): Promise<ChatAgent | void> {
     }, 1000);
     return;
   }
-
-  initAgentServices();
-
   const llms: LLMs = {
     default: {
       provider: llmConfig.llm as any,
@@ -178,6 +175,26 @@ export async function init(): Promise<ChatAgent | void> {
     },
   };
 
+  chrome.storage.onChanged.addListener(async (changes, areaName) => {
+    if (areaName === "sync" && changes[storageKey]) {
+      const newConfig = changes[storageKey].newValue;
+      if (newConfig) {
+        llms.default.provider = newConfig.llm as any;
+        llms.default.model = newConfig.modelName;
+        llms.default.apiKey = newConfig.apiKey;
+        llms.default.config.baseURL = newConfig.options.baseURL;
+        console.log("LLM config updated");
+      }
+    }
+  });
+
+  return llms;
+}
+
+async function init(): Promise<ChatAgent | void> {
+  initAgentServices();
+
+  const llms = await loadLLMs();
   const agents = [new BrowserAgent(), new WriteFileAgent()];
   chatAgent = new ChatAgent({ llms, agents });
   chatAgent.initMessages().catch((e) => {
@@ -294,7 +311,10 @@ async function handleStop(requestId: string, data: any): Promise<void> {
 }
 
 // Handle clear messages request
-async function handleClearMessages(requestId: string, data: any): Promise<void> {
+async function handleClearMessages(
+  requestId: string,
+  data: any
+): Promise<void> {
   if (chatAgent) {
     chatAgent.getMemory().clear();
   }

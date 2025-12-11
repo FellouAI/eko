@@ -16,8 +16,12 @@ const OptionsPage = () => {
     },
   });
 
+  const [historyLLMConfig, setHistoryLLMConfig] = useState<Record<string, any>>(
+    {}
+  );
+
   useEffect(() => {
-    chrome.storage.sync.get(["llmConfig"], (result) => {
+    chrome.storage.sync.get(["llmConfig", "historyLLMConfig"], (result) => {
       if (result.llmConfig) {
         if (result.llmConfig.llm === "") {
           result.llmConfig.llm = "anthropic";
@@ -25,17 +29,28 @@ const OptionsPage = () => {
         setConfig(result.llmConfig);
         form.setFieldsValue(result.llmConfig);
       }
+      if (result.historyLLMConfig) {
+        setHistoryLLMConfig(result.historyLLMConfig);
+      }
     });
   }, []);
 
   const handleSave = () => {
     form
       .validateFields()
-      .then((values) => {
-        setConfig(values);
+      .then((value) => {
+        setConfig(value);
+        setHistoryLLMConfig({
+          ...historyLLMConfig,
+          [value.llm]: value,
+        });
         chrome.storage.sync.set(
           {
-            llmConfig: values,
+            llmConfig: value,
+            historyLLMConfig: {
+              ...historyLLMConfig,
+              [value.llm]: value,
+            },
           },
           () => {
             message.success("Save Success!");
@@ -51,13 +66,19 @@ const OptionsPage = () => {
     { value: "anthropic", label: "Claude (default)" },
     { value: "openai", label: "OpenAI" },
     { value: "openrouter", label: "OpenRouter" },
+    { value: "google", label: "Google Generative" },
+    { value: "bedrock", label: "AWS Bedrock" },
+    { value: "azure", label: "Microsoft Azure" },
     { value: "openai-compatible", label: "OpenAI Compatible" },
-    { value: "modelscope", label: "ModelScope"},
+    { value: "modelscope", label: "ModelScope" },
   ];
 
   const modelOptions = {
     anthropic: [
-      { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5 (default)" },
+      {
+        value: "claude-sonnet-4-5-20250929",
+        label: "Claude Sonnet 4.5 (default)",
+      },
       { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
       { value: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet" },
     ],
@@ -70,9 +91,13 @@ const OptionsPage = () => {
       { value: "o4-mini", label: "o4-mini" },
     ],
     openrouter: [
-      { value: "anthropic/claude-sonnet-4.5", label: "claude-sonnet-4.5 (default)" },
+      {
+        value: "anthropic/claude-sonnet-4.5",
+        label: "claude-sonnet-4.5 (default)",
+      },
       { value: "anthropic/claude-sonnet-4", label: "claude-sonnet-4" },
       { value: "anthropic/claude-3.7-sonnet", label: "claude-3.7-sonnet" },
+      { value: "google/gemini-3-pro-preview", label: "gemini-3-pro-preview" },
       { value: "google/gemini-3-pro", label: "gemini-3-pro" },
       { value: "google/gemini-2.5-pro", label: "gemini-2.5-pro" },
       { value: "openai/gpt-5.1", label: "gpt-5.1" },
@@ -84,15 +109,53 @@ const OptionsPage = () => {
       { value: "x-ai/grok-4", label: "grok-4" },
       { value: "x-ai/grok-4-fast", label: "grok-4-fast" },
     ],
-    "openai-compatible": [
-      { value: "doubao-seed-1-6-250615", label: "doubao-seed-1-6-250615" },
+    google: [
+      {
+        value: "gemini-3-pro-preview",
+        label: "gemini-3-pro-preview (default)",
+      },
+      { value: "gemini-3-pro", label: "gemini-3-pro" },
+      { value: "gemini-2.5-pro", label: "gemini-2.5-pro" },
+      { value: "gemini-2.5-flash", label: "gemini-2.5-flash" },
     ],
-    "modelscope": [
-      { value: "Qwen/Qwen3-VL-8B-Instruct", label: "Qwen/Qwen3-VL-8B-Instruct" },
-      { value: "Qwen/Qwen3-VL-30B-A3B-Instruct", label: "Qwen/Qwen3-VL-30B-A3B-Instruct" },
-      { value: "Qwen/Qwen3-VL-235B-A22B-Instruct", label: "Qwen/Qwen3-VL-235B-A22B-Instruct" },
-      { value: "Qwen/Qwen3-VL-8B-Thinking", label: "Qwen/Qwen3-VL-8B-Thinking" },
-      { value: "Qwen/Qwen3-VL-30B-A3B-Thinking", label: "Qwen/Qwen3-VL-30B-A3B-Thinking" },
+    bedrock: [
+      {
+        value: "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        label: "claude-sonnet-4-5 (default)",
+      },
+      {
+        value: "us.anthropic.claude-opus-4-1-20250805-v1:0",
+        label: "claude-opus-4-1",
+      },
+      {
+        value: "us.anthropic.claude-sonnet-4-20250514-v1:0",
+        label: "claude-sonnet-4",
+      },
+    ],
+    azure: [
+      { value: "gpt-5.1", label: "gpt-5.1 (default)" },
+      { value: "gpt-5", label: "gpt-5" },
+      { value: "gpt-4.1", label: "gpt-4.1" },
+      { value: "gpt-4.1-mini", label: "gpt-4.1-mini" },
+    ],
+    "openai-compatible": [{ value: "", label: "Please enter the model" }],
+    modelscope: [
+      {
+        value: "Qwen/Qwen3-VL-30B-A3B-Instruct",
+        label: "Qwen3-VL-30B-A3B-Instruct (default)",
+      },
+      {
+        value: "Qwen/Qwen3-VL-30B-A3B-Thinking",
+        label: "Qwen3-VL-30B-A3B-Thinking",
+      },
+      {
+        value: "Qwen/Qwen3-VL-235B-A22B-Instruct",
+        label: "Qwen3-VL-235B-A22B-Instruct",
+      },
+      {
+        value: "Qwen/Qwen3-VL-8B-Instruct",
+        label: "Qwen3-VL-8B-Instruct",
+      },
     ],
   };
 
@@ -101,15 +164,19 @@ const OptionsPage = () => {
       openai: "https://api.openai.com/v1",
       anthropic: "https://api.anthropic.com/v1",
       openrouter: "https://openrouter.ai/api/v1",
+      modelscope: "https://api-inference.modelscope.cn/v1",
+      // https://{resourceName}.cognitiveservices.azure.com/openai
+      azure: "https://{resourceName}.openai.azure.com/openai",
       "openai-compatible": "https://openrouter.ai/api/v1",
-      "modelscope": "https://api-inference.modelscope.cn/v1"
+      google: "",
+      bedrock: "",
     };
-    const newConfig = {
+    const newConfig = historyLLMConfig[value] || {
       llm: value,
       apiKey: "",
       modelName: modelOptions[value][0].value,
       options: {
-        baseURL: baseURLMap[value]
+        baseURL: baseURLMap[value],
       },
     };
     setConfig(newConfig);
@@ -138,18 +205,6 @@ const OptionsPage = () => {
               ))}
             </Select>
           </Form.Item>
-          <Form.Item
-            name={["options", "baseURL"]}
-            label="Base URL"
-            rules={[
-              {
-                required: true,
-                message: "Please enter the base URL",
-              },
-            ]}
-          >
-            <Input placeholder="Please enter the base URL" />
-          </Form.Item>
 
           <Form.Item
             name="modelName"
@@ -165,7 +220,9 @@ const OptionsPage = () => {
               placeholder="Model name"
               options={modelOptions[config.llm]}
               filterOption={(inputValue, option) =>
-                (option.value as string).toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+                (option.value as string)
+                  .toUpperCase()
+                  .indexOf(inputValue.toUpperCase()) !== -1
               }
             />
           </Form.Item>
@@ -181,6 +238,10 @@ const OptionsPage = () => {
             ]}
           >
             <Input.Password placeholder="Please enter the API Key" allowClear />
+          </Form.Item>
+
+          <Form.Item name={["options", "baseURL"]} label="Base URL">
+            <Input placeholder="Please enter the base URL (Optional)" />
           </Form.Item>
 
           <Form.Item>

@@ -228,6 +228,22 @@ const AppRun = () => {
     });
   }, []);
 
+  // Listen for storage changes (e.g., when LLM config is updated)
+  useEffect(() => {
+    const handleStorageChange = async (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (areaName === "sync" && changes["llmConfig"]) {
+        clearMessages();
+      }
+    };
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, [clearMessages]);
+
   return (
     <div
       style={{
