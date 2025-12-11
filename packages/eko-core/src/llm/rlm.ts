@@ -324,7 +324,7 @@ export class RetryLanguageModel {
         fetch: llm.fetch,
         headers: llm.config?.headers,
         resourceName: llm.config?.resourceName,
-        apiVersion: llm.config?.apiVersion || "2025-04-01-preview",
+        apiVersion: llm.config?.apiVersion,
         useDeploymentBasedUrls: llm.config?.useDeploymentBasedUrls,
       }).languageModel(llm.model);
     } else if (llm.provider == "openai-compatible") {
