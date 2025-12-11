@@ -1,9 +1,11 @@
 import {
   ProviderV2,
+  JSONSchema7,
   SharedV2Headers,
   LanguageModelV2Usage,
   LanguageModelV2Prompt,
   LanguageModelV2Content,
+  SharedV2ProviderOptions,
   LanguageModelV2TextPart,
   SharedV2ProviderMetadata,
   LanguageModelV2ToolChoice,
@@ -23,7 +25,8 @@ export type LLMprovider =
   | "openai"
   | "anthropic"
   | "google"
-  | "aws"
+  | "bedrock"
+  | "azure"
   | "openrouter"
   | "openai-compatible"
   | "modelscope"
@@ -95,9 +98,10 @@ export type LLMRequest = {
   topK?: number;
   stopSequences?: string[];
   abortSignal?: AbortSignal;
+  providerOptions?: SharedV2ProviderOptions;
 };
 
-export type ReActStreamMessage =
+export type ReActStreamMessage = (
   | {
       type: "text" | "thinking";
       streamId: string;
@@ -148,7 +152,8 @@ export type ReActStreamMessage =
         completionTokens: number;
         totalTokens: number;
       };
-    };
+    }
+) & { providerMetadata?: SharedV2ProviderOptions };
 
 export type ReActStreamCallback = (
   message: ReActStreamMessage
@@ -177,3 +182,27 @@ export type ReActLoopControl = (
   assistantParts: Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>,
   loopNum: number
 ) => Promise<boolean>;
+
+export type ReActToolSchema = {
+  name: string;
+  description?: string;
+  inputSchema: JSONSchema7;
+  execute: (
+    args: Record<string, unknown>,
+    toolCall: LanguageModelV2ToolCallPart
+  ) => Promise<LanguageModelV2ToolResultOutput>;
+};
+
+export interface ReActToolInterface {
+  readonly name: string;
+  readonly description?: string;
+  readonly inputSchema: JSONSchema7;
+  execute: (
+    args: Record<string, unknown>,
+    toolCall: LanguageModelV2ToolCallPart
+  ) => Promise<LanguageModelV2ToolResultOutput>;
+}
+
+export type ReActTool = ReActToolSchema | ReActToolInterface;
+export type ReActRequest = LLMRequest | Omit<LLMRequest, "tools">;
+export type ToolCallsOrCallback = ReActToolCallCallback | ReActTool[];

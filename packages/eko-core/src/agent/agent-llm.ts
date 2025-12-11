@@ -21,27 +21,31 @@ import {
   LanguageModelV2ToolResultPart,
   LanguageModelV2ToolResultOutput,
 } from "@ai-sdk/provider";
+import { AnthropicProviderOptions } from "@ai-sdk/anthropic";
 
 export function defaultLLMProviderOptions(): SharedV2ProviderOptions {
   return {
-    openai: {
-      stream_options: {
-        include_usage: true,
-      },
-    },
-    openrouter: {
-      reasoning: {
-        effort: "low",
-      },
-    },
+    // openai: {
+    //   reasoning: {
+    //     effort: "low",
+    //   },
+    // },
+    // anthropic: {
+    //   effort: "low",
+    // },
+    // openrouter: {
+    //   reasoning: {
+    //     effort: "low",
+    //   },
+    // },
   };
 }
 
 export function defaultMessageProviderOptions(): SharedV2ProviderOptions {
   return {
     anthropic: {
-      cacheControl: { type: "ephemeral" },
-    },
+      cacheControl: { type: "ephemeral", ttl: "1h" },
+    } as AnthropicProviderOptions,
     bedrock: {
       cachePoint: { type: "default" },
     },

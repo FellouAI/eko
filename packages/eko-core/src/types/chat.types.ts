@@ -1,6 +1,10 @@
+import {
+  JSONSchema7,
+  SharedV2ProviderOptions,
+  LanguageModelV2ToolCallPart,
+} from "@ai-sdk/provider";
 import { ToolResult } from "./tools.types";
 import { ReActStreamMessage } from "./llm.types";
-import { JSONSchema7, LanguageModelV2ToolCallPart } from "@ai-sdk/provider";
 import { EkoConfig, HumanCallback, AgentStreamCallback } from "./agent.types";
 
 export type MessageTextPart = {
@@ -91,14 +95,11 @@ export type EkoMessageAssistantPart =
       text: string;
     }
   | {
-      type: "reasoning";
-      text: string;
-    }
-  | {
       type: "tool-call";
       toolCallId: string;
       toolName: string;
       args: Record<string, unknown>;
+      providerOptions?: SharedV2ProviderOptions;
     };
 
 export type EkoMessageToolPart = {

@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { defaultMessageProviderOptions } from "../../src/agent/llm";
+import { defaultMessageProviderOptions } from "../../src/agent/agent-llm";
 import { LanguageModelV2, LanguageModelV2StreamPart } from "@ai-sdk/provider";
 
 dotenv.config();

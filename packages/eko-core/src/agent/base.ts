@@ -14,10 +14,10 @@ import {
 } from "../tools";
 import {
   Tool,
+  ToolSchema,
   IMcpClient,
   LLMRequest,
   ToolResult,
-  ToolSchema,
   ToolExecuter,
   WorkflowAgent,
   HumanCallback,
@@ -37,6 +37,7 @@ import {
   convertToolResult,
   defaultMessageProviderOptions,
 } from "./agent-llm";
+import { convertAssistantContent } from "../llm/react";
 import TaskContext, { AgentContext } from "./agent-context";
 import { doTaskResultCheck } from "../tools/task-result-check";
 import { doTodoListManager } from "../tools/todo-list-manager";
@@ -207,7 +208,7 @@ export class Agent {
     // results = memory.removeDuplicateToolUse(results);
     messages.push({
       role: "assistant",
-      content: results,
+      content: convertAssistantContent(results),
     });
     if (results.length == 0) {
       return null;

@@ -39,7 +39,7 @@ export default class WebSearchTool implements DialogueTool {
           maximum: 50,
         },
       },
-      required: ["query", "keywords"],
+      required: ["query", "language"],
     };
   }
 

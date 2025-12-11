@@ -59,7 +59,11 @@ export function convertAssistantToolResults(
         type: "tool-call",
         toolCallId: part.toolCallId,
         toolName: part.toolName,
-        args: (part.input || {}) as any,
+        args:
+          typeof part.input == "string"
+            ? JSON.parse(part.input || "{}")
+            : part.input || {},
+        providerOptions: part.providerOptions,
       };
     }
     return part;

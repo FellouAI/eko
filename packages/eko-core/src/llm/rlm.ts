@@ -5,12 +5,13 @@ import {
 } from "@ai-sdk/provider";
 import Log from "../common/log";
 import config from "../config";
+import { createAzure } from "@ai-sdk/azure";
 import { createOpenAI } from "@ai-sdk/openai";
 import { call_timeout } from "../common/utils";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import {
   LLMs,
@@ -34,7 +35,7 @@ export class RetryLanguageModel {
     names?: string[],
     stream_first_timeout?: number,
     stream_token_timeout?: number,
-    context?: TaskContext | AgentContext,
+    context?: TaskContext | AgentContext
   ) {
     this.llms = llms;
     this.names = names || [];
@@ -67,6 +68,7 @@ export class RetryLanguageModel {
       topK: request.topK,
       stopSequences: request.stopSequences,
       abortSignal: request.abortSignal,
+      providerOptions: request.providerOptions,
     });
   }
 
@@ -90,11 +92,17 @@ export class RetryLanguageModel {
       }
       if (!providerOptions) {
         options.providerOptions = defaultLLMProviderOptions();
-        options.providerOptions[llm.provider] = llmConfig.options || {};
+        if (llmConfig.options && Object.keys(llmConfig.options).length > 0) {
+          options.providerOptions[llm.provider] = llmConfig.options;
+        }
       }
       let _options = options;
       if (llmConfig.handler) {
-        _options = await llmConfig.handler(_options, this.context, this.agentContext);
+        _options = await llmConfig.handler(
+          _options,
+          this.context,
+          this.agentContext
+        );
       }
       try {
         let result = (await llm.doGenerate(_options)) as GenerateResult;
@@ -138,6 +146,7 @@ export class RetryLanguageModel {
       topK: request.topK,
       stopSequences: request.stopSequences,
       abortSignal: request.abortSignal,
+      providerOptions: request.providerOptions,
     });
   }
 
@@ -159,11 +168,17 @@ export class RetryLanguageModel {
       }
       if (!providerOptions) {
         options.providerOptions = defaultLLMProviderOptions();
-        options.providerOptions[llm.provider] = llmConfig.options || {};
+        if (llmConfig.options && Object.keys(llmConfig.options).length > 0) {
+          options.providerOptions[llm.provider] = llmConfig.options;
+        }
       }
       let _options = options;
       if (llmConfig.handler) {
-        _options = await llmConfig.handler(_options, this.context, this.agentContext);
+        _options = await llmConfig.handler(
+          _options,
+          this.context,
+          this.agentContext
+        );
       }
       try {
         const controller = new AbortController();
@@ -282,16 +297,35 @@ export class RetryLanguageModel {
         fetch: llm.fetch,
         headers: llm.config?.headers,
       }).languageModel(llm.model);
-    } else if (llm.provider == "aws") {
-      let keys = apiKey.split("=");
+    } else if (llm.provider == "bedrock") {
+      apiKey = apiKey.trim();
+      let keyInfos;
+      if (apiKey.startsWith("{") && apiKey.endsWith("}")) {
+        keyInfos = JSON.parse(apiKey);
+      } else {
+        keyInfos = {
+          apiKey: apiKey,
+        };
+      }
       return createAmazonBedrock({
-        accessKeyId: keys[0],
-        secretAccessKey: keys[1],
         baseURL: baseURL,
-        region: llm.config?.region || "us-west-1",
+        apiKey: keyInfos.apiKey,
+        accessKeyId: keyInfos.accessKeyId,
+        secretAccessKey: keyInfos.secretAccessKey,
+        region: keyInfos.region || llm.config?.region || "us-west-1",
+        sessionToken: keyInfos.sessionToken || llm.config?.sessionToken,
         fetch: llm.fetch,
         headers: llm.config?.headers,
-        sessionToken: llm.config?.sessionToken,
+      }).languageModel(llm.model);
+    } else if (llm.provider == "azure") {
+      return createAzure({
+        apiKey: apiKey,
+        baseURL: baseURL,
+        fetch: llm.fetch,
+        headers: llm.config?.headers,
+        resourceName: llm.config?.resourceName,
+        apiVersion: llm.config?.apiVersion || "2025-04-01-preview",
+        useDeploymentBasedUrls: llm.config?.useDeploymentBasedUrls,
       }).languageModel(llm.model);
     } else if (llm.provider == "openai-compatible") {
       return createOpenAICompatible({

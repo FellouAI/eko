@@ -8,10 +8,16 @@ import {
   ReActToolCallCallback,
   LanguageModelV2TextPart,
   LanguageModelV2ToolCallPart,
+  LanguageModelV2ToolResultOutput,
 } from "../types";
+import {
+  ReActTool,
+  ReActRequest,
+  ToolCallsOrCallback,
+} from "../types/llm.types";
 import config from "../config";
 import Log from "../common/log";
-import { RetryLanguageModel } from ".";
+import { RetryLanguageModel } from "./rlm";
 import { sleep, uuidv4 } from "../common/utils";
 import { LanguageModelV2StreamPart } from "@ai-sdk/provider";
 
@@ -19,6 +25,26 @@ export async function callWithReAct(
   rlm: RetryLanguageModel,
   request: LLMRequest,
   toolCallCallback: ReActToolCallCallback,
+  streamCallback?: ReActStreamCallback,
+  errorHandler?: ReActErrorHandler,
+  finishHandler?: ReActFinishHandler,
+  loopControl?: ReActLoopControl
+): Promise<Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>>;
+
+export async function callWithReAct(
+  rlm: RetryLanguageModel,
+  request: Omit<LLMRequest, "tools">,
+  tools: ReActTool[],
+  streamCallback?: ReActStreamCallback,
+  errorHandler?: ReActErrorHandler,
+  finishHandler?: ReActFinishHandler,
+  loopControl?: ReActLoopControl
+): Promise<Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>>;
+
+export async function callWithReAct(
+  rlm: RetryLanguageModel,
+  request: ReActRequest,
+  toolCallsOrCallback: ToolCallsOrCallback,
   streamCallback?: ReActStreamCallback,
   errorHandler?: ReActErrorHandler,
   finishHandler?: ReActFinishHandler,
@@ -31,6 +57,14 @@ export async function callWithReAct(
       }
       return assistantParts.filter((s) => s.type == "tool-call").length > 0;
     };
+  }
+  if (typeof toolCallsOrCallback !== "function") {
+    (request as LLMRequest).tools = toolCallsOrCallback.map((tool) => ({
+      type: "function",
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+    }));
   }
   let loopNum = 0;
   let assistantParts: Array<
@@ -47,21 +81,7 @@ export async function callWithReAct(
     if (assistantParts.length > 0) {
       request.messages.push({
         role: "assistant",
-        content: assistantParts
-          .filter((part) => part.type == "text" || part.type == "tool-call")
-          .map((part) =>
-            part.type === "text"
-              ? {
-                  type: "text",
-                  text: part.text,
-                }
-              : {
-                  type: "tool-call",
-                  toolCallId: part.toolCallId,
-                  toolName: part.toolName,
-                  input: JSON.parse((part.input || "{}") as string),
-                }
-          ),
+        content: convertAssistantContent(assistantParts),
       });
     }
     const continueLoop = await loopControl(request, assistantParts, loopNum);
@@ -69,7 +89,28 @@ export async function callWithReAct(
       break;
     }
     const toolUses = assistantParts.filter((s) => s.type == "tool-call");
-    const toolResults = await toolCallCallback(request, toolUses);
+
+    let toolResults: LanguageModelV2ToolResultOutput[];
+    if (typeof toolCallsOrCallback === "function") {
+      toolResults = await toolCallsOrCallback(request, toolUses);
+    } else {
+      toolResults = await Promise.all(
+        toolUses.map(async (toolUse) => {
+          const tool = toolCallsOrCallback.find(
+            (t) => t.name === toolUse.toolName
+          );
+          if (!tool) {
+            throw new Error(`Tool ${toolUse.toolName} not found`);
+          }
+          const args =
+            typeof toolUse.input === "string"
+              ? JSON.parse(toolUse.input || "{}")
+              : toolUse.input || {};
+          return await tool.execute(args, toolUse);
+        })
+      );
+    }
+
     if (toolResults.length > 0) {
       request.messages.push({
         role: "tool",
@@ -81,6 +122,7 @@ export async function callWithReAct(
         })),
       });
     }
+
     loopNum++;
   }
   return assistantParts;
@@ -135,6 +177,7 @@ export async function callLLM(
               toolCallId: toolPart.toolCallId,
               toolName: toolPart.toolName,
               params: toolPart.input || {},
+              providerMetadata: toolPart.providerOptions,
             });
             toolPart = null;
           }
@@ -148,12 +191,13 @@ export async function callLLM(
               streamId: textStreamId,
               streamDone: true,
               text: streamText,
+              providerMetadata: chunk.providerMetadata,
             });
           }
           break;
         }
         case "reasoning-start": {
-          thinkStreamId = uuidv4();
+          thinkStreamId = chunk.id || uuidv4();
           break;
         }
         case "reasoning-delta": {
@@ -188,12 +232,14 @@ export async function callLLM(
               toolPart = _toolPart;
               toolPart.toolName = _toolPart.toolName || chunk.toolName;
               toolPart.input = _toolPart.input || {};
+              toolPart.providerOptions = _toolPart.providerOptions;
             } else {
               toolPart = {
                 type: "tool-call",
                 toolCallId: chunk.id,
                 toolName: chunk.toolName,
                 input: {},
+                providerOptions: chunk.providerMetadata,
               };
               toolParts.push(toolPart);
             }
@@ -227,6 +273,7 @@ export async function callLLM(
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
             params: args,
+            providerMetadata: chunk.providerMetadata,
           };
           await streamCallback?.(message);
           if (toolPart == null) {
@@ -235,16 +282,19 @@ export async function callLLM(
             )[0];
             if (_toolPart) {
               _toolPart.input = message.params || args;
+              _toolPart.providerOptions = chunk.providerMetadata;
             } else {
               toolParts.push({
                 type: "tool-call",
                 toolCallId: chunk.toolCallId,
                 toolName: chunk.toolName,
                 input: message.params || args,
+                providerOptions: chunk.providerMetadata,
               });
             }
           } else {
             toolPart.input = message.params || args;
+            toolPart.providerOptions = chunk.providerMetadata;
             toolPart = null;
           }
           break;
@@ -281,6 +331,7 @@ export async function callLLM(
               toolCallId: toolPart.toolCallId,
               toolName: toolPart.toolName,
               params: toolPart.input || {},
+              providerMetadata: toolPart.providerOptions,
             });
             toolPart = null;
           }
@@ -314,6 +365,7 @@ export async function callLLM(
                 (chunk.usage.inputTokens || 0) +
                   (chunk.usage.outputTokens || 0),
             },
+            providerMetadata: chunk.providerMetadata,
           });
           break;
         }
@@ -344,4 +396,28 @@ export async function callLLM(
         ...toolParts,
       ]
     : toolParts;
+}
+
+export function convertAssistantContent(
+  assistantParts: Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>
+): Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart> {
+  return assistantParts
+    .filter((part) => part.type == "text" || part.type == "tool-call")
+    .map((part) =>
+      part.type === "text"
+        ? {
+            type: "text",
+            text: part.text,
+          }
+        : {
+            type: "tool-call",
+            toolCallId: part.toolCallId,
+            toolName: part.toolName,
+            input:
+              typeof part.input == "string"
+                ? JSON.parse(part.input || "{}")
+                : part.input || {},
+            providerOptions: part.providerOptions,
+          }
+    );
 }
