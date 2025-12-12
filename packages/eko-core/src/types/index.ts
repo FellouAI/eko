@@ -42,12 +42,13 @@ export type {
   GenerateResult,
   ReActToolSchema,
   ReActLoopControl,
-  ReActErrorHandler,
-  ReActFinishHandler,
-  ReActStreamMessage,
+  LLMErrorHandler,
+  LLMFinishHandler,
+  LLMStreamMessage,
+  LLMStreamCallback,
   ReActToolInterface,
-  ToolCallsOrCallback,
   ReActStreamCallback,
+  ToolCallsOrCallback,
   ReActToolCallCallback,
 } from "./llm.types";
 

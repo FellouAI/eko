@@ -4,7 +4,7 @@ import {
   LanguageModelV2ToolCallPart,
 } from "@ai-sdk/provider";
 import { ToolResult } from "./tools.types";
-import { ReActStreamMessage } from "./llm.types";
+import { LLMStreamMessage } from "./llm.types";
 import { EkoConfig, HumanCallback, AgentStreamCallback } from "./agent.types";
 
 export type MessageTextPart = {
@@ -44,7 +44,7 @@ export type ChatStreamMessage = {
   | {
       type: "chat_start";
     }
-  | ReActStreamMessage
+  | LLMStreamMessage
   | {
       type: "chat_end";
       error: string | null;

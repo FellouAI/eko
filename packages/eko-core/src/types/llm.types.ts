@@ -101,7 +101,7 @@ export type LLMRequest = {
   providerOptions?: SharedV2ProviderOptions;
 };
 
-export type ReActStreamMessage = (
+export type LLMStreamMessage = (
   | {
       type: "text" | "thinking";
       streamId: string;
@@ -163,16 +163,26 @@ export type ReActStreamMessage = (
 ) & { providerMetadata?: SharedV2ProviderOptions };
 
 export type ReActStreamCallback = (
-  message: ReActStreamMessage
+  message:
+    | { type: "loop_start"; request: ReActRequest; loopNum: number }
+    | LLMStreamMessage
+    | {
+        type: "loop_end";
+        request: ReActRequest;
+        loopNum: number;
+        continueLoop: boolean;
+      }
 ) => Promise<void>;
 
-export type ReActErrorHandler = (
+export type LLMStreamCallback = (message: LLMStreamMessage) => Promise<void>;
+
+export type LLMErrorHandler = (
   request: LLMRequest,
   error: any,
   retryNum: number
 ) => Promise<void>;
 
-export type ReActFinishHandler = (
+export type LLMFinishHandler = (
   request: LLMRequest,
   finishReason: LanguageModelV2FinishReason,
   value: LanguageModelV2StreamPart,

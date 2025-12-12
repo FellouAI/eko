@@ -1,10 +1,10 @@
 import {
   LLMRequest,
+  LLMErrorHandler,
+  LLMStreamMessage,
+  LLMFinishHandler,
   ReActLoopControl,
-  ReActErrorHandler,
-  ReActFinishHandler,
-  ReActStreamMessage,
-  ReActStreamCallback,
+  LLMStreamCallback,
   ReActToolCallCallback,
   LanguageModelV2TextPart,
   LanguageModelV2ToolCallPart,
@@ -14,6 +14,7 @@ import {
   ReActTool,
   ReActRequest,
   ToolCallsOrCallback,
+  ReActStreamCallback,
 } from "../types/llm.types";
 import config from "../config";
 import Log from "../common/log";
@@ -26,8 +27,8 @@ export async function callWithReAct(
   request: LLMRequest,
   toolCallCallback: ReActToolCallCallback,
   streamCallback?: ReActStreamCallback,
-  errorHandler?: ReActErrorHandler,
-  finishHandler?: ReActFinishHandler,
+  errorHandler?: LLMErrorHandler,
+  finishHandler?: LLMFinishHandler,
   loopControl?: ReActLoopControl
 ): Promise<Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>>;
 
@@ -36,8 +37,8 @@ export async function callWithReAct(
   request: Omit<LLMRequest, "tools">,
   tools: ReActTool[],
   streamCallback?: ReActStreamCallback,
-  errorHandler?: ReActErrorHandler,
-  finishHandler?: ReActFinishHandler,
+  errorHandler?: LLMErrorHandler,
+  finishHandler?: LLMFinishHandler,
   loopControl?: ReActLoopControl
 ): Promise<Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>>;
 
@@ -46,8 +47,8 @@ export async function callWithReAct(
   request: ReActRequest,
   toolCallsOrCallback: ToolCallsOrCallback,
   streamCallback?: ReActStreamCallback,
-  errorHandler?: ReActErrorHandler,
-  finishHandler?: ReActFinishHandler,
+  errorHandler?: LLMErrorHandler,
+  finishHandler?: LLMFinishHandler,
   loopControl?: ReActLoopControl
 ): Promise<Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>> {
   if (!loopControl) {
@@ -71,6 +72,11 @@ export async function callWithReAct(
     LanguageModelV2TextPart | LanguageModelV2ToolCallPart
   > | null = null;
   while (true) {
+    await streamCallback?.({
+      type: "loop_start",
+      request,
+      loopNum,
+    });
     assistantParts = await callLLM(
       rlm,
       request,
@@ -86,6 +92,12 @@ export async function callWithReAct(
     }
     const continueLoop = await loopControl(request, assistantParts, loopNum);
     if (!continueLoop) {
+      await streamCallback?.({
+        type: "loop_end",
+        request,
+        loopNum,
+        continueLoop,
+      });
       break;
     }
     const toolUses = assistantParts.filter((s) => s.type == "tool-call");
@@ -123,6 +135,13 @@ export async function callWithReAct(
       });
     }
 
+    await streamCallback?.({
+      type: "loop_end",
+      request,
+      loopNum,
+      continueLoop,
+    });
+
     loopNum++;
   }
   return assistantParts;
@@ -131,9 +150,9 @@ export async function callWithReAct(
 export async function callLLM(
   rlm: RetryLanguageModel,
   request: LLMRequest,
-  streamCallback?: ReActStreamCallback,
-  errorHandler?: ReActErrorHandler,
-  finishHandler?: ReActFinishHandler,
+  streamCallback?: LLMStreamCallback,
+  errorHandler?: LLMErrorHandler,
+  finishHandler?: LLMFinishHandler,
   retryNum: number = 0
 ): Promise<Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>> {
   let streamText = "";
@@ -274,7 +293,7 @@ export async function callLLM(
         case "tool-call": {
           toolArgsText = "";
           const args = chunk.input ? JSON.parse(chunk.input) : {};
-          const message: ReActStreamMessage = {
+          const message: LLMStreamMessage = {
             type: "tool_use",
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,

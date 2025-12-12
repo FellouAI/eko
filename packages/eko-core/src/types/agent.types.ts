@@ -1,8 +1,8 @@
 import { Agent } from "../agent";
 import { IMcpClient } from "./mcp.types";
 import { IA2aClient } from "../agent/a2a";
+import { LLMs, LLMStreamMessage } from "./llm.types";
 import { AgentContext } from "../agent/agent-context";
-import { LLMs, ReActStreamMessage } from "./llm.types";
 
 export type EkoConfig = {
   llms: LLMs;
@@ -30,7 +30,7 @@ export type AgentStreamMessage = {
       type: "agent_start";
       agentNode: WorkflowAgent;
     }
-  | ReActStreamMessage
+  | LLMStreamMessage
   | {
       type: "agent_result";
       agentNode: WorkflowAgent;
