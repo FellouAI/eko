@@ -107,6 +107,7 @@ export type ReActStreamMessage = (
       streamId: string;
       streamDone: boolean;
       text: string;
+      newTextLength: number;
     }
   | {
       type: "file";
@@ -118,6 +119,7 @@ export type ReActStreamMessage = (
       toolName: string;
       toolCallId: string;
       paramsText: string;
+      newTextLength: number;
     }
   | {
       type: "tool_use";
@@ -132,6 +134,7 @@ export type ReActStreamMessage = (
       text: string;
       streamId: string;
       streamDone: boolean;
+      newTextLength?: number;
     }
   | {
       type: "tool_result";
@@ -139,6 +142,10 @@ export type ReActStreamMessage = (
       toolCallId: string;
       params: Record<string, any>;
       toolResult: ToolResult;
+    }
+  | {
+      type: "raw";
+      rawValue: unknown;
     }
   | {
       type: "error";

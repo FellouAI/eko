@@ -170,6 +170,7 @@ export async function callLLM(
             streamId: textStreamId,
             streamDone: false,
             text: streamText,
+            newTextLength: chunk.delta?.length || 0,
           });
           if (toolPart) {
             await streamCallback?.({
@@ -191,6 +192,7 @@ export async function callLLM(
               streamId: textStreamId,
               streamDone: true,
               text: streamText,
+              newTextLength: 0,
               providerMetadata: chunk.providerMetadata,
             });
           }
@@ -207,6 +209,7 @@ export async function callLLM(
             streamId: thinkStreamId,
             streamDone: false,
             text: thinkText,
+            newTextLength: chunk.delta?.length || 0,
           });
           break;
         }
@@ -217,6 +220,7 @@ export async function callLLM(
               streamId: thinkStreamId,
               streamDone: true,
               text: thinkText,
+              newTextLength: 0,
             });
           }
           break;
@@ -254,6 +258,7 @@ export async function callLLM(
               streamId: textStreamId,
               streamDone: true,
               text: streamText,
+              newTextLength: 0,
             });
           }
           toolArgsText += chunk.delta || "";
@@ -262,6 +267,7 @@ export async function callLLM(
             toolCallId: chunk.id,
             toolName: toolPart?.toolName || "",
             paramsText: toolArgsText,
+            newTextLength: chunk.delta?.length || 0,
           });
           break;
         }
@@ -307,6 +313,13 @@ export async function callLLM(
           });
           break;
         }
+        case "raw": {
+          await streamCallback?.({
+            type: "raw",
+            rawValue: chunk.rawValue,
+          });
+          break;
+        }
         case "error": {
           Log.error(`chatLLM error: `, chunk);
           await streamCallback?.({
@@ -323,6 +336,7 @@ export async function callLLM(
               streamId: textStreamId,
               streamDone: true,
               text: streamText,
+              newTextLength: 0,
             });
           }
           if (toolPart) {
