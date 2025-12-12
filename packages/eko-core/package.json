@@ -1,6 +1,6 @@
 {
   "name": "@eko-ai/eko",
-  "version": "4.0.6",
+  "version": "4.0.7",
   "description": "Empowering language to transform human words into action.",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
@@ -44,11 +44,11 @@
   "dependencies": {
     "@ai-sdk/provider": "^2.0.0",
     "@ai-sdk/amazon-bedrock": "^3.0.68",
-    "@ai-sdk/azure": "^2.0.82",
+    "@ai-sdk/azure": "^2.0.87",
     "@ai-sdk/anthropic": "^2.0.54",
     "@ai-sdk/google": "^2.0.45",
-    "@ai-sdk/openai": "^2.0.80",
-    "@ai-sdk/openai-compatible": "^1.0.28",
+    "@ai-sdk/openai": "^2.0.85",
+    "@ai-sdk/openai-compatible": "^1.0.29",
     "@openrouter/ai-sdk-provider": "^1.5.3",
     "secure-json-parse": "^4.1.0",
     "@xmldom/xmldom": "^0.8.11",

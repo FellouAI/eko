@@ -83,7 +83,8 @@ const OptionsPage = () => {
       { value: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet" },
     ],
     openai: [
-      { value: "gpt-5.1", label: "gpt-5.1 (default)" },
+      { value: "gpt-5.2", label: "gpt-5.2 (default)" },
+      { value: "gpt-5.1", label: "gpt-5.1" },
       { value: "gpt-5", label: "gpt-5" },
       { value: "gpt-5-mini", label: "gpt-5-mini" },
       { value: "gpt-4.1", label: "gpt-4.1" },
@@ -100,6 +101,7 @@ const OptionsPage = () => {
       { value: "google/gemini-3-pro-preview", label: "gemini-3-pro-preview" },
       { value: "google/gemini-3-pro", label: "gemini-3-pro" },
       { value: "google/gemini-2.5-pro", label: "gemini-2.5-pro" },
+      { value: "openai/gpt-5.2", label: "gpt-5.2" },
       { value: "openai/gpt-5.1", label: "gpt-5.1" },
       { value: "openai/gpt-5", label: "gpt-5" },
       { value: "openai/gpt-5-mini", label: "gpt-5-mini" },
@@ -133,7 +135,8 @@ const OptionsPage = () => {
       },
     ],
     azure: [
-      { value: "gpt-5.1", label: "gpt-5.1 (default)" },
+      { value: "gpt-5.2", label: "gpt-5.2 (default)" },
+      { value: "gpt-5.1", label: "gpt-5.1" },
       { value: "gpt-5", label: "gpt-5" },
       { value: "gpt-4.1", label: "gpt-4.1" },
       { value: "gpt-4.1-mini", label: "gpt-4.1-mini" },
