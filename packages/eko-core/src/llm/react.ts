@@ -142,7 +142,7 @@ export async function callWithReAct(
                 ? JSON.parse(toolUse.input || "{}")
                 : toolUse.input || {};
             try {
-              return await tool.execute(args, toolUse);
+              return tool.execute(args, toolUse);
             } catch (e) {
               Log.error(
                 "tool call error: ",
