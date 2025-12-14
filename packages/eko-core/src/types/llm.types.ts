@@ -220,17 +220,19 @@ export interface ReActToolInterface {
   ) => Promise<LanguageModelV2ToolResultOutput>;
 }
 
+export type ReActToolsAndCallback = {
+  tools: ReActTool[];
+  callback?: (
+    request: LLMRequest,
+    toolUses: LanguageModelV2ToolCallPart[],
+    tools: ReActTool[]
+  ) => Promise<LanguageModelV2ToolResultOutput[]>;
+};
+
 export type ToolCallsOrCallback =
   | ReActToolCallCallback
   | ReActTool[]
-  | {
-      tools: ReActTool[];
-      callback?: (
-        request: LLMRequest,
-        toolUses: LanguageModelV2ToolCallPart[],
-        tools: ReActTool[]
-      ) => Promise<LanguageModelV2ToolResultOutput[]>;
-    };
+  | ReActToolsAndCallback;
 
 export type ReActTool = ReActToolSchema | ReActToolInterface;
 export type ReActRequest = LLMRequest | Omit<LLMRequest, "tools">;

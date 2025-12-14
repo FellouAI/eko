@@ -50,6 +50,7 @@ export type {
   ReActStreamCallback,
   ToolCallsOrCallback,
   ReActToolCallCallback,
+  ReActToolsAndCallback,
 } from "./llm.types";
 
 export type { Tool, ToolSchema, ToolResult, ToolExecuter } from "./tools.types";

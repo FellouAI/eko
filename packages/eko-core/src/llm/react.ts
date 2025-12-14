@@ -15,6 +15,7 @@ import {
   ReActRequest,
   ToolCallsOrCallback,
   ReActStreamCallback,
+  ReActToolsAndCallback,
 } from "../types/llm.types";
 import config from "../config";
 import Log from "../common/log";
@@ -36,6 +37,16 @@ export async function callWithReAct(
   rlm: RetryLanguageModel,
   request: Omit<LLMRequest, "tools">,
   tools: ReActTool[],
+  streamCallback?: ReActStreamCallback,
+  errorHandler?: LLMErrorHandler,
+  finishHandler?: LLMFinishHandler,
+  loopControl?: ReActLoopControl
+): Promise<Array<LanguageModelV2TextPart | LanguageModelV2ToolCallPart>>;
+
+export async function callWithReAct(
+  rlm: RetryLanguageModel,
+  request: Omit<LLMRequest, "tools">,
+  toolsAndCallback: ReActToolsAndCallback,
   streamCallback?: ReActStreamCallback,
   errorHandler?: LLMErrorHandler,
   finishHandler?: LLMFinishHandler,
