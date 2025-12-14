@@ -60,7 +60,11 @@ export async function callWithReAct(
     };
   }
   if (typeof toolCallsOrCallback !== "function") {
-    (request as LLMRequest).tools = toolCallsOrCallback.map((tool) => ({
+    (request as LLMRequest).tools = (
+      Array.isArray(toolCallsOrCallback)
+        ? toolCallsOrCallback
+        : toolCallsOrCallback.tools
+    ).map((tool) => ({
       type: "function",
       name: tool.name,
       description: tool.description,
@@ -106,21 +110,43 @@ export async function callWithReAct(
     if (typeof toolCallsOrCallback === "function") {
       toolResults = await toolCallsOrCallback(request, toolUses);
     } else {
-      toolResults = await Promise.all(
-        toolUses.map(async (toolUse) => {
-          const tool = toolCallsOrCallback.find(
-            (t) => t.name === toolUse.toolName
-          );
-          if (!tool) {
-            throw new Error(`Tool ${toolUse.toolName} not found`);
-          }
-          const args =
-            typeof toolUse.input === "string"
-              ? JSON.parse(toolUse.input || "{}")
-              : toolUse.input || {};
-          return await tool.execute(args, toolUse);
-        })
-      );
+      const tools = Array.isArray(toolCallsOrCallback)
+        ? toolCallsOrCallback
+        : toolCallsOrCallback.tools;
+      if (!Array.isArray(toolCallsOrCallback) && toolCallsOrCallback.callback) {
+        toolResults = await toolCallsOrCallback.callback(
+          request,
+          toolUses,
+          tools
+        );
+      } else {
+        toolResults = await Promise.all(
+          toolUses.map(async (toolUse) => {
+            const tool = tools.find((t) => t.name === toolUse.toolName);
+            if (!tool) {
+              throw new Error(`Tool ${toolUse.toolName} not found`);
+            }
+            const args =
+              typeof toolUse.input === "string"
+                ? JSON.parse(toolUse.input || "{}")
+                : toolUse.input || {};
+            try {
+              return await tool.execute(args, toolUse);
+            } catch (e) {
+              Log.error(
+                "tool call error: ",
+                toolUse.toolName,
+                toolUse.input,
+                e
+              );
+              return {
+                type: "error-text",
+                value: "Error: " + (e + "") || "Unknown error",
+              };
+            }
+          })
+        );
+      }
     }
 
     if (toolResults.length > 0) {
