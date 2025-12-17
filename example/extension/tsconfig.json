@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "strict": false,
-    "target": "ES2018",
+    "target": "ES2019",
     "moduleResolution": "bundler",
     "module": "ES6",
     "esModuleInterop": true,

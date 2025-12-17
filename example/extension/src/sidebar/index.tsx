@@ -2,12 +2,12 @@ import "./index.css";
 import { uuidv4 } from "@eko-ai/eko";
 import { createRoot } from "react-dom/client";
 import { ChatInput } from "./components/ChatInput";
-import { Empty, message as AntdMessage, Button, Tooltip } from "antd";
 import { ClearOutlined } from "@ant-design/icons";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { MessageItem } from "./components/MessageItem";
 import type { ChatMessage, UploadedFile } from "./types";
 import { useChatCallbacks } from "./hooks/useChatCallbacks";
+import { Empty, message as AntdMessage, Button, Tooltip } from "antd";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 
 const AppRun = () => {
@@ -30,7 +30,7 @@ const AppRun = () => {
   const isNearBottom = useCallback(() => {
     const container = messagesContainerRef.current;
     if (!container) return true;
-    const threshold = 200;
+    const threshold = 350;
     const scrollBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
     return scrollBottom < threshold;
   }, []);

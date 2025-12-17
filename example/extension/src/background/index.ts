@@ -196,6 +196,9 @@ async function init(): Promise<ChatAgent | void> {
 
   const llms = await loadLLMs();
   const agents = [new BrowserAgent(), new WriteFileAgent()];
+  // agents.forEach((agent) =>
+  //   agent.Tools.forEach((tool) => wrapToolInputSchema(agent, tool))
+  // );
   chatAgent = new ChatAgent({ llms, agents });
   chatAgent.initMessages().catch((e) => {
     printLog("init messages error: " + e, "error");
