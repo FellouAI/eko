@@ -33,6 +33,7 @@ export {
 export {
   ChatAgent,
   ChatContext,
+  AgentWrapTool,
   WebSearchTool,
   WebpageQaTool,
   DeepActionTool,
