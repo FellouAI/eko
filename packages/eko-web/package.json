@@ -1,6 +1,6 @@
 {
   "name": "@eko-ai/eko-web",
-  "version": "4.0.8",
+  "version": "4.0.9",
   "description": "Empowering language to transform human words into action.",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
