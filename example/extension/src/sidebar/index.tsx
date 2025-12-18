@@ -29,8 +29,10 @@ const AppRun = () => {
 
   const isNearBottom = useCallback(() => {
     const container = messagesContainerRef.current;
-    if (!container) return true;
-    const threshold = 350;
+    if (!container || container.scrollHeight < container.clientHeight * 1.5) {
+      return true;
+    }
+    const threshold = container.clientHeight / 3;
     const scrollBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
     return scrollBottom < threshold;
   }, []);

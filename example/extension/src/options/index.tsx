@@ -99,6 +99,10 @@ const OptionsPage = () => {
       { value: "anthropic/claude-sonnet-4", label: "claude-sonnet-4" },
       { value: "anthropic/claude-3.7-sonnet", label: "claude-3.7-sonnet" },
       { value: "google/gemini-3-pro-preview", label: "gemini-3-pro-preview" },
+      {
+        value: "google/gemini-3-flash-preview",
+        label: "gemini-3-flash-preview",
+      },
       { value: "google/gemini-3-pro", label: "gemini-3-pro" },
       { value: "google/gemini-2.5-pro", label: "gemini-2.5-pro" },
       { value: "openai/gpt-5.2", label: "gpt-5.2" },
@@ -116,6 +120,7 @@ const OptionsPage = () => {
         value: "gemini-3-pro-preview",
         label: "gemini-3-pro-preview (default)",
       },
+      { value: "gemini-3-flash-preview", label: "gemini-3-flash-preview" },
       { value: "gemini-3-pro", label: "gemini-3-pro" },
       { value: "gemini-2.5-pro", label: "gemini-2.5-pro" },
       { value: "gemini-2.5-flash", label: "gemini-2.5-flash" },
