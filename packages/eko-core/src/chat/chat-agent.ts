@@ -214,6 +214,9 @@ export class ChatAgent {
     }
     tools.push(new WebSearchTool(this.chatContext, params));
     tools.push(new TaskVariableStorageTool(this.chatContext, params));
+    // this.chatContext.getConfig().agents?.forEach((agent) => {
+    //   tools.push(new AgentWrapTool(this.chatContext, params, agent));
+    // });
     return tools;
   }
 

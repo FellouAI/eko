@@ -334,6 +334,12 @@ export class Agent {
       agentNodeXml.indexOf("output=") > -1;
     if (hasVariable) {
       tools.push(new VariableStorageTool());
+    } else {
+      const dependentVariables =
+        agentContext.context.variables.get("dependentVariables");
+      if (dependentVariables && dependentVariables.length > 0) {
+        tools.push(new VariableStorageTool());
+      }
     }
     const hasForeach = agentNodeXml.indexOf("</forEach>") > -1;
     if (hasForeach) {

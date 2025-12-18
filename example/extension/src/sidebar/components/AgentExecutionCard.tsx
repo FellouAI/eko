@@ -89,7 +89,7 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
         <>
           {/* Render content in order of appearance */}
           {agent.contentItems.map((item, index) => {
-            if (item.type === "thinking") {
+            if (item.type === "thinking" && item.text != "[REDACTED]") {
               return (
                 <div key={`thinking-${item.streamId}-${index}`}>
                   <ThinkingItem

@@ -5,6 +5,7 @@ import { ThinkingItem } from "./ThinkingItem";
 import { ToolCallItem } from "./ToolCallItem";
 import { WorkflowCard } from "./WorkflowCard";
 import { MarkdownRenderer } from "../MarkdownRenderer";
+import { AgentExecutionCard } from "./AgentExecutionCard";
 import { Card, Space, Typography, Alert, Image, Spin } from "antd";
 import { RobotOutlined, UserOutlined, FileOutlined } from "@ant-design/icons";
 
@@ -202,7 +203,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       >
         {message.contentItems && message.contentItems.length > 0 ? (
           message.contentItems.map((item, index) => {
-            if (item.type === "thinking") {
+            if (item.type === "thinking" && item.text != "[REDACTED]") {
               return (
                 <div key={`chat-thinking-${item.streamId}-${index}`}>
                   <ThinkingItem
@@ -244,13 +245,25 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                   style={{ maxWidth: "100%", marginTop: 8, marginBottom: 8 }}
                 />
               );
-            } else if (item.type === "task") {
+            } else if (
+              item.type === "task" &&
+              (item.task.workflow || item.task.agents?.length > 0)
+            ) {
               return (
                 <div
                   key={`chat-task-${item.taskId}-${index}`}
                   style={{ marginBottom: 8 }}
                 >
-                  <WorkflowCard task={item.task} />
+                  {item.task.workflow ? (
+                    // Multi-agent workflow
+                    <WorkflowCard task={item.task} />
+                  ) : (
+                    // Single agent tool
+                    <AgentExecutionCard
+                      agentNode={item.task.agents[0].agentNode}
+                      task={item.task}
+                    />
+                  )}
                 </div>
               );
             }

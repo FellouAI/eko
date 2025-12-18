@@ -109,7 +109,7 @@ export default class DeepActionTool implements DialogueTool {
           file_url: part.data,
         };
       });
-    const taskWebsite = await this.gettaskWebsite(tabIds);
+    const taskWebsite = await this.getTaskWebsite(tabIds);
     const workflow = await eko.generate(taskDescription, messageId, {
       ...(this.params.extra || {}),
       ...globalVariables,
@@ -162,7 +162,7 @@ export default class DeepActionTool implements DialogueTool {
     };
   }
 
-  private async gettaskWebsite(tabIds: string[]): Promise<any[]> {
+  private async getTaskWebsite(tabIds: string[]): Promise<any[]> {
     if (!global.browserService) {
       return [];
     }
