@@ -64,7 +64,7 @@ async function run() {
   ];
   const chatAgent = new ChatAgent({ llms, agents });
   const result1 = await chatAgent.chat({
-    messageId: uuidv4(),
+    messageId: "msg-" + uuidv4(),
     user: [{ type: "text", text: "Hello" }],
     callback: {
       chatCallback,
@@ -73,7 +73,7 @@ async function run() {
   });
   console.log("=================>\nresult1: ", result1);
   const result2 = await chatAgent.chat({
-    messageId: uuidv4(),
+    messageId: "msg-" + uuidv4(),
     user: [{ type: "text", text: "Search for information about Musk" }],
     callback: {
       chatCallback,

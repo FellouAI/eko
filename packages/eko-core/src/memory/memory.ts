@@ -20,7 +20,7 @@ export class EkoMemory {
   }
 
   public genMessageId(): string {
-    return uuidv4();
+    return "msg-" + uuidv4();
   }
 
   public async import(data: {

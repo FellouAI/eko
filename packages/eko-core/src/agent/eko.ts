@@ -1,7 +1,7 @@
 import config from "../config";
+import Log from "../common/log";
 import { Agent } from "../agent";
 import { Planner } from "./plan";
-import Log from "../common/log";
 import TaskContext from "./agent-context";
 import Chain, { AgentChain } from "./chain";
 import { buildAgentTree } from "../common/tree";

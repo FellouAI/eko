@@ -1,7 +1,14 @@
-import { chromium } from "playwright-extra";
-import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import { AgentContext, BaseBrowserLabelsAgent, Log } from "@eko-ai/eko";
-import { Page, Browser, ElementHandle, BrowserContext } from "playwright";
+import { chromium } from 'playwright-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { AgentContext, BaseBrowserLabelsAgent, Log } from '@eko-ai/eko';
+import { Page, Browser, ElementHandle, BrowserContext } from 'playwright';
+
+var tabId = 1000;
+
+type PageInfo = {
+  tabId: number;
+  lastAccessed: number;
+};
 
 export default class BrowserAgent extends BaseBrowserLabelsAgent {
   private cdpWsEndpoint?: string;
@@ -12,6 +19,9 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   private browser_context: BrowserContext | null = null;
   private current_page: Page | null = null;
   private headless: boolean = false;
+
+  private pageMap = new Map<Page, PageInfo>();
+  private activePage: Page | null = null;
 
   public setHeadless(headless: boolean) {
     this.headless = headless;
@@ -35,7 +45,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       path?: string;
       expires?: number;
       httpOnly?: boolean;
-    }>
+    }>,
   ) {
     this.cookies = cookies;
   }
@@ -45,24 +55,24 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   }
 
   protected async screenshot(
-    agentContext: AgentContext
-  ): Promise<{ imageBase64: string; imageType: "image/jpeg" | "image/png" }> {
+    agentContext: AgentContext,
+  ): Promise<{ imageBase64: string; imageType: 'image/jpeg' | 'image/png' }> {
     const page = await this.currentPage();
     const screenshotBuffer = await page.screenshot({
       fullPage: false,
-      type: "jpeg",
+      type: 'jpeg',
       quality: 60,
     });
-    const base64 = screenshotBuffer.toString("base64");
+    const base64 = screenshotBuffer.toString('base64');
     return {
-      imageType: "image/jpeg",
+      imageType: 'image/jpeg',
       imageBase64: base64,
     };
   }
 
   protected async navigate_to(
     agentContext: AgentContext,
-    url: string
+    url: string,
   ): Promise<{
     url: string;
     title?: string;
@@ -76,20 +86,50 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     };
   }
 
-  protected async get_all_tabs(
-    agentContext: AgentContext
-  ): Promise<Array<{ tabId: number; url: string; title: string }>> {
+  public async loadTabs() {
+    return await this.get_all_tabs(undefined);
+  }
+
+  public getPageMap() {
+    return this.pageMap;
+  }
+
+  protected async get_all_tabs(agentContext?: AgentContext): Promise<
+    Array<{
+      tabId: number;
+      url: string;
+      title: string;
+      lastAccessed?: number;
+      active: boolean;
+    }>
+  > {
     if (!this.browser_context) {
       return [];
     }
-    const result: Array<{ tabId: number; url: string; title: string }> = [];
-    const pages = await this.browser_context.pages();
+    const result: Array<{
+      tabId: number;
+      url: string;
+      title: string;
+      lastAccessed?: number;
+      active: boolean;
+    }> = [];
+    const pages = this.browser_context.pages();
     for (let i = 0; i < pages.length; i++) {
       let page = pages[i];
+      let pageInfo = this.pageMap.get(page);
+      if (!pageInfo) {
+        pageInfo = {
+          tabId: tabId++,
+          lastAccessed: Date.now(),
+        };
+        this.pageMap.set(page, pageInfo);
+      }
       result.push({
-        tabId: i,
+        tabId: pageInfo.tabId,
         url: page.url(),
         title: await page.title(),
+        lastAccessed: pageInfo.lastAccessed,
+        active: page === this.activePage,
       });
     }
     return result;
@@ -97,21 +137,27 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
 
   protected async switch_tab(
     agentContext: AgentContext,
-    tabId: number
+    tabId: number,
   ): Promise<{ tabId: number; url: string; title: string }> {
     if (!this.browser_context) {
-      throw new Error("tabId does not exist: " + tabId);
+      throw new Error('tabId does not exist: ' + tabId);
     }
-    const pages = await this.browser_context.pages();
-    const page = pages[tabId];
-    if (!page) {
-      throw new Error("tabId does not exist: " + tabId);
+    let switchPage: Page | null = null;
+    this.pageMap.forEach((pageInfo, page) => {
+      if (pageInfo.tabId === tabId) {
+        switchPage = page;
+        return;
+      }
+    });
+    if (!switchPage) {
+      throw new Error('tabId does not exist: ' + tabId);
     }
-    this.current_page = page;
+    this.current_page = switchPage;
+    this.activePage = switchPage;
     return {
       tabId: tabId,
-      url: page.url(),
-      title: await page.title(),
+      url: (switchPage as Page).url(),
+      title: await (switchPage as Page).title(),
     };
   }
 
@@ -119,14 +165,14 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     agentContext: AgentContext,
     index: number,
     text: string,
-    enter: boolean
+    enter: boolean,
   ): Promise<any> {
     try {
       const elementHandle = await this.get_element(index, true);
-      await elementHandle.fill("");
+      await elementHandle.fill('');
       await elementHandle.fill(text);
       if (enter) {
-        await elementHandle.press("Enter");
+        await elementHandle.press('Enter');
         await this.sleep(200);
       }
     } catch (e) {
@@ -138,7 +184,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     agentContext: AgentContext,
     index: number,
     num_clicks: number,
-    button: "left" | "right" | "middle"
+    button: 'left' | 'right' | 'middle',
   ): Promise<any> {
     try {
       const elementHandle = await this.get_element(index, true);
@@ -148,7 +194,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
         page.mouse.move(
           box.x + box.width / 2 + (Math.random() * 10 - 5),
           box.y + box.height / 2 + (Math.random() * 10 - 5),
-          { steps: Math.floor(Math.random() * 5) + 3 }
+          { steps: Math.floor(Math.random() * 5) + 3 },
         );
       }
       await elementHandle.click({
@@ -164,7 +210,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
 
   protected async hover_to_element(
     agentContext: AgentContext,
-    index: number
+    index: number,
   ): Promise<void> {
     try {
       const elementHandle = await this.get_element(index, true);
@@ -177,7 +223,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   protected async execute_script(
     agentContext: AgentContext,
     func: (...args: any[]) => void,
-    args: any[]
+    args: any[],
   ): Promise<any> {
     const page = await this.currentPage();
     return await page.evaluate(func, ...args);
@@ -185,7 +231,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
 
   private async open_url(
     agentContext: AgentContext,
-    url: string
+    url: string,
   ): Promise<Page> {
     const browser_context = await this.getBrowserContext();
     const page: Page = await browser_context.newPage();
@@ -195,12 +241,12 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       await this.autoLoadCookies(url);
       await this.autoLoadLocalStorage(page, url);
       await page.goto(url, {
-        waitUntil: "domcontentloaded",
+        waitUntil: 'domcontentloaded',
         timeout: 10000,
       });
-      await page.waitForLoadState("networkidle", { timeout: 5000 });
+      await page.waitForLoadState('networkidle', { timeout: 5000 });
     } catch (e) {
-      if ((e + "").indexOf("Timeout") == -1) {
+      if ((e + '').indexOf('Timeout') == -1) {
         throw e;
       }
     }
@@ -210,18 +256,18 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
 
   protected async currentPage(): Promise<Page> {
     if (this.current_page == null) {
-      throw new Error("There is no page, please call navigate_to first");
+      throw new Error('There is no page, please call navigate_to first');
     }
     const page = this.current_page as Page;
     try {
-      await page.waitForLoadState("domcontentloaded", { timeout: 10000 });
+      await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
     } catch (e) {}
     return page;
   }
 
   private async get_element(
     index: number,
-    findInput?: boolean
+    findInput?: boolean,
   ): Promise<ElementHandle> {
     const page = await this.currentPage();
     return await page.evaluateHandle(
@@ -229,19 +275,19 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
         let element = (window as any).get_highlight_element(params.index);
         if (element && params.findInput) {
           if (
-            element.tagName != "INPUT" &&
-            element.tagName != "TEXTAREA" &&
+            element.tagName != 'INPUT' &&
+            element.tagName != 'TEXTAREA' &&
             element.childElementCount != 0
           ) {
             element =
-              element.querySelector("input") ||
-              element.querySelector("textarea") ||
+              element.querySelector('input') ||
+              element.querySelector('textarea') ||
               element;
           }
         }
         return element;
       },
-      { index, findInput }
+      { index, findInput },
     );
   }
 
@@ -256,7 +302,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       if (this.cdpWsEndpoint) {
         this.browser = (await chromium.connectOverCDP(
           this.cdpWsEndpoint,
-          this.options
+          this.options,
         )) as unknown as Browser;
         this.browser_context = await this.browser.newContext({
           userAgent: this.getUserAgent(),
@@ -267,10 +313,10 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
           this.userDataDir,
           {
             headless: this.headless,
-            channel: "chrome",
+            channel: 'chrome',
             args: this.getChromiumArgs(),
             ...this.options,
-          }
+          },
         )) as unknown as BrowserContext;
       } else {
         this.browser = (await chromium.launch({
@@ -291,15 +337,23 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       if (init_script.content || init_script.path) {
         this.browser_context.addInitScript(init_script);
       }
-      this.browser_context.on("page", async (page) => {
-        page.on("framenavigated", async (frame) => {
+      this.browser_context.on('page', async (page) => {
+        this.activePage = page;
+        this.pageMap.set(page, {
+          tabId: tabId++,
+          lastAccessed: Date.now(),
+        });
+        page.on('framenavigated', async (frame) => {
           if (frame === page.mainFrame()) {
             const url = frame.url();
-            if (url.startsWith("http")) {
+            if (url.startsWith('http')) {
               await this.autoLoadCookies(url);
               await this.autoLoadLocalStorage(page, url);
             }
           }
+        });
+        page.on('close', () => {
+          this.pageMap.delete(page);
         });
       });
     }
@@ -317,7 +371,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
         await this.browser_context?.addCookies(cookies);
       }
     } catch (e) {
-      Log.error("Failed to auto load cookies: " + url, e);
+      Log.error('Failed to auto load cookies: ' + url, e);
     }
   }
 
@@ -330,11 +384,11 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
             localStorage.setItem(key, value);
           }
         } catch (e) {
-          Log.error("Failed to inject localStorage: " + url, e);
+          Log.error('Failed to inject localStorage: ' + url, e);
         }
       }, localStorageData);
     } catch (e) {
-      Log.error("Failed to auto load localStorage: " + url, e);
+      Log.error('Failed to auto load localStorage: ' + url, e);
     }
   }
 
@@ -348,7 +402,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       expires?: number;
       httpOnly?: boolean;
       secure?: boolean;
-      sameSite?: "Strict" | "Lax" | "None";
+      sameSite?: 'Strict' | 'Lax' | 'None';
       partitionKey?: string;
     }>
   > {
@@ -356,25 +410,25 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   }
 
   protected async loadLocalStorageWithUrl(
-    url: string
+    url: string,
   ): Promise<Record<string, string>> {
     return {};
   }
 
   protected getChromiumArgs(): string[] {
     return [
-      "--no-sandbox",
-      "--remote-allow-origins=*",
-      "--disable-dev-shm-usage",
-      "--disable-popup-blocking",
-      "--ignore-ssl-errors",
-      "--ignore-certificate-errors",
-      "--ignore-certificate-errors-spki-list",
-      "--disable-blink-features=AutomationControlled",
-      "--disable-infobars",
-      "--disable-notifications",
-      "--disable-web-security",
-      "--disable-features=IsolateOrigins,site-per-process",
+      '--no-sandbox',
+      '--remote-allow-origins=*',
+      '--disable-dev-shm-usage',
+      '--disable-popup-blocking',
+      '--ignore-ssl-errors',
+      '--ignore-certificate-errors',
+      '--ignore-certificate-errors-spki-list',
+      '--disable-blink-features=AutomationControlled',
+      '--disable-infobars',
+      '--disable-notifications',
+      '--disable-web-security',
+      '--disable-features=IsolateOrigins,site-per-process',
     ];
   }
 
@@ -392,5 +446,8 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   protected async initScript(): Promise<{ path?: string; content?: string }> {
     return {};
   }
+
+  public async getActivePage(): Promise<Page | null> {
+    return this.activePage;
+  }
 }
-export { BrowserAgent };

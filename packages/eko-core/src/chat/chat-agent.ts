@@ -33,10 +33,11 @@ export class ChatAgent {
   protected memory: EkoMemory;
   protected tools: DialogueTool[];
   protected chatContext: ChatContext;
+  protected maxReactLoopNum: number = 15;
 
   constructor(
     config: EkoDialogueConfig,
-    chatId: string = uuidv4(),
+    chatId: string = "chat-" + uuidv4(),
     memory?: EkoMemory,
     tools?: DialogueTool[]
   ) {
@@ -71,7 +72,7 @@ export class ChatAgent {
       await this.addUserMessage(params.messageId, params.user);
       const config = this.chatContext.getConfig();
       const rlm = new RetryLanguageModel(config.llms, config.chatLlms);
-      for (; reactLoopNum < 15; reactLoopNum++) {
+      for (; reactLoopNum < this.maxReactLoopNum; reactLoopNum++) {
         const messages = this.memory.buildMessages();
         const results = await callChatLLM(
           this.chatContext.getChatId(),

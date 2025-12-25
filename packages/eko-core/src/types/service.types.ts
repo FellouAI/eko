@@ -9,7 +9,7 @@ export type WebSearchResult = {
 
 export type PageTab = {
   tabId: string;
-  windowId: string;
+  windowId?: string;
   title: string;
   url: string;
   active: boolean;
