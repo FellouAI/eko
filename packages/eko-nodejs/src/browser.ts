@@ -10,7 +10,7 @@ type PageInfo = {
   lastAccessed: number;
 };
 
-export default class BrowserAgent extends BaseBrowserLabelsAgent {
+export class BrowserAgent extends BaseBrowserLabelsAgent {
   private cdpWsEndpoint?: string;
   private userDataDir?: string;
   private options?: Record<string, any>;
@@ -451,3 +451,5 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     return this.activePage;
   }
 }
+
+export default BrowserAgent;

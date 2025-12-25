@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2018",
-    "moduleResolution": "bundler",
+    "moduleResolution": "Bundler",
     "module": "ES6",
     "skipLibCheck": true,
     "strict": false,
@@ -10,6 +10,7 @@
     "noFallthroughCasesInSwitch": true,
     "isolatedModules": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "outDir": "./dist",
     "declaration": true,
     "declarationMap": true,

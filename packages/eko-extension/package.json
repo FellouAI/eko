@@ -1,11 +1,11 @@
 {
   "name": "@eko-ai/eko-extension",
-  "version": "4.0.9-alpha.1",
+  "version": "4.0.9-alpha.2",
   "description": "Empowering language to transform human words into action.",
-  "main": "dist/index.cjs.js",
-  "module": "dist/index.esm.js",
-  "types": "dist/index.d.ts",
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.esm.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist/",
     "LICENSE",
@@ -14,9 +14,10 @@
   ],
   "exports": {
     ".": {
-      "require": "./dist/index.cjs.js",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.esm.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.esm.js"
     }
   },
   "scripts": {

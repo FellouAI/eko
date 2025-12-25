@@ -9,9 +9,11 @@ export default [
     input: 'src/index.ts',
     output: [
       {
-        file: 'dist/index.cjs.js',
+        file: 'dist/index.cjs',
         format: 'cjs',
-        sourcemap: true
+        sourcemap: true,
+        exports: 'named',
+        interop: 'auto'
       }
     ],
     external: ["dotenv", "@eko-ai/eko", "canvas", "playwright", "playwright-extra", "puppeteer-extra-plugin-stealth"],
@@ -21,11 +23,20 @@ export default [
       resolve({
         preferBuiltins: true,
       }),
-      typescript(),
+      typescript({
+        declaration: true,
+        declarationMap: true,
+        compilerOptions: {
+          declaration: true,
+          declarationMap: true,
+          moduleResolution: 'Bundler',
+        }
+      }),
       copy({
         targets: [
           { src: '../../README.md', dest: './' }
-        ]
+        ],
+        hook: 'writeBundle'
       })
     ]
   },
@@ -46,11 +57,9 @@ export default [
         browser: true,
         preferBuiltins: true,
       }),
-      typescript(),
-      copy({
-        targets: [
-          { src: '../../README.md', dest: './' }
-        ]
+      typescript({
+        declaration: false,
+        declarationMap: false,
       })
     ]
   }
