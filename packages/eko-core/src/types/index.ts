@@ -70,7 +70,9 @@ export type { PageTab, PageContent, WebSearchResult } from "./service.types";
 
 export type {
   JSONSchema7,
+  LanguageModelV2Usage,
   LanguageModelV2Prompt,
+  LanguageModelV2Content,
   LanguageModelV2Message,
   SharedV2ProviderOptions,
   LanguageModelV2TextPart,
