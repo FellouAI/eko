@@ -87,7 +87,6 @@ export interface AgentExecution {
 
 export interface UploadedFile {
   id: string;
-  file: File;
   base64Data: string;
   mimeType: string;
   filename: string;

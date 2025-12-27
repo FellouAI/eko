@@ -199,8 +199,7 @@ const AppRun = () => {
         const base64Data = await fileToBase64(file);
         newFiles.push({
           id: uuidv4(),
-          file,
-          base64Data,
+          base64Data: base64Data,
           mimeType: file.type,
           filename: file.name,
         });

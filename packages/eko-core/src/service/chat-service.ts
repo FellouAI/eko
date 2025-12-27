@@ -8,7 +8,7 @@ export default interface ChatService {
   memoryRecall(chatId: string, prompt: string): Promise<string>;
 
   uploadFile(
-    file: File | { base64Data: string; mimeType: string; filename: string },
+    file: { base64Data: string; mimeType: string; filename?: string },
     chatId: string,
     taskId?: string | undefined // messageId
   ): Promise<{
