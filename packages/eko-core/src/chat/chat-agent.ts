@@ -182,7 +182,7 @@ export class ChatAgent {
 
   protected async addUserMessage(
     messageId: string,
-    user: string | EkoMessageUserPart[]
+    user: EkoMessageUserPart[]
   ): Promise<EkoMessage> {
     const message: EkoMessage = {
       id: messageId,

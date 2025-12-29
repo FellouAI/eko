@@ -63,7 +63,7 @@ export interface ChatStreamCallback {
 export type EkoMessage = { id: string } & (
   | {
       role: "user";
-      content: string | EkoMessageUserPart[];
+      content: EkoMessageUserPart[];
     }
   | {
       role: "assistant";
@@ -87,6 +87,7 @@ export type EkoMessageUserPart =
       type: "file";
       mimeType: string;
       data: string; // base64 / URL
+      filename?: string;
     };
 
 export type EkoMessageAssistantPart =
