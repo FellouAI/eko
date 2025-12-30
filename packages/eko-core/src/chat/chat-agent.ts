@@ -48,13 +48,6 @@ export class ChatAgent {
   }
 
   public async chat(params: DialogueParams): Promise<string> {
-    return this.doChat(params, false);
-  }
-
-  private async doChat(
-    params: DialogueParams,
-    segmentedExecution: boolean
-  ): Promise<string> {
     const runStartTime = Date.now();
     let reactLoopNum = 0;
     let errorInfo: string | null = null;

@@ -29,6 +29,7 @@ export interface TaskData {
   workflow?: Workflow;
   workflowStreamDone?: boolean;
   agents: AgentExecution[]; // Ordered by execution sequence
+  workflowConfirm?: "pending" | "confirm" | "cancel";
 }
 
 export type AgentContentItem =

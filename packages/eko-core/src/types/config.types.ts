@@ -19,6 +19,7 @@ export type Config = {
   maxOutputTokens: number;
   maxRetryNum: number;
   agentParallel: boolean;
+  workflowConfirm: boolean;
   compressThreshold: number; // Dialogue context compression threshold (message count)
   compressTokensThreshold: number; // Dialogue context compression threshold (token count)
   largeTextLength: number;
@@ -29,7 +30,7 @@ export type Config = {
   markImageMode: "dom" | "draw";
   expertModeTodoLoopNum: number;
   memoryConfig: MemoryConfig;
-}
+};
 
 export enum GlobalPromptKey {
   planner_system = "planner_system",
@@ -46,6 +47,6 @@ export type Global = {
   chatMap: Map<string, ChatContext>;
   taskMap: Map<string, TaskContext>; // messageId -> TaskContext
   prompts: Map<string, string>;
-  chatService?: ChatService,
-  browserService?: BrowserService,
+  chatService?: ChatService;
+  browserService?: BrowserService;
 };

@@ -45,8 +45,6 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
     }
   };
 
-  console.log("agent_error", agent?.error);
-
   return (
     <Card
       size="small"

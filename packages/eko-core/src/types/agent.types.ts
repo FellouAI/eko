@@ -27,6 +27,11 @@ export type AgentStreamMessage = {
       workflow: Workflow;
     }
   | {
+      type: "workflow_confirm";
+      workflow: Workflow;
+      resolve: (result: "confirm" | "cancel") => void;
+    }
+  | {
       type: "agent_start";
       agentNode: WorkflowAgent;
     }

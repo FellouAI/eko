@@ -1,5 +1,6 @@
 import {
   LLMs,
+  config,
   global,
   uuidv4,
   ChatAgent,
@@ -18,7 +19,7 @@ import WriteFileAgent from "./agent/file-agent";
 import { BrowserAgent } from "@eko-ai/eko-extension";
 
 var chatAgent: ChatAgent | null = null;
-const humanCallbackIdMap = new Map<string, Function>();
+const callbackIdMap = new Map<string, Function>();
 const abortControllers = new Map<string, AbortController>();
 
 // Chat callback
@@ -39,6 +40,12 @@ const taskCallback: AgentStreamCallback & HumanCallback = {
       type: "task_callback",
       data: { ...message, messageId: message.taskId },
     });
+    if (message.type === "workflow_confirm") {
+      callbackIdMap.set(message.taskId, (value: "confirm" | "cancel") => {
+        callbackIdMap.delete(message.taskId);
+        message.resolve(value);
+      });
+    }
     console.log("task message: ", JSON.stringify(message, null, 2));
   },
   onHumanConfirm: async (context: AgentContext, prompt: string) => {
@@ -59,8 +66,8 @@ const taskCallback: AgentStreamCallback & HumanCallback = {
     });
     console.log("human_confirm: ", prompt);
     return new Promise((resolve) => {
-      humanCallbackIdMap.set(callbackId, (value: boolean) => {
-        humanCallbackIdMap.delete(callbackId);
+      callbackIdMap.set(callbackId, (value: boolean) => {
+        callbackIdMap.delete(callbackId);
         resolve(value);
       });
     });
@@ -83,8 +90,8 @@ const taskCallback: AgentStreamCallback & HumanCallback = {
     });
     console.log("human_input: ", prompt);
     return new Promise((resolve) => {
-      humanCallbackIdMap.set(callbackId, (value: string) => {
-        humanCallbackIdMap.delete(callbackId);
+      callbackIdMap.set(callbackId, (value: string) => {
+        callbackIdMap.delete(callbackId);
         resolve(value);
       });
     });
@@ -114,8 +121,8 @@ const taskCallback: AgentStreamCallback & HumanCallback = {
     });
     console.log("human_select: ", prompt);
     return new Promise((resolve) => {
-      humanCallbackIdMap.set(callbackId, (value: string[]) => {
-        humanCallbackIdMap.delete(callbackId);
+      callbackIdMap.set(callbackId, (value: string[]) => {
+        callbackIdMap.delete(callbackId);
         resolve(value);
       });
     });
@@ -143,8 +150,8 @@ const taskCallback: AgentStreamCallback & HumanCallback = {
     });
     console.log("human_help: ", prompt);
     return new Promise((resolve) => {
-      humanCallbackIdMap.set(callbackId, (value: boolean) => {
-        humanCallbackIdMap.delete(callbackId);
+      callbackIdMap.set(callbackId, (value: boolean) => {
+        callbackIdMap.delete(callbackId);
         resolve(value);
       });
     });
@@ -252,20 +259,17 @@ async function handleChat(requestId: string, data: any): Promise<void> {
   }
 }
 
-// Handle human callback request
-async function handleHumanCallback(
-  requestId: string,
-  data: any
-): Promise<void> {
+// Handle callback request
+async function handleCallback(requestId: string, data: any): Promise<void> {
   const callbackId = data.callbackId as string;
   const value = data.value as any;
-  const callback = humanCallbackIdMap.get(callbackId);
+  const callback = callbackIdMap.get(callbackId);
   if (callback) {
     callback(value);
   }
   chrome.runtime.sendMessage({
     requestId,
-    type: "human_callback_result",
+    type: "callback_result",
     data: { callbackId, success: callback != null },
   });
 }
@@ -306,6 +310,12 @@ async function handleUploadFile(requestId: string, data: any): Promise<void> {
 
 // Handle stop request
 async function handleStop(requestId: string, data: any): Promise<void> {
+  if (config.workflowConfirm) {
+    const workflowConfirmCallback = callbackIdMap.get(data.messageId);
+    if (workflowConfirmCallback) {
+      workflowConfirmCallback("cancel");
+    }
+  }
   const abortController = abortControllers.get(data.messageId);
   if (abortController) {
     abortController.abort("User aborted");
@@ -370,7 +380,7 @@ const eventHandlers: Record<
   (requestId: string, data: any) => Promise<void>
 > = {
   chat: handleChat,
-  human_callback: handleHumanCallback,
+  callback: handleCallback,
   uploadFile: handleUploadFile,
   stop: handleStop,
   clear_messages: handleClearMessages,

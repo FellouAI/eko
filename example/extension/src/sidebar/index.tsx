@@ -19,6 +19,14 @@ const AppRun = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [updateTrigger, setUpdateTrigger] = useState(0);
+
+  const forceUpdate = useCallback((status?: "stop") => {
+    if (status === "stop") {
+      setCurrentMessageId(null);
+    }
+    setUpdateTrigger(prev => prev + 1);
+  }, [setCurrentMessageId]);
 
   const { handleChatCallback, handleTaskCallback } = useChatCallbacks(
     setMessages,
@@ -294,7 +302,7 @@ const AppRun = () => {
           />
         ) : (
           messages.map((message) => (
-            <MessageItem key={message.id} message={message} />
+            <MessageItem key={message.id} message={message} onUpdateMessage={forceUpdate} />
           ))
         )}
         <div ref={messagesEndRef} />

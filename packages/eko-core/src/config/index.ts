@@ -8,6 +8,7 @@ const config: Config = {
   maxOutputTokens: 16000,
   maxRetryNum: 3,
   agentParallel: false,
+  workflowConfirm: false,
   compressThreshold: 80,
   compressTokensThreshold: 80000,
   largeTextLength: 8000,

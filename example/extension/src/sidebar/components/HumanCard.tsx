@@ -19,7 +19,7 @@ const { Text } = Typography;
 // Human callback handler
 const sendHumanCallback = (callbackId: string, value: any) => {
   chrome.runtime.sendMessage({
-    type: "human_callback",
+    type: "callback",
     data: { callbackId, value },
   });
 };

@@ -262,6 +262,8 @@ export const useChatCallbacks = (
         if (data.type === "workflow") {
           taskItem.task.workflow = data.workflow;
           taskItem.task.workflowStreamDone = data.streamDone;
+        } else if (data.type === "workflow_confirm") {
+          taskItem.task.workflowConfirm = "pending";
         } else if (data.type === "agent_start") {
           const existingAgent = taskItem.task.agents.find(
             (a) => a.agentNode.id === data.nodeId

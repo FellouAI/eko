@@ -6,6 +6,8 @@ import {
   GlobalPromptKey,
   LanguageModelV2ToolCallPart,
 } from "../../types";
+import config from "../../config";
+import Log from "../../common/log";
 import { sub } from "../../common/utils";
 import global from "../../config/global";
 import Eko, { Agent } from "../../agent";
@@ -79,11 +81,11 @@ export default class DeepActionTool implements DialogueTool {
     const taskDescription = args.taskDescription as string;
     const tabIds = args.tabIds as string[];
     const dependentVariables = args.dependentVariables as string[];
-    const config = this.chatContext.getConfig();
+    const chatConfig = this.chatContext.getConfig();
     const globalVariables = this.chatContext.getGlobalVariables();
     const eko = new Eko(
       {
-        ...config,
+        ...chatConfig,
         callback: this.params.callback?.taskCallback,
       },
       chatId
@@ -101,7 +103,7 @@ export default class DeepActionTool implements DialogueTool {
     }
     const attachments = this.params.user
       .filter((part) => part.type === "file")
-      .filter((part) => part.data && part.data.length < 500)
+      .filter((part) => part.data && part.data.length < 1000)
       .map((part) => {
         return {
           file_name: part.filename,
@@ -121,7 +123,30 @@ export default class DeepActionTool implements DialogueTool {
       datetime: this.params.datetime || new Date().toLocaleString(),
     });
     const context = eko.getTask(messageId)!;
-    console.log("==> workflow", workflow);
+    Log.info("==> workflow", workflow);
+    if (config.workflowConfirm && this.params.callback?.taskCallback) {
+      const result = await new Promise<"confirm" | "cancel">((resolve) => {
+        this.params.callback.taskCallback?.onMessage({
+          streamType: "agent",
+          chatId: context.chatId,
+          taskId: context.taskId,
+          agentName: "",
+          type: "workflow_confirm",
+          workflow: workflow,
+          resolve,
+        });
+      });
+      if (result == "cancel") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "User has canceled the execution.",
+            },
+          ],
+        };
+      }
+    }
     const result = await eko.execute(messageId);
     const variableNames: string[] = [];
     if (context.variables && context.variables.size > 0) {
