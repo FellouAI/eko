@@ -52,11 +52,14 @@ async function run() {
     new FileAgent(),
   ];
   const eko = new Eko({ llms, agents, callback });
-  const result = await eko.run(
-    `Open GitHub, search for the FellouAI/eko repository, click star,
-    and summarize the eko introduction information, then save it to the fellou-eko.md file on the desktop`
-  );
-  console.log("Task result: \n", result.result);
+  try {
+    const result = await eko.run(
+      "Open GitHub, search for the FellouAI/eko repository, click star, and summarize the eko introduction information, then save it to the fellou-eko.md file on the desktop"
+    );
+    console.log("Task result: \n", result.result);
+  } finally {
+    process.exit(0);
+  }
 }
 
 run().catch((e) => {

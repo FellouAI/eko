@@ -18,7 +18,7 @@ export default {
       "keytar",
       "bindings",
       "level",
-      "leveldown",
+      "leveldown"
     ].some((mod) => id === mod || id.startsWith(mod + "/")) ||
     id.endsWith(".node"),
   plugins: [
@@ -29,6 +29,12 @@ export default {
     resolve({
       preferBuiltins: true,
     }),
-    typescript(),
+    typescript({
+      tsconfig: "./tsconfig.json",
+      compilerOptions: {
+        target: "ES2020",
+        module: "ESNext",
+      },
+    }),
   ],
 };
