@@ -62,6 +62,7 @@ export class BrowserAgent extends BaseBrowserLabelsAgent {
       fullPage: false,
       type: "jpeg",
       quality: 60,
+      animations: "disabled",
     });
     const base64 = screenshotBuffer.toString("base64");
     return {
@@ -236,8 +237,6 @@ export class BrowserAgent extends BaseBrowserLabelsAgent {
   ): Promise<Page> {
     const browser_context = await this.getBrowserContext();
     const page: Page = await browser_context.newPage();
-    // await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.setViewportSize({ width: 1536, height: 864 });
     try {
       await this.autoLoadCookies(url);
       await this.autoLoadLocalStorage(page, url);
@@ -321,6 +320,7 @@ export class BrowserAgent extends BaseBrowserLabelsAgent {
     if (!this.browserContext) {
       this.activePage = null;
       this.browserContext = null;
+      const viewport = this.options?.viewport || { width: 1536, height: 864 };
       if (this.cdpWsEndpoint) {
         this.browser = (await chromium.connectOverCDP(
           this.cdpWsEndpoint,
@@ -328,7 +328,7 @@ export class BrowserAgent extends BaseBrowserLabelsAgent {
         )) as unknown as Browser;
         this.browserContext = await this.browser.newContext({
           userAgent: this.getUserAgent(),
-          viewport: { width: 1536, height: 864 },
+          viewport: viewport,
         });
       } else if (this.userDataDir) {
         this.browserContext = (await chromium.launchPersistentContext(
@@ -337,6 +337,7 @@ export class BrowserAgent extends BaseBrowserLabelsAgent {
             headless: this.headless,
             channel: "chrome",
             args: this.getChromiumArgs(),
+            viewport: viewport,
             ...this.options,
           }
         )) as unknown as BrowserContext;
@@ -348,7 +349,7 @@ export class BrowserAgent extends BaseBrowserLabelsAgent {
         })) as unknown as Browser;
         this.browserContext = await this.browser.newContext({
           userAgent: this.getUserAgent(),
-          viewport: { width: 1536, height: 864 },
+          viewport: viewport,
         });
       }
       // Anti-crawling detection website:
