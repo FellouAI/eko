@@ -8,10 +8,10 @@ import config from "../config";
 import { Tool } from "../types";
 import Log from "../common/log";
 import TaskSnapshotTool from "./snapshot";
-import { callAgentLLM } from "../agent/agent-llm";
 import { RetryLanguageModel } from "../llm";
-import { fixJson, mergeTools, sub } from "../common/utils";
+import { callAgentLLM } from "../agent/agent-llm";
 import { AgentContext } from "../agent/agent-context";
+import { fixJson, mergeTools, sub } from "../common/utils";
 
 export function extractUsedTool<T extends Tool | LanguageModelV2FunctionTool>(
   messages: LanguageModelV2Prompt,
@@ -172,25 +172,28 @@ async function doCompressAgentMessages(
   });
 }
 
-function compressLargeContextMessages(messages: LanguageModelV2Prompt) {
+export function compressLargeContextMessages(
+  messages: LanguageModelV2Prompt,
+  largeTextLength: number = config.largeTextLength
+) {
   for (let r = 2; r < messages.length; r++) {
     const message = messages[r];
     if (message.role == "assistant") {
       message.content = message.content.map((c) => {
-        if (c.type == "text" && c.text.length > config.largeTextLength) {
+        if (c.type == "text" && c.text.length > largeTextLength) {
           return {
             ...c,
-            text: sub(c.text, config.largeTextLength, true),
+            text: sub(c.text, largeTextLength, true),
           };
         }
         return c;
       });
     } else if (message.role == "user") {
       message.content = message.content.map((c) => {
-        if (c.type == "text" && c.text.length > config.largeTextLength) {
+        if (c.type == "text" && c.text.length > largeTextLength) {
           return {
             ...c,
-            text: sub(c.text, config.largeTextLength, true),
+            text: sub(c.text, largeTextLength, true),
           };
         }
         return c;
@@ -201,22 +204,22 @@ function compressLargeContextMessages(messages: LanguageModelV2Prompt) {
           const output = c.output;
           if (
             (output.type == "text" || output.type == "error-text") &&
-            output.value.length > config.largeTextLength
+            output.value.length > largeTextLength
           ) {
             return {
               ...c,
               output: {
                 ...output,
-                value: sub(output.value, config.largeTextLength, true),
+                value: sub(output.value, largeTextLength, true),
               },
             };
           } else if (
             (output.type == "json" || output.type == "error-json") &&
-            JSON.stringify(output.value).length > config.largeTextLength
+            JSON.stringify(output.value).length > largeTextLength
           ) {
             const json_str = sub(
               JSON.stringify(output.value),
-              config.largeTextLength,
+              largeTextLength,
               false
             );
             const json_obj = fixJson(json_str);
@@ -243,9 +246,9 @@ function compressLargeContextMessages(messages: LanguageModelV2Prompt) {
               const content = output.value[i];
               if (
                 content.type == "text" &&
-                content.text.length > config.largeTextLength
+                content.text.length > largeTextLength
               ) {
-                content.text = sub(content.text, config.largeTextLength, true);
+                content.text = sub(content.text, largeTextLength, true);
               }
             }
           }
@@ -256,7 +259,10 @@ function compressLargeContextMessages(messages: LanguageModelV2Prompt) {
   }
 }
 
-export function handleLargeContextMessages(messages: LanguageModelV2Prompt) {
+export function handleLargeContextMessages(
+  messages: LanguageModelV2Prompt,
+  largeTextLength: number = config.largeTextLength
+) {
   let imageNum = 0;
   let fileNum = 0;
   let maxNum = config.maxDialogueImgFileNum;
@@ -313,7 +319,7 @@ export function handleLargeContextMessages(messages: LanguageModelV2Prompt) {
           let _content = toolContent.value[r];
           if (
             _content.type == "text" &&
-            _content.text?.length > config.largeTextLength
+            _content.text?.length > largeTextLength
           ) {
             if (!longTextTools[toolResult.toolName]) {
               longTextTools[toolResult.toolName] = 1;
@@ -323,7 +329,7 @@ export function handleLargeContextMessages(messages: LanguageModelV2Prompt) {
             }
             _content = {
               type: "text",
-              text: sub(_content.text, config.largeTextLength, true),
+              text: sub(_content.text, largeTextLength, true),
             };
             toolContent.value[r] = _content;
           }

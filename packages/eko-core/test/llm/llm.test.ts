@@ -22,6 +22,11 @@ const llms: LLMs = {
     config: {
       baseURL: openaiBaseURL,
     },
+    options: {
+      stream_options: {
+        include_usage: true,
+      },
+    },
     fetch: (url, options) => {
       const body = JSON.parse(options?.body as string);
       body.user = "zhuowei@fellou.ai";

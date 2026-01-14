@@ -93,7 +93,15 @@ export class RetryLanguageModel {
       if (!providerOptions) {
         options.providerOptions = defaultLLMProviderOptions();
         if (llmConfig.options && Object.keys(llmConfig.options).length > 0) {
-          options.providerOptions[llm.provider] = llmConfig.options;
+          // Filter out keys that start with 'stream_'
+          options.providerOptions[llm.provider] = Object.entries(
+            llmConfig.options
+          ).reduce((acc, [key, value]) => {
+            if (!key.startsWith("stream_")) {
+              acc[key] = value;
+            }
+            return acc;
+          }, {} as Record<string, any>);
         }
       }
       let _options = options;

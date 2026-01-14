@@ -63,6 +63,7 @@ export {
   uuidv4,
   toFile,
   toImage,
+  fixJson,
   mergeTools,
   call_timeout,
   compressImageData,
@@ -74,6 +75,11 @@ export {
   resetWorkflowXml,
   buildSimpleAgentWorkflow,
 } from "./common/xml";
+
+export {
+  handleLargeContextMessages,
+  compressLargeContextMessages,
+} from "./memory";
 
 export { buildAgentTree } from "./common/tree";
 export { PromptTemplate } from "./prompt/prompt-template";
