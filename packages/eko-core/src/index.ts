@@ -56,6 +56,24 @@ export {
   VariableStorageTool,
 } from "./tools";
 
+// Noda VR Mind Mapping Integration
+export {
+  NodaAgent,
+  type NodaAgentParams,
+  // Tools
+  NodaCreateNodeTool,
+  NodaUpdateNodeTool,
+  NodaDeleteNodeTool,
+  NodaListNodesTool,
+  NodaCreateLinkTool,
+  NodaUpdateLinkTool,
+  NodaDeleteLinkTool,
+  NodaListLinksTool,
+  NodaGetUserTool,
+  NodaBuildMindmapTool,
+  getAllNodaTools,
+} from "./noda";
+
 export type { ChatService, BrowserService } from "./service";
 
 export {
