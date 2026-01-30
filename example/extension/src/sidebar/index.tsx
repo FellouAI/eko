@@ -259,7 +259,7 @@ const AppRun = () => {
         display: "flex",
         flexDirection: "column",
         height: "100vh",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#1e1e1e",
       }}
     >
       {/* Message area */}
@@ -270,7 +270,7 @@ const AppRun = () => {
           overflowY: "auto",
           overflowX: "hidden",
           padding: "16px",
-          backgroundColor: "#f5f5f5",
+          backgroundColor: "#1e1e1e",
           position: "relative",
         }}
       >
@@ -297,8 +297,8 @@ const AppRun = () => {
         )}
         {messages.length === 0 ? (
           <Empty
-            description="Start a conversation!"
-            style={{ marginTop: "20vh" }}
+            description={<span style={{ color: "#a0a0a0" }}>Start a conversation!</span>}
+            style={{ marginTop: "20vh", color: "#a0a0a0" }}
           />
         ) : (
           messages.map((message) => (

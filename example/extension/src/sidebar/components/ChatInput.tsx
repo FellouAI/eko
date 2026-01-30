@@ -41,8 +41,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     <div
       style={{
         padding: "16px",
-        backgroundColor: "#ffffff",
-        borderTop: "1px solid #e8e8e8",
+        backgroundColor: "#2d2d2d",
+        borderTop: "1px solid #424242",
       }}
     >
       {uploadedFiles.length > 0 && (
@@ -57,9 +57,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     display: "inline-flex",
                     alignItems: "center",
                     padding: "4px 8px",
-                    backgroundColor: "#f5f5f5",
+                    backgroundColor: "#424242",
                     borderRadius: 4,
-                    border: "1px solid #d9d9d9",
+                    border: "1px solid #616161",
                   }}
                 >
                   {isImage ? (
@@ -90,6 +90,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
+                      color: "#e0e0e0",
                     }}
                   >
                     {file.filename}
