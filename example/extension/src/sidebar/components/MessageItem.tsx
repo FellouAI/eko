@@ -121,8 +121,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onUpdateMessa
         <Card
           style={{
             maxWidth: "70%",
-            backgroundColor: "#1890ff",
+            backgroundColor: "#722ed1",
             color: "white",
+            border: "none",
           }}
           styles={{
             body: { padding: "12px 16px" },
@@ -194,13 +195,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onUpdateMessa
   return (
     <div style={{ marginBottom: 16 }}>
       <Card
-        style={{ backgroundColor: "#fafafa" }}
+        style={{ backgroundColor: "#2d2d2d", border: "1px solid #424242" }}
         title={
           <Space>
-            <RobotOutlined />
-            <Text strong>AI Assistant</Text>
+            <RobotOutlined style={{ color: "#e0e0e0" }} />
+            <Text strong style={{ color: "#e0e0e0" }}>AI Assistant</Text>
           </Space>
         }
+        headStyle={{ borderBottom: "1px solid #424242", color: "#e0e0e0" }}
+        bodyStyle={{ color: "#e0e0e0" }}
       >
         {message.contentItems && message.contentItems.length > 0 ? (
           message.contentItems.map((item, index) => {

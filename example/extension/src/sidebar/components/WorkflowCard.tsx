@@ -60,15 +60,17 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
         size="small"
         title={
           <Space>
-            <RobotOutlined />
-            <Text strong>Multi-Agent Workflow</Text>
+            <RobotOutlined style={{ color: "#e0e0e0" }} />
+            <Text strong style={{ color: "#e0e0e0" }}>Multi-Agent Workflow</Text>
             {!task.workflowStreamDone && <Spin size="small" />}
           </Space>
         }
-        style={{ backgroundColor: "#f0f7ff" }}
+        style={{ backgroundColor: "#2d2d2d", borderColor: "#424242" }}
+        headStyle={{ borderBottom: "1px solid #424242", color: "#e0e0e0" }}
+        bodyStyle={{ color: "#e0e0e0" }}
       >
         {workflow.thought && (
-          <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+          <Paragraph style={{ marginBottom: 16, color: "#b0b0b0" }}>
             {workflow.thought}
           </Paragraph>
         )}
@@ -82,7 +84,7 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
             ) : (
               // Parallel agents
               <div>
-                <Text strong style={{ color: "#1890ff" }}>
+                <Text strong style={{ color: "#722ed1" }}>
                   [{group.map((a) => a.name).join(", ")}]
                 </Text>
                 <div style={{ marginLeft: 16, marginTop: 8 }}>

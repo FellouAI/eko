@@ -50,20 +50,24 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
       size="small"
       style={{
         marginBottom: 8,
+        backgroundColor: "#2d2d2d",
+        borderColor: "#424242",
         borderLeft: `3px solid ${
           status === "done"
             ? "#52c41a"
             : status === "error"
             ? "#ff4d4f"
             : status === "running"
-            ? "#1890ff"
-            : "#d9d9d9"
+            ? "#722ed1"
+            : "#616161"
         }`,
       }}
+      headStyle={{ borderBottom: "1px solid #424242", color: "#e0e0e0" }}
+      bodyStyle={{ color: "#e0e0e0" }}
       title={
         <Space>
-          <Text strong>{agentNode.name}</Text>
-          {status === "running" && <Spin size="small" />}
+          <Text strong style={{ color: "#e0e0e0" }}>{agentNode.name}</Text>
+          {status === "running" && <Spin size="small" style={{ color: "#722ed1" }} />}
           {status === "done" && (
             <Tag color="success" icon={<CheckCircleOutlined />}>
               Completed
@@ -78,7 +82,7 @@ export const AgentExecutionCard: React.FC<AgentExecutionCardProps> = ({
       }
     >
       {agentNode.task && (
-        <Paragraph type="secondary" style={{ marginBottom: 8 }}>
+        <Paragraph style={{ marginBottom: 8, color: "#b0b0b0" }}>
           {agentNode.task}
         </Paragraph>
       )}
