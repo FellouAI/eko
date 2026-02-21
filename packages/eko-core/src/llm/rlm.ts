@@ -40,7 +40,7 @@ export class RetryLanguageModel {
     this.llms = llms;
     this.names = names || [];
     context && this.setContext(context);
-    this.stream_first_timeout = stream_first_timeout || 30_000;
+    this.stream_first_timeout = stream_first_timeout || 45_000;
     this.stream_token_timeout = stream_token_timeout || 180_000;
     if (this.names.indexOf("default") == -1) {
       this.names.push("default");
@@ -235,12 +235,11 @@ export class RetryLanguageModel {
         }
         lastError = e;
         if (Log.isEnableInfo()) {
-          Log.info(`LLM stream request, name: ${name} => `, {
-            tools: _options.tools,
+          Log.info(`LLM stream request, name: ${name} => `, e, {
             messages: _options.prompt,
+            tools: _options.tools,
           });
         }
-        Log.error(`LLM error, name: ${name} => `, e);
       }
     }
     return Promise.reject(

@@ -10,7 +10,7 @@ const OptionsPage = () => {
   const [config, setConfig] = useState({
     llm: "anthropic",
     apiKey: "",
-    modelName: "claude-sonnet-4-5-20250929",
+    modelName: "claude-sonnet-4-6",
     options: {
       baseURL: "https://api.anthropic.com/v1",
     },
@@ -76,9 +76,10 @@ const OptionsPage = () => {
   const modelOptions = {
     anthropic: [
       {
-        value: "claude-sonnet-4-5-20250929",
-        label: "Claude Sonnet 4.5 (default)",
+        value: "claude-sonnet-4-6",
+        label: "Claude Sonnet 4.6 (default)",
       },
+      { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5" },
       { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
       { value: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet" },
     ],
@@ -93,11 +94,11 @@ const OptionsPage = () => {
     ],
     openrouter: [
       {
-        value: "anthropic/claude-sonnet-4.5",
-        label: "claude-sonnet-4.5 (default)",
+        value: "anthropic/claude-sonnet-4.6",
+        label: "claude-sonnet-4.6 (default)",
       },
+      { value: "anthropic/claude-sonnet-4.5", label: "claude-sonnet-4.5" },
       { value: "anthropic/claude-sonnet-4", label: "claude-sonnet-4" },
-      { value: "anthropic/claude-3.7-sonnet", label: "claude-3.7-sonnet" },
       { value: "google/gemini-3-pro-preview", label: "gemini-3-pro-preview" },
       {
         value: "google/gemini-3-flash-preview",
@@ -127,8 +128,12 @@ const OptionsPage = () => {
     ],
     bedrock: [
       {
+        value: "us.anthropic.claude-sonnet-4-6",
+        label: "claude-sonnet-4-6 (default)",
+      },
+      {
         value: "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-        label: "claude-sonnet-4-5 (default)",
+        label: "claude-sonnet-4-5",
       },
       {
         value: "us.anthropic.claude-opus-4-1-20250805-v1:0",

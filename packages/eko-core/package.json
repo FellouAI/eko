@@ -50,7 +50,7 @@
     "@ai-sdk/google": "^2.0.45",
     "@ai-sdk/openai": "^2.0.85",
     "@ai-sdk/openai-compatible": "^1.0.29",
-    "@openrouter/ai-sdk-provider": "^1.5.3",
+    "@openrouter/ai-sdk-provider": "^1.5.4",
     "secure-json-parse": "^4.1.0",
     "@xmldom/xmldom": "^0.8.11",
     "zod": "^4.1.13"
