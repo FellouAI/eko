@@ -442,21 +442,34 @@ export async function callLLM(
       }
     }
   } catch (e: any) {
-    if (retryNum < config.maxRetryNum) {
-      await sleep(200 * (retryNum + 1) * (retryNum + 1));
+    if (e instanceof Error && e.name === "AbortError") {
       if (errorHandler) {
         await errorHandler(request, e, retryNum);
       }
-      return callLLM(
-        rlm,
-        request,
-        streamCallback,
-        errorHandler,
-        finishHandler,
-        ++retryNum
-      );
+      Log.warn("callLLM abort error: ", e);
+      return streamText
+        ? [
+            { type: "text", text: streamText } as LanguageModelV2TextPart,
+            ...toolParts,
+          ]
+        : toolParts;
+    } else {
+      if (retryNum < config.maxRetryNum) {
+        await sleep(200 * (retryNum + 1) * (retryNum + 1));
+        if (errorHandler) {
+          await errorHandler(request, e, retryNum);
+        }
+        return callLLM(
+          rlm,
+          request,
+          streamCallback,
+          errorHandler,
+          finishHandler,
+          ++retryNum
+        );
+      }
+      throw e;
     }
-    throw e;
   } finally {
     reader && reader.releaseLock();
   }
