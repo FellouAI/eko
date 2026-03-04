@@ -5,6 +5,7 @@ import {
   BaseBrowserScreenAgent,
 } from "./browser";
 import { Agent, AgentParams } from "./base";
+import { NodaAgent, NodaAgentParams } from "../noda/agent";
 
 export default Eko;
 
@@ -14,4 +15,6 @@ export {
   BaseBrowserAgent,
   BaseBrowserLabelsAgent,
   BaseBrowserScreenAgent,
+  NodaAgent,
+  type NodaAgentParams,
 };
