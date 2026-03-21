@@ -30,6 +30,7 @@ export type LLMprovider =
   | "openrouter"
   | "openai-compatible"
   | "modelscope"
+  | "minimax"
   | ProviderV2;
 
 export type LLMConfig = {

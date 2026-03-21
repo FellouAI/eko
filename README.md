@@ -105,6 +105,12 @@ const llms: LLMs = {
     config: {
       baseURL: "https://ark.cn-beijing.volces.com/api/v3"  // Volcengine endpoint
     }
+  },
+  // MiniMax
+  minimax: {
+    provider: "minimax",
+    model: "MiniMax-M2.7",  // or MiniMax-M2.5, MiniMax-M2.5-highspeed
+    apiKey: "your-minimax-api-key"
   }
 
 };
