@@ -358,6 +358,14 @@ export class RetryLanguageModel {
         fetch: llm.fetch,
         headers: llm.config?.headers,
       }).languageModel(llm.model);
+    } else if (llm.provider == "minimax") {
+      return createOpenAICompatible({
+        name: llm.config?.name || "minimax",
+        apiKey: apiKey,
+        baseURL: baseURL || "https://api.minimax.io/v1",
+        fetch: llm.fetch,
+        headers: llm.config?.headers,
+      }).languageModel(llm.model);
     } else {
       return llm.provider.languageModel(llm.model);
     }
