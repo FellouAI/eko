@@ -18,6 +18,7 @@
   "dependencies": {
     "@eko-ai/eko": "workspace:*",
     "@eko-ai/eko-nodejs": "workspace:*",
+    "exa-js": "^2.11.0",
     "canvas": "^3.2.0",
     "glob": "^11.0.2",
     "keytar": "^7.9.0",
