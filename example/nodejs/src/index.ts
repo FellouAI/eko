@@ -1,8 +1,9 @@
 import dotenv from "dotenv";
 import FileAgent from "./file-agent";
 import LocalCookiesBrowserAgent from "./browser";
+import { ExaChatService } from "./exa-chat-service";
 import { BrowserAgent } from "@eko-ai/eko-nodejs";
-import { Eko, Log, LLMs, Agent, AgentStreamMessage } from "@eko-ai/eko";
+import { Eko, Log, LLMs, Agent, AgentStreamMessage, global } from "@eko-ai/eko";
 
 dotenv.config();
 
@@ -44,6 +45,10 @@ function testBrowserLoginStatus() {
 
 async function run() {
   Log.setLevel(1);
+  // Enable Exa-powered web search (requires EXA_API_KEY in .env)
+  if (process.env.EXA_API_KEY) {
+    global.chatService = new ExaChatService();
+  }
   // Use local browser cookie login state, will read local Chrome's cookie and localStorage information
   // If a password dialog pops up, please enter your computer password and click "Always Allow"
   const agents: Agent[] = [
