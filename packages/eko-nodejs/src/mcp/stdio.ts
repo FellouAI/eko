@@ -18,6 +18,7 @@ export class SimpleStdioMcpClient implements IMcpClient {
   private options?: SpawnOptionsWithoutStdio;
   private process: ChildProcessWithoutNullStreams | null = null;
   private requestMap: Map<string, (messageData: any) => void>;
+  private stdoutBuffer: string = "";
 
   constructor(
     command: string,
@@ -39,17 +40,29 @@ export class SimpleStdioMcpClient implements IMcpClient {
       } catch (e) {}
     }
     this.process = spawn(this.command, this.args, this.options);
-    this.process.stdout.on("data", (data) => {
-      const response = data.toString().trim();
-      Log.debug("MCP Client, onmessage", this.command, this.args, response);
-      if (!response.startsWith("{")) {
-        return;
-      }
-      const message = JSON.parse(response);
-      if (message.id) {
-        const callback = this.requestMap.get(message.id);
-        if (callback) {
-          callback(message);
+    this.process.stdout.on("data", (chunk: Buffer) => {
+      this.stdoutBuffer += chunk.toString();
+      // Split on newlines and parse complete lines only
+      const lines = this.stdoutBuffer.split("\n");
+      // Keep the last (potentially incomplete) line in the buffer
+      this.stdoutBuffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("{")) {
+          continue;
+        }
+        try {
+          const message = JSON.parse(trimmed);
+          Log.debug("MCP Client, onmessage", this.command, this.args, trimmed);
+          if (message.id) {
+            const callback = this.requestMap.get(message.id);
+            if (callback) {
+              this.requestMap.delete(message.id);
+              callback(message);
+            }
+          }
+        } catch {
+          // Incomplete or malformed JSON — skip and keep for next chunk
         }
       }
     });
