@@ -199,6 +199,46 @@ Eko can be used in multiple environments:
 [![Star History Chart](https://api.star-history.com/svg?repos=FellouAI/eko&type=Date)](https://star-history.com/#FellouAI/eko&Date)
 
 
+
+
+## FAQ
+
+### What is Eko?
+
+Eko (pronounced like 'echo') is a production-ready JavaScript framework that enables developers to create reliable agents and workflows from simple natural language commands to complex multi-step processes. It works in both browser and Node.js environments.
+
+### How does Eko differ from LangChain or Browser-use?
+
+Eko offers:
+- **All platform support** (browser + server), unlike LangChain (server-only) or Browser-use (browser-only)
+- **One sentence to multi-step workflow** - natural language to full workflow
+- **Intervenability** - human-in-the-loop control
+- **Task Parallel** - dependency-aware parallel execution
+- **Access to private web resources** - secure handling
+
+### What LLM providers does Eko support?
+
+Eko supports Anthropic (Claude), Google (Gemini), OpenAI (GPT), and OpenAI-compatible models like Qwen and Doubao.
+
+### How do I install Eko?
+
+```bash
+pnpm install @eko-ai/eko @eko-ai/eko-nodejs @eko-ai/eko-web
+```
+
+### Does Eko support MCP?
+
+Yes, Eko has native MCP support and connects seamlessly with Awesome MCP Servers.
+
+### Can I run agents in the browser?
+
+Yes, Eko works in both browser and Node.js environments. Never expose API keys in frontend code.
+
+### Where can I get help?
+
+- Documentation: https://eko.fellou.ai/docs/
+- GitHub Issues: https://github.com/FellouAI/eko/issues
+
 ## License
 
 Eko is released under the MIT License. See the [LICENSE](LICENSE) file for details.
